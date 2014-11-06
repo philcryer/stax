@@ -1,8 +1,16 @@
-##  This project's structure and scripts are based on the work by:
+# Stax
+
+Create cloud stacks/stax on AWS ([Amazon Web Services](aws.amazon.com)) quickly.
+
+## The stax project is based on work from
 
     https://github.com/emmanuel/coreos-skydns-cloudformation
+    and
+    https://github.com/philcryer/coreos-aws-cloudformation
 
-## The cluster runs on AWS EC2 using Cloud Formation. cloud-init includes:
+## Stax runs [CoreOS](https://coreos.com/) instances on AWS EC2
+
+Configuration is handled by Cloud Formation, services installed via cloud-init are
 
 * etcd
 * fleet
@@ -13,24 +21,33 @@
 
 ## Requirements
 
-* Install aws-cli client
-* aws client needs to be configured with an AWS credential.
+* Install [aws-cli](https://github.com/aws/aws-cli) (Universal Command Line Interface for Amazon Web Services) on your client.
+
+```bash
+apt-get install awscli  # Debian GNU/Linux, Ubuntu
+brew install aws-cli    # Apple OS X (via Homebrew)
+rpm -Uvh awscli         # Red Hat Enterprise Linux (RHEL), Amazon Linux, Centos
+```
+
+* Configure the aws client with your AWS credentials.
 
 ```bash
 aws configure
 ```
 
-* Get AWS ssh private key for the 'coreoscluster01' keypair in s3, and then `ssh-add` it. Alternatively, generate your own key pair and upload it to our AWS account 
+You will be prompted to enter your AWS access key and secret access key (this will write and store them in ~/.aws/credentials)
+
+* Get AWS ssh private key for the 'coreoscluster01' keypair in s3, and then `ssh-add` it. Alternatively, use an existing key pair already on AWS, or generate your own on your AWS account
 (you'll need to refer to this key in the create_stack command below).
 
 ## Manage Stacks
 ```bash
-aws/create-stack.sh
-aws/describe-stack.sh stackname
-aws/update-stack.sh stackname
-aws/delete-stack.sh stackname
+stax create     (create a new stack)
+stax describe   (describe the stack)
+stax update     (update the stack)
+stax delete     (delete the stack)
 ```
-## Access cluster 
+## Access cluster
 
 Get a public hostname or ip from one of your new instances from the AWS console (todo: with aws cli command line instructions)
 
@@ -48,7 +65,7 @@ export FLEETCTL_TUNNEL={resolvable address of one of the cloud instances}
 coreos/list_units.sh
 ```
 
-## Access cluster 
+## Access cluster
 You can test some changes to your cloud without needing to destroy and re-create. SCP your file to a host and:
 
 ``` bash
@@ -56,5 +73,5 @@ sudo /usr/bin/coreos-cloudinit --from-file /tmp/user-data.yml
 ```
 ## Tear down
 ```bash
-aws/delete-stack.sh stackname
+stax delete
 ```
