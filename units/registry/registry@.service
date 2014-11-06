@@ -1,0 +1,18 @@
+[Unit]
+Description=Private Docker Registry
+After=docker.service
+Requires=docker.service
+
+[Service]
+# Need $COREOS_PUBLIC_IPV4 defined in /etc/environment
+EnvironmentFile=/etc/environment
+# Pulling a docker images may take forever
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill %n
+ExecStartPre=-/usr/bin/docker rm %n
+ExecStartPre=/usr/bin/docker pull registry:0.7.3
+ExecStart=/usr/bin/docker run --rm --name %n -p 5000:5000  -v /home/core/share/data/registry:/data -e DOCKER_REGISTRY_CONFIG=/data/config.yml -e SETTINGS_FLAVOR=prod registry:0.7.3
+
+ExecStartPost=/usr/bin/etcdctl set /services/registry ${COREOS_PUBLIC_IPV4}:5000
+ExecStop=/usr/bin/docker stop %n
+ExecStopPost=/usr/bin/etcdctl rm /services/registry
