@@ -7,6 +7,8 @@ Create cloud stacks/stax on AWS ([Amazon Web Services](aws.amazon.com)) quickly.
     https://github.com/emmanuel/coreos-skydns-cloudformation
     and
     https://github.com/philcryer/coreos-aws-cloudformation
+    and
+    https://github.com/kelseyhightower/kubernetes-coreos
 
 ## Stax runs [CoreOS](https://coreos.com/) instances on AWS EC2
 
@@ -26,7 +28,7 @@ Configuration is handled by Cloud Formation, services installed via cloud-init a
 ```bash
 apt-get install awscli  # Debian GNU/Linux, Ubuntu
 brew install aws-cli    # Apple OS X (via Homebrew)
-rpm -Uvh awscli         # Red Hat Enterprise Linux (RHEL), Amazon Linux, Centos
+yum install awscli      # Red Hat Enterprise Linux (RHEL), Amazon Linux, Centos
 ```
 
 * Configure the aws client with your AWS credentials.

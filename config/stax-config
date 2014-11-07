@@ -1,0 +1,11 @@
+#STACK_KEY_PAIR="pccrye-20141005"
+#STACK_KEY_PAIR=""
+STACK_INSTANCE_TYPE="t2.micro"    # m3.medium, t2.micro
+STACK_CLUSTER_SIZE=3
+COREOS_CHANNEL="alpha"            # stable, beta, alpha
+STACK_REGION="us-east-1"
+STACK_NAME="coreos-pool-$RANDOM"
+
+SCRIPT_PATH=$( cd $(dirname $0) ; pwd -P )
+STACK_DISCOVERY_URL=$(curl -s https://discovery.etcd.io/new)
+STACK_SSHFROM="$(curl -s http://ipecho.net/plain)/32"
