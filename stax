@@ -22,13 +22,13 @@ stax-colors(){
 }
 
 stax-usage(){
-echo "Usage: stax <options> command"
+echo "Usage: stax command"
 
 echo; echo "Commands:"
 echo "  dryrun        Don't do anything, just show what would be done"
 echo "  create        Create new stax"
 echo "  describe      Describe existing stax"
-echo "  get-ip        Get the public, or elastic IP of stax"
+echo "  getip         Get the public, or elastic IP of stax"
 echo "  delete        Delete existing stax"
 
 echo; echo "For more help, check the docs; https://github.com/philcryer/stax"
@@ -45,6 +45,13 @@ stax-logo(){
   echo '\__ \ || (_| |>  < '
   echo "|___/\__\__,_/_/\_\ ${reset}"
   echo
+}
+
+stax-existing(){
+  if [ ! -f $HOME/.stax/stack_name ]; then
+    echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
+    exit 1
+  fi
 }
 
 stax-preflight(){
@@ -66,8 +73,10 @@ stax-preflight(){
     cp config/stax-config ${HOME}/.stax/config
   fi
   echo "${yellow}[  ${green}ok${yellow}  ]${reset} stax config file available"
+  echo "${yellow}[  ${green}ok${yellow}  ]${reset} sourcing config file"
+  stax-config
   # awscli key check
-#  aws ec2 describe-key-pairs --key-names $STACK_KEY_PAIR --region $STACK_REGION > /dev/null 2>&1 || { echo "Keypair $STACK_KEY_PAIR does not exit."; exit 1; }
+  aws ec2 describe-key-pairs --key-names $STACK_KEY_PAIR --region $STACK_REGION > /dev/null 2>&1 || { echo "Keypair $STACK_KEY_PAIR does not exit."; exit 1; }
 }
 
 stax-config(){
@@ -75,6 +84,10 @@ stax-config(){
 }
 
 stax-summary(){
+  #if [ ! -f $HOME/.stax/stack_name ]; then
+  #  echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
+  #  exit 1
+  #fi
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} stax summary"
   echo "${yellow}[ ${blue}info${yellow} ]${reset} stax name: $STACK_NAME"
   echo "${yellow}[ ${blue}info${yellow} ]${reset} instance type: $STACK_INSTANCE_TYPE"
@@ -85,6 +98,7 @@ stax-summary(){
 }
 
 stax-create(){
+  STACK_NAME="$STACK_PRE_NAME-$RANDOM"
   echo $STACK_NAME > ~/.stax/stack_name
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} creating $STACK_CLUSTER_SIZE nodes - $STACK_NAME"
   aws --no-verify-ssl --color on cloudformation create-stack \
@@ -101,12 +115,17 @@ stax-create(){
 }
 
 stax-describe(){
-  aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
-  exit 0
+  #aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
+  aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1 || { echo "${yellow}[ ${cyan}----${yellow} ]${reset} no stax defined"; rm $HOME/.stax/stack_name; exit 1; }
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} describe $STACK_NAME"
+  #aws #ecloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
+  aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
 }
 
-stax-get-ip(){
-  bar
+stax-getip(){
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} looking up ip"
+  aws ec2 describe-stacks --stack-name $STACK_NAME
+  exit 0
 }
 
 stax-delete(){
@@ -119,41 +138,71 @@ clear
 stax-colors
 stax-logo
 stax-preflight
-stax-config
+#stax-config
 if [ -f $HOME/.stax/stack_name ]; then
   STACK_NAME=`cat $HOME/.stax/stack_name`
 fi
-if [ ! -f $HOME/.stax/stack_name ]; then
-  STACK_NAME="$STACK_PRE_NAME-$RANDOM"
-  echo $STACK_NAME > $HOME/.stax/stack_name
-fi
-stax-summary
+#if [ ! -f $HOME/.stax/stack_name ]; then
+#  STACK_NAME="$STACK_PRE_NAME-$RANDOM"
+#  echo $STACK_NAME > $HOME/.stax/stack_name
+#fi
+#stax-summary
 
 if [[ "$1" == "dryrun" ]]; then
- echo "${yellow}[ ${cyan}----${yellow} ]${reset} dryrun only, exiting"
- exit 0
+  stax-existing
+  stax-summary
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} dryrun only, exiting"
+  exit 0
 fi
 
 if [[ "$1" == "create" ]]; then
-  stax-create
-  stax-describe
-  echo "${yellow}[ ${cyan}----${yellow} ]${reset} creation complete"
+  #stax-existing
+  if [ -f $HOME/.stax/stack_name ]; then
+    echo "${yellow}[ ${red}ERRR${yellow} ]${reset} existing stax defined, exiting";
+    exit 1
+  else
+    stax-create
+    stax-describe
+    aws cloudformation describe-stacks --stack-name $STACK_NAME > ~/.stax/$STACK_NAME.json
+    echo "${yellow}[ ${cyan}----${yellow} ]${reset} creation complete"
+    exit 0
+  fi
 fi
 
 if [[ "$1" == "describe" ]]; then
+  stax-existing
+  stax-summary
   if [ -f $HOME/.stax/stack_name ]; then
-    echo "${yellow}[ ${cyan}----${yellow} ]${reset} describe $STACK_NAME"
     stax-describe
   else
-    echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined"
+    echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
+    exit 1
+  fi
+fi
+
+if [[ "$1" == "getip" ]]; then
+  stax-existing
+  stax-summary
+  if [ -f $HOME/.stax/stack_name ]; then
+    stax-getip
+  else
+    echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
+    exit 1
   fi
 fi
 
 if [[ "$1" == "delete" ]]; then
+  stax-existing
+  stax-summary
   if [ -f $HOME/.stax/stack_name ]; then
-    echo "${yellow}[ ${cyan}----${yellow} ]${reset} will delete $STACK_NAME"
-    stax-delete
-    echo "${yellow}[ ${cyan}----${yellow} ]${reset} stax $STACK_NAME deleted"
+    read -p "${yellow}[ ${cyan}----${yellow} ]${reset} ok to delete $STACK_NAME [y/n] answer"
+    #read -p "Run command $foo? [yn]" answer
+    if [[ $answer = y ]] ; then
+        # run the command
+        echo "${yellow}[ ${cyan}----${yellow} ]${reset} will delete $STACK_NAME"
+        stax-delete
+        echo "${yellow}[ ${cyan}----${yellow} ]${reset} stax $STACK_NAME deleted"
+    fi
   else
     echo "${yellow}[ ${cyan}----${yellow} ]${reset} could not delete $STACK_NAME, check name"
     exit 1
