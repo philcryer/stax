@@ -1,51 +1,90 @@
 #!/bin/bash
 
+#set -e
+
 ##################################################################
-#   S     t     a     x   (for aws ec2)
-#   https://github.com/philcryer/stax
+#   stax - for aws ec2 - https://github.com/philcryer/stax
 #   https://github.com/philcryer/stax/blob/master/LICENSE
-
-# colours http://misc.flogisoft.com/bash/tip_colors_and_formatting
-# [ ok ] - echo -e '\e[33m[ \e[32mok\e[33m ]\e[39m'
-#
 ##################################################################
 
-function stax-logo(){
-  echo -e '\e[31m     _             '
-  echo -e '    | | \e[33mfor aws ec2\e[31m'
-  echo ' ___| |_ __ ___  __'
-  echo '/ __| __/ _` \ \/ /'
-  echo '\__ \ || (_| |>  < '
-  echo '|___/\__\__,_/_/\_\'
-  echo -e '\e[39m'
+usage() {
+  echo "Usage:"
+  echo "stax create"
+  echo "stax describe"
+  echo "stax public-ip"
+  echo "stax update"
+  echo "stax delete"
+  exit 1
 }
 
-clear
-stax-logo
+usage2(){
+echo "Usage: stax <command>" 
 
-function stax-preflight(){
+echo; echo "Commands:"
+echo "  create      Get help on a command"
+echo "  describe      Create a new Hexo folder"
+echo "  get-ip   Migrate your site from other system to Hexo"
+echo "  update   Display version information"
+echo "  delete   Display version information"
+
+echo; echo "Global Options:"
+echo "  --config   Specify config file instead of using _config.yml"
+echo "  --debug    Display all verbose messages in the terminal"
+echo "  --safe     Disable all plugins and scripts"
+echo "  --silent   Hide output on console"
+
+echo "For more help, check the docs; https://github.com/philcryer/stax"
+}
+
+[ $# -gt 0 ] || usage2
+
+exit 0
+
+colors(){
+  green=$(tput setaf 2)
+  yellow=$(tput setaf 3)
+  blue=$(tput setaf 4)
+  purple=$(tput setaf 5)
+  cyan=$(tput setaf 6)
+  white=$(tput setaf 7)
+  reset=$(tput sgr0)
+}
+
+stax-logo(){
+  echo "${green}     _             "
+  echo "    | | ${yellow}for aws ec2${green}"
+  echo " ___| |_ __ ___  __"
+  echo '/ __| __/ _` \ \/ /'
+  echo '\__ \ || (_| |>  < '
+  echo "|___/\__\__,_/_/\_\ ${reset}"
+  echo
+}
+colors; clear; stax-logo
+
+stax-preflight(){
   # awscli check
   which aws > /dev/null 2>&1 || { echo "awscli is not installed. Aborting."; exit 1; }
-  echo -e '\e[33m[ \e[32mok\e[33m ]\e[39m awscli installed'
+  echo "${yellow}[ ${green}ok${yellow} ]${reset} awscli installed"
   # awscli config check
   if [ ! -f ${HOME}/.aws/config ]; then
      echo "awscli not configured, run 'aws configure'. Aborting."; exit 1
   fi
-  echo -e '\e[33m[ \e[32mok\e[33m ]\e[39m awscli configured'
+  echo "${yellow}[ ${green}ok${yellow} ]${reset} awscli configured"
   # stax dot dir check
   if [ ! -d ~/.stax ]; then
     mkdir ~/.stax
   fi
-  echo -e '\e[33m[ \e[32mok\e[33m ]\e[39m stax config dir available'
+  echo "${yellow}[ ${green}ok${yellow} ]${reset} stax config dir available"
   # stax config check
   if [ ! -f ~/.stax/config ]; then
     cp config/stax-config ${HOME}/.stax/config
   fi
-  echo -e '\e[33m[ \e[32mok\e[33m ]\e[39m stax config file available'
+  echo "${yellow}[ ${green}ok${yellow} ]${reset} stax config file available"
 }
 
 stax-preflight
 
+exit 0
 echo
 
 dryrun=0
@@ -159,3 +198,5 @@ exit 0
 (___/ (__)(_)(_)(_/\_)
 
 }
+#  http://misc.flogisoft.com/bash/tip_colors_and_formatting
+# [ ok ] - echo -e '\e[33m[ \e[32mok\e[33m ]\e[39m'
