@@ -1,46 +1,17 @@
 #!/bin/bash
 
-#set -e
+set -e
 
 ##################################################################
 #   stax - for aws ec2 - https://github.com/philcryer/stax
 #   https://github.com/philcryer/stax/blob/master/LICENSE
 ##################################################################
 
-usage() {
-  echo "Usage:"
-  echo "stax create"
-  echo "stax describe"
-  echo "stax public-ip"
-  echo "stax update"
-  echo "stax delete"
-  exit 1
-}
+SCRIPT_PATH=$( cd $(dirname $0) ; pwd -P )
+STACK_DISCOVERY_URL=$(curl -s https://discovery.etcd.io/new)
+STACK_SSHFROM="$(curl -s http://ipecho.net/plain)/32"
 
-usage2(){
-echo "Usage: stax <command>" 
-
-echo; echo "Commands:"
-echo "  create      Get help on a command"
-echo "  describe      Create a new Hexo folder"
-echo "  get-ip   Migrate your site from other system to Hexo"
-echo "  update   Display version information"
-echo "  delete   Display version information"
-
-echo; echo "Global Options:"
-echo "  --config   Specify config file instead of using _config.yml"
-echo "  --debug    Display all verbose messages in the terminal"
-echo "  --safe     Disable all plugins and scripts"
-echo "  --silent   Hide output on console"
-
-echo "For more help, check the docs; https://github.com/philcryer/stax"
-}
-
-[ $# -gt 0 ] || usage2
-
-exit 0
-
-colors(){
+stax-colors(){
   green=$(tput setaf 2)
   yellow=$(tput setaf 3)
   blue=$(tput setaf 4)
@@ -49,6 +20,22 @@ colors(){
   white=$(tput setaf 7)
   reset=$(tput sgr0)
 }
+
+stax-usage(){
+echo "Usage: stax <options> command"
+
+echo; echo "Commands:"
+echo "  dryrun        Don't do anything, just show what would be done"
+echo "  create        Create new stax"
+echo "  describe      Describe existing stax"
+echo "  get-ip        Get the public, or elastic IP of stax"
+echo "  delete        Delete existing stax"
+
+echo; echo "For more help, check the docs; https://github.com/philcryer/stax"
+exit 1
+}
+
+[ $# -gt 0 ] || stax-usage
 
 stax-logo(){
   echo "${green}     _             "
@@ -59,144 +46,118 @@ stax-logo(){
   echo "|___/\__\__,_/_/\_\ ${reset}"
   echo
 }
-colors; clear; stax-logo
 
 stax-preflight(){
   # awscli check
   which aws > /dev/null 2>&1 || { echo "awscli is not installed. Aborting."; exit 1; }
-  echo "${yellow}[ ${green}ok${yellow} ]${reset} awscli installed"
+  echo "${yellow}[  ${green}ok${yellow}  ]${reset} awscli installed"
   # awscli config check
   if [ ! -f ${HOME}/.aws/config ]; then
      echo "awscli not configured, run 'aws configure'. Aborting."; exit 1
   fi
-  echo "${yellow}[ ${green}ok${yellow} ]${reset} awscli configured"
+  echo "${yellow}[  ${green}ok${yellow}  ]${reset} awscli configured"
   # stax dot dir check
   if [ ! -d ~/.stax ]; then
     mkdir ~/.stax
   fi
-  echo "${yellow}[ ${green}ok${yellow} ]${reset} stax config dir available"
+  echo "${yellow}[  ${green}ok${yellow}  ]${reset} stax config dir available"
   # stax config check
   if [ ! -f ~/.stax/config ]; then
     cp config/stax-config ${HOME}/.stax/config
   fi
-  echo "${yellow}[ ${green}ok${yellow} ]${reset} stax config file available"
+  echo "${yellow}[  ${green}ok${yellow}  ]${reset} stax config file available"
+  # awscli key check
+#  aws ec2 describe-key-pairs --key-names $STACK_KEY_PAIR --region $STACK_REGION > /dev/null 2>&1 || { echo "Keypair $STACK_KEY_PAIR does not exit."; exit 1; }
 }
 
+stax-config(){
+  source ${HOME}/.stax/config
+}
+
+stax-summary(){
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} stax summary"
+  echo "${yellow}[ ${blue}info${yellow} ]${reset} stax name: $STACK_NAME"
+  echo "${yellow}[ ${blue}info${yellow} ]${reset} instance type: $STACK_INSTANCE_TYPE"
+  echo "${yellow}[ ${blue}info${yellow} ]${reset} cluster size: $STACK_CLUSTER_SIZE nodes"
+  echo "${yellow}[ ${blue}info${yellow} ]${reset} discovery url: $STACK_DISCOVERY_URL"
+  echo "${yellow}[ ${blue}info${yellow} ]${reset} ec2 key pair: $STACK_KEY_PAIR"
+  echo "${yellow}[ ${blue}info${yellow} ]${reset} ssh from ip: $STACK_SSHFROM"
+}
+
+stax-create(){
+  echo $STACK_NAME > ~/.stax/stack_name
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} creating $STACK_CLUSTER_SIZE nodes - $STACK_NAME"
+  aws --no-verify-ssl --color on cloudformation create-stack \
+    --region $STACK_REGION \
+    --stack-name $STACK_NAME \
+    --template-body file://$SCRIPT_PATH/templates/cloudformation-template-$COREOS_CHANNEL.json \
+    --parameters \
+      "ParameterKey=InstanceType,ParameterValue=$STACK_INSTANCE_TYPE,UsePreviousValue=false" \
+      "ParameterKey=ClusterSize,ParameterValue=$STACK_CLUSTER_SIZE,UsePreviousValue=false" \
+      "ParameterKey=DiscoveryURL,ParameterValue=$STACK_DISCOVERY_URL,UsePreviousValue=false" \
+      "ParameterKey=AdvertisedIPAddress,ParameterValue=private,UsePreviousValue=false" \
+      "ParameterKey=AllowSSHFrom,ParameterValue=$STACK_SSHFROM,UsePreviousValue=false" \
+      "ParameterKey=KeyPair,ParameterValue=$STACK_KEY_PAIR,UsePreviousValue=false"
+}
+
+stax-describe(){
+  aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
+  exit 0
+}
+
+stax-get-ip(){
+  bar
+}
+
+stax-delete(){
+  # verify stack exists, then delete
+  aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation delete-stack  --stack-name $STACK_NAME 
+  rm $HOME/.stax/stack_name
+}
+
+clear
+stax-colors
+stax-logo
 stax-preflight
+stax-config
+if [ -f $HOME/.stax/stack_name ]; then
+  STACK_NAME=`cat $HOME/.stax/stack_name`
+fi
+if [ ! -f $HOME/.stax/stack_name ]; then
+  STACK_NAME="$STACK_PRE_NAME-$RANDOM"
+  echo $STACK_NAME > $HOME/.stax/stack_name
+fi
+stax-summary
+
+if [[ "$1" == "dryrun" ]]; then
+ echo "${yellow}[ ${cyan}----${yellow} ]${reset} dryrun only, exiting"
+ exit 0
+fi
+
+if [[ "$1" == "create" ]]; then
+  stax-create
+  stax-describe
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} creation complete"
+fi
+
+if [[ "$1" == "describe" ]]; then
+  if [ -f $HOME/.stax/stack_name ]; then
+    echo "${yellow}[ ${cyan}----${yellow} ]${reset} describe $STACK_NAME"
+    stax-describe
+  else
+    echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined"
+  fi
+fi
+
+if [[ "$1" == "delete" ]]; then
+  if [ -f $HOME/.stax/stack_name ]; then
+    echo "${yellow}[ ${cyan}----${yellow} ]${reset} will delete $STACK_NAME"
+    stax-delete
+    echo "${yellow}[ ${cyan}----${yellow} ]${reset} stax $STACK_NAME deleted"
+  else
+    echo "${yellow}[ ${cyan}----${yellow} ]${reset} could not delete $STACK_NAME, check name"
+    exit 1
+  fi
+fi
 
 exit 0
-echo
-
-dryrun=0
-
-help(){
-    echo "create-stack [-s <stack-name>] -k <keypair-name> -u <discovery-toten-url> -r region -t <ec2-type> -n <ec2-number> -d "
-}
-
-source ${HOME}/.stax/config
-
-exit 0
-
-
-while getopts "s:k:u:r:t:n:dh" OPTION
-do
-    case $OPTION in
-        s)
-          STACK_NAME==$OPTARG
-          ;;
-        k)
-          STACK_KEY_PAIR=$OPTARG
-          ;;
-        t)
-          STACK_INSTANCE_TYPE=$OPTARG
-          ;;
-        u)
-          STACK_DISCOVERY_URL=$OPTARG
-          ;;
-        r)
-          STACK_REGION=$OPTARG
-          ;;
-        n)
-          STACK_CLUSTER_SIZE=$OPTARG
-          ;;
-        d)
-          dryrun=1
-          ;;
-        [h?])
-          help
-          exit
-          ;;
-    esac
-done
-
-aws ec2 describe-key-pairs --key-names $STACK_KEY_PAIR --region $STACK_REGION > /dev/null 2>&1 || { echo "Keypair $STACK_KEY_PAIR does not exit."; exit 1; }
-
-echo "Stax setup:"
-AWS_CLI_VERSION=`aws --version`
-echo "Aws-cli: $AWS_CLI_VERSION"
-echo "Name: $STACK_NAME"
-echo "Discovery URL: $STACK_DISCOVERY_URL"
-echo "Instance Type x Cluster Size: $STACK_INSTANCE_TYPE x $STACK_CLUSTER_SIZE"
-echo "EC2 Key Pair: $STACK_KEY_PAIR"
-echo "SSH From: $STACK_SSHFROM"
-
-#if [ ${1} == 'create' ]; then
-#  echo "go"
-#fi
-
-[ $dryrun -eq 1 ] && { echo "Dryrun only."; exit 0; }
-
-echo "$STACK_NAME" > ~/.stax/stack_name
-
-aws --no-verify-ssl --color on cloudformation create-stack \
-  --region $STACK_REGION \
-  --stack-name $STACK_NAME \
-  --template-body file://$SCRIPT_PATH/templates/cloudformation-template-$COREOS_CHANNEL.json \
-  --parameters \
-    "ParameterKey=InstanceType,ParameterValue=$STACK_INSTANCE_TYPE,UsePreviousValue=false" \
-    "ParameterKey=ClusterSize,ParameterValue=$STACK_CLUSTER_SIZE,UsePreviousValue=false" \
-    "ParameterKey=DiscoveryURL,ParameterValue=$STACK_DISCOVERY_URL,UsePreviousValue=false" \
-    "ParameterKey=AdvertisedIPAddress,ParameterValue=private,UsePreviousValue=false" \
-    "ParameterKey=AllowSSHFrom,ParameterValue=$STACK_SSHFROM,UsePreviousValue=false" \
-    "ParameterKey=KeyPair,ParameterValue=$STACK_KEY_PAIR,UsePreviousValue=false"
-
-exit 0
-
-
-
-
-
- ___  ____   __    _  _ 
-/ __)(_  _) /__\  ( \/ )
-\__ \  )(  /(__)\  )  ( 
-(___/ (__)(__)(__)(_/\_)
-
-
-
-     _             
-    | |            
- ___| |_ __ ___  __
-/ __| __/ _` \ \/ /
-\__ \ || (_| |>  < 
-|___/\__\__,_/_/\_\
-                   
-            
-
-
-     _             
- ___| |_ __ ___  __
-/ __| __/ _` \ \/ /
-\__ \ || (_| |>  < 
-|___/\__\__,_/_/\_\
-                   
-
-
-
- ___  ____  __   _  _ 
-/ __)(_  _)(  ) ( \/ )
-\__ \  )(  /__\  )  ( 
-(___/ (__)(_)(_)(_/\_)
-
-}
-#  http://misc.flogisoft.com/bash/tip_colors_and_formatting
-# [ ok ] - echo -e '\e[33m[ \e[32mok\e[33m ]\e[39m'
