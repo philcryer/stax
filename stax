@@ -195,8 +195,7 @@ if [[ "$1" == "delete" ]]; then
   stax-existing
   stax-summary
   if [ -f $HOME/.stax/stack_name ]; then
-    read -p "${yellow}[ ${cyan}----${yellow} ]${reset} ok to delete $STACK_NAME [y/n] answer"
-    #read -p "Run command $foo? [yn]" answer
+    read -p "${yellow}[ ${cyan}????${yellow} ]${reset} ok to delete $STACK_NAME [y/n]? " answer
     if [[ $answer = y ]] ; then
         # run the command
         echo "${yellow}[ ${cyan}----${yellow} ]${reset} will delete $STACK_NAME"
