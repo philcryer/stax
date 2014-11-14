@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+#set -e
 
 ##################################################################
 #   stax - for aws ec2 - https://github.com/philcryer/stax
@@ -25,11 +25,12 @@ stax-usage(){
 echo "Usage: stax command"
 
 echo; echo "Commands:"
-echo "  dryrun        Don't do anything, just show what would be done"
-echo "  create        Create new stax"
-echo "  describe      Describe existing stax"
-echo "  getip         Get the public, or elastic IP of stax"
-echo "  delete        Delete existing stax"
+echo "  create            Create new stax"
+echo "  describe | desc   Describe created stax"
+echo "  getip             Get the public, or elastic IP of created stax"
+echo "  list-stax         List all existing stax"
+echo "  destroy           Destroy existing stax"
+echo "  dryrun            Don't do anything, just show what would be done"
 
 echo; echo "For more help, check the docs; https://github.com/philcryer/stax"
 exit 1
@@ -122,16 +123,33 @@ stax-describe(){
   aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
 }
 
-stax-getip(){
-  echo "${yellow}[ ${cyan}----${yellow} ]${reset} looking up ip"
-  aws ec2 describe-stacks --stack-name $STACK_NAME
+stax-list(){
+  #aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
+  #aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1 || { echo "${yellow}[ ${cyan}----${yellow} ]${reset} no stax defined"; rm $HOME/.stax/stack_name; exit 1; }
+  #aws #ecloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
+  #aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} list all existing stax"
+  #TODO formating, more detail on output
+  aws cloudformation list-stacks |jq '.StackSummaries[].StackName'
   exit 0
 }
 
-stax-delete(){
-  # verify stack exists, then delete
-  aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation delete-stack  --stack-name $STACK_NAME 
+stax-getip(){
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} looking up public ip"
+  #aws ec2 describe-stacks --stack-name $STACK_NAME
+  #TODO formating, more detail on output
+  aws ec2 describe-instances | jq '.Reservations[].Instances[].PublicIpAddress'
+  exit 0
+}
+
+stax-destroy(){
+  # verify stack exists, then destroy
+  aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation destroy-stack  --stack-name $STACK_NAME 
+  rm $HOME/.stax/$STACK_NAME.json
   rm $HOME/.stax/stack_name
+
+
+  ###FIXME we need to delete the securty groups it created
 }
 
 clear
@@ -169,7 +187,7 @@ if [[ "$1" == "create" ]]; then
   fi
 fi
 
-if [[ "$1" == "describe" ]]; then
+if [[ "$1" == "describe" || "desc" ]]; then
   stax-existing
   stax-summary
   if [ -f $HOME/.stax/stack_name ]; then
@@ -191,19 +209,25 @@ if [[ "$1" == "getip" ]]; then
   fi
 fi
 
-if [[ "$1" == "delete" ]]; then
+if [[ "$1" == "list-stax" ]]; then
+    stax-list
+    #echo "${yellow}[ ${cyan}----${yellow} ]${reset} creation complete"
+    exit 0
+  fi
+fi
+
+if [[ "$1" == "destroy" ]]; then
   stax-existing
   stax-summary
   if [ -f $HOME/.stax/stack_name ]; then
-    read -p "${yellow}[ ${cyan}????${yellow} ]${reset} ok to delete $STACK_NAME [y/n]? " answer
+    read -p "${yellow}[ ${cyan}????${yellow} ]${reset} ok to destroy $STACK_NAME [y/n]? " answer
     if [[ $answer = y ]] ; then
         # run the command
-        echo "${yellow}[ ${cyan}----${yellow} ]${reset} will delete $STACK_NAME"
-        stax-delete
-        echo "${yellow}[ ${cyan}----${yellow} ]${reset} stax $STACK_NAME deleted"
+        stax-destroy
+        echo "${yellow}[ ${cyan}----${yellow} ]${reset} stax $STACK_NAME will be destroyd"
     fi
   else
-    echo "${yellow}[ ${cyan}----${yellow} ]${reset} could not delete $STACK_NAME, check name"
+    echo "${yellow}[ ${cyan}----${yellow} ]${reset} could not destroy $STACK_NAME, check name"
     exit 1
   fi
 fi
