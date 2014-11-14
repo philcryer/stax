@@ -42,12 +42,12 @@ You will be prompted to enter your AWS access key and secret access key (this wi
 * Get AWS ssh private key for the 'coreoscluster01' keypair in s3, and then `ssh-add` it. Alternatively, use an existing key pair already on AWS, or generate your own on your AWS account
 (you'll need to refer to this key in the create_stack command below).
 
-* Install [jq]() to parse json output from the awscli
+* Install [curl](), to talk to the web and [jq](), to parse json output from the awscli
 
 ```bash
-apt-get install jq  # Debian GNU/Linux, Ubuntu ???maybe test this
-brew install jq    # Apple OS X (via Homebrew)
-yum install jq      # Red Hat Enterprise Linux (RHEL), Amazon Linux, Centos ???test this
+apt-get install jq curl   # Debian GNU/Linux, Ubuntu ???maybe test this
+brew install jq curl      # Apple OS X (via Homebrew)
+yum install jq curl       # Red Hat Enterprise Linux (RHEL), Amazon Linux, Centos ???test this
 ```
 
 ## Manage Stacks

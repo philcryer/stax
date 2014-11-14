@@ -38,7 +38,8 @@ exit 1
 
 stax-logo(){
   echo "${green}     _             "
-  echo "    | | ${yellow}for aws ec2${green}"
+#  echo "    | | ${yellow}for aws ec2${green}"
+  echo "    | | ${yellow}`shuf -n 1 config/stax-slogans`${green}"
   echo " ___| |_ __ ___  __"
   echo '/ __| __/ _` \ \/ /'
   echo '\__ \ || (_| |>  < '
@@ -47,7 +48,7 @@ stax-logo(){
 }
 
 stax-existing(){
-  if [ ! -f $HOME/.stax/stack_name ]; then
+  if [ ! -f $HOME/.stax/stax-name ]; then
     echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
     exit 1
   fi
@@ -83,7 +84,7 @@ stax-config(){
 }
 
 stax-summary(){
-  #if [ ! -f $HOME/.stax/stack_name ]; then
+  #if [ ! -f $HOME/.stax/stax-name ]; then
   #  echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
   #  exit 1
   #fi
@@ -97,8 +98,8 @@ stax-summary(){
 }
 
 stax-create(){
-  STACK_NAME="$STACK_PRE_NAME-$RANDOM_NAM.$RANDOM_NUM"
-  echo $STACK_NAME > ~/.stax/stack_name
+  STACK_NAME="$STACK_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
+  echo $STACK_NAME > ~/.stax/stax-name
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} creating $STACK_CLUSTER_SIZE nodes - $STACK_NAME"
   aws --no-verify-ssl --color on cloudformation create-stack \
     --region $STACK_REGION \
@@ -115,7 +116,7 @@ stax-create(){
 
 stax-describe(){
   #aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
-  aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1 || { echo "${yellow}[ ${cyan}----${yellow} ]${reset} no stax defined"; rm $HOME/.stax/stack_name; exit 1; }
+  aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1 || { echo "${yellow}[ ${cyan}----${yellow} ]${reset} no stax defined"; rm $HOME/.stax/stax-name; exit 1; }
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} describe $STACK_NAME"
   #aws #ecloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
   aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
@@ -123,7 +124,7 @@ stax-describe(){
 
 stax-list(){
   #aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
-  #aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1 || { echo "${yellow}[ ${cyan}----${yellow} ]${reset} no stax defined"; rm $HOME/.stax/stack_name; exit 1; }
+  #aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1 || { echo "${yellow}[ ${cyan}----${yellow} ]${reset} no stax defined"; rm $HOME/.stax/stax-name; exit 1; }
   #aws #ecloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
   #aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} list all existing stax"
@@ -144,15 +145,15 @@ stax-destroy(){
   # verify stack exists, then destroy
   aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation destroy-stack  --stack-name $STACK_NAME 
   rm $HOME/.stax/$STACK_NAME.json
-  rm $HOME/.stax/stack_name
-
-
+  rm $HOME/.stax/stax-name
   ###FIXME we need to delete the securty groups it created
 }
 
 stax-generate(){
-  STACK_DISCOVERY_URL=$(curl -s https://discovery.etcd.io/new)
-  STACK_SSHFROM="$(curl -s http://ipecho.net/plain)/32"
+  #STACK_DISCOVERY_URL=$(curl -s https://discovery.etcd.io/new)
+  STACK_DISCOVERY_URL=$(curl -s http://discovery.etcd.io/new)
+  #STACK_SSHFROM="$(curl -s https://ipecho.net/plain)/32"
+  STACK_SSHFROM="$(curl -s http://icanhazip.com)/32"
   RANDOM_NAM=`shuf -n 1 config/stax-words`
   RANDOM_NUM=`< /dev/urandom tr -dc 0-9 | head -c${1:-4};`
 }
@@ -163,12 +164,12 @@ stax-logo
 stax-preflight
 stax-generate
 #stax-config
-if [ -f $HOME/.stax/stack_name ]; then
-  STACK_NAME=`cat $HOME/.stax/stack_name`
+if [ -f $HOME/.stax/stax-name ]; then
+  STACK_NAME=`cat $HOME/.stax/stax-name`
 fi
-#if [ ! -f $HOME/.stax/stack_name ]; then
+#if [ ! -f $HOME/.stax/stax-name ]; then
 #  STACK_NAME="$STACK_PRE_NAME-$RANDOM"
-#  echo $STACK_NAME > $HOME/.stax/stack_name
+#  echo $STACK_NAME > $HOME/.stax/stax-name
 #fi
 #stax-summary
 
@@ -181,7 +182,7 @@ fi
 
 if [[ "$1" == "create" ]]; then
   #stax-existing
-  if [ -f $HOME/.stax/stack_name ]; then
+  if [ -f $HOME/.stax/stax-name ]; then
     echo "${yellow}[ ${red}ERRR${yellow} ]${reset} existing stax defined, exiting";
     exit 1
   else
@@ -196,7 +197,7 @@ fi
 if [[ "$1" == "describe" || "desc" ]]; then
   stax-existing
   stax-summary
-  if [ -f $HOME/.stax/stack_name ]; then
+  if [ -f $HOME/.stax/stax-name ]; then
     stax-describe
   else
     echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
@@ -207,7 +208,7 @@ fi
 if [[ "$1" == "getip" ]]; then
   stax-existing
   stax-summary
-  if [ -f $HOME/.stax/stack_name ]; then
+  if [ -f $HOME/.stax/stax-name ]; then
     stax-getip
   else
     echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
@@ -224,11 +225,11 @@ fi
 if [[ "$1" == "destroy" ]]; then
   stax-existing
   stax-summary
-  if [ -f $HOME/.stax/stack_name ]; then
+  if [ -f $HOME/.stax/stax-name ]; then
     read -p "${yellow}[ ${cyan}????${yellow} ]${reset} ok to destroy $STACK_NAME [y/n]? " answer
     if [[ $answer = y ]] ; then
         # run the command
-        stax-destroy
+        #stax-destroy
         echo "${yellow}[ ${cyan}----${yellow} ]${reset} stax $STACK_NAME will be destroyd"
     fi
   else
