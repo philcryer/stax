@@ -8,8 +8,6 @@
 ##################################################################
 
 SCRIPT_PATH=$( cd $(dirname $0) ; pwd -P )
-STACK_DISCOVERY_URL=$(curl -s https://discovery.etcd.io/new)
-STACK_SSHFROM="$(curl -s http://ipecho.net/plain)/32"
 
 stax-colors(){
   green=$(tput setaf 2)
@@ -77,7 +75,7 @@ stax-preflight(){
   echo "${yellow}[  ${green}ok${yellow}  ]${reset} sourcing config file"
   stax-config
   # awscli key check
-  aws ec2 describe-key-pairs --key-names $STACK_KEY_PAIR --region $STACK_REGION > /dev/null 2>&1 || { echo "Keypair $STACK_KEY_PAIR does not exit."; exit 1; }
+  aws ec2 describe-key-pairs --key-names $STACK_KEY_PAIR --region $STACK_REGION > /dev/null 2>&1 || { echo "${yellow}[ ${red}ERRR${yellow} ]${reset} keypair $STACK_KEY_PAIR does not exit."; exit 1; }
 }
 
 stax-config(){
@@ -99,7 +97,7 @@ stax-summary(){
 }
 
 stax-create(){
-  STACK_NAME="$STACK_PRE_NAME-$RANDOM"
+  STACK_NAME="$STACK_PRE_NAME-$RANDOM_NAM.$RANDOM_NUM"
   echo $STACK_NAME > ~/.stax/stack_name
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} creating $STACK_CLUSTER_SIZE nodes - $STACK_NAME"
   aws --no-verify-ssl --color on cloudformation create-stack \
@@ -152,10 +150,18 @@ stax-destroy(){
   ###FIXME we need to delete the securty groups it created
 }
 
+stax-generate(){
+  STACK_DISCOVERY_URL=$(curl -s https://discovery.etcd.io/new)
+  STACK_SSHFROM="$(curl -s http://ipecho.net/plain)/32"
+  RANDOM_NAM=`shuf -n 1 config/stax-words`
+  RANDOM_NUM=`< /dev/urandom tr -dc 0-9 | head -c${1:-4};`
+}
+
 clear
 stax-colors
 stax-logo
 stax-preflight
+stax-generate
 #stax-config
 if [ -f $HOME/.stax/stack_name ]; then
   STACK_NAME=`cat $HOME/.stax/stack_name`
