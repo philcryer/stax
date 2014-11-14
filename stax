@@ -28,7 +28,7 @@ echo; echo "Commands:"
 echo "  create            Create new stax"
 echo "  describe | desc   Describe created stax"
 echo "  getip             Get the public, or elastic IP of created stax"
-echo "  list-stax         List all existing stax"
+#echo "  list-stax         List all existing stax"
 echo "  destroy           Destroy existing stax"
 echo "  dryrun            Don't do anything, just show what would be done"
 
@@ -209,12 +209,11 @@ if [[ "$1" == "getip" ]]; then
   fi
 fi
 
-if [[ "$1" == "list-stax" ]]; then
-    stax-list
-    #echo "${yellow}[ ${cyan}----${yellow} ]${reset} creation complete"
-    exit 0
-  fi
-fi
+#if [[ "$1" == "list-stax" ]]; then
+#    stax-list
+#    #echo "${yellow}[ ${cyan}----${yellow} ]${reset} creation complete"
+#    exit 0
+#fi
 
 if [[ "$1" == "destroy" ]]; then
   stax-existing

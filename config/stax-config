@@ -14,4 +14,4 @@ COREOS_CHANNEL="alpha"
 STACK_REGION="us-east-1"
 
 # stack prefix
-STACK_PRE_NAME="coreos-pool"
+STACK_PRE_NAME="stax-pool"
