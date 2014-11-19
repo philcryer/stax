@@ -58,6 +58,9 @@ stax-existing(){
 }
 
 stax-preflight(){
+  # jq check
+  which jq > /dev/null 2>&1 || { echo "jq (commandline JSON processor) is not installed. Aborting."; exit 1; }
+  echo "${yellow}[  ${green}ok${yellow}  ]${reset} jq installed"
   # awscli check
   which aws > /dev/null 2>&1 || { echo "awscli is not installed. Aborting."; exit 1; }
   echo "${yellow}[  ${green}ok${yellow}  ]${reset} awscli installed"
@@ -101,6 +104,7 @@ stax-summary(){
 }
 
 stax-create(){
+  stax-generate
   STACK_NAME="$STACK_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
   echo $STACK_NAME > ~/.stax/stax-name
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} creating $STACK_CLUSTER_SIZE nodes - $STACK_NAME"
@@ -146,10 +150,12 @@ stax-getip(){
 
 stax-destroy(){
   # verify stack exists, then destroy
-  aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation destroy-stack  --stack-name $STACK_NAME 
-  rm $HOME/.stax/$STACK_NAME.json
-  rm $HOME/.stax/stax-name
+  aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation delete-stack --stack-name $STACK_NAME 
+  #echo "aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation destroy-stack  --stack-name $STACK_NAME"
+  rm $HOME/.stax/$STACK_NAME.json > /dev/null
+  rm $HOME/.stax/stax-name > /dev/null
   ###FIXME we need to delete the securty groups it created
+  ### (looks like they are getting deleted, only partial or broken jobs were leaving them behind. manually cleaned up)
 }
 
 stax-generate(){
@@ -171,7 +177,7 @@ clear
 stax-colors
 stax-logo
 stax-preflight
-stax-generate
+#stax-generate
 #stax-config
 if [ -f $HOME/.stax/stax-name ]; then
   STACK_NAME=`cat $HOME/.stax/stax-name`
@@ -184,6 +190,7 @@ fi
 
 if [[ "$1" == "dryrun" ]]; then
   stax-existing
+  stax-generate
   stax-summary
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} dryrun only, exiting"
   exit 0
@@ -205,7 +212,7 @@ fi
 
 if [[ "$1" == "describe" || "desc" ]]; then
   stax-existing
-  stax-summary
+  #stax-summary
   if [ -f $HOME/.stax/stax-name ]; then
     stax-describe
   else
@@ -233,13 +240,13 @@ fi
 
 if [[ "$1" == "destroy" ]]; then
   stax-existing
-  stax-summary
+  #stax-summary
   if [ -f $HOME/.stax/stax-name ]; then
     read -p "${yellow}[ ${cyan}????${yellow} ]${reset} ok to destroy $STACK_NAME [y/n]? " answer
     if [[ $answer = y ]] ; then
         # run the command
-        #stax-destroy
-        echo "${yellow}[ ${cyan}----${yellow} ]${reset} stax $STACK_NAME will be destroyd"
+        stax-destroy
+        echo "${yellow}[ ${cyan}----${yellow} ]${reset} $STACK_NAME will be destroyd"
     fi
   else
     echo "${yellow}[ ${cyan}----${yellow} ]${reset} could not destroy $STACK_NAME, check name"
