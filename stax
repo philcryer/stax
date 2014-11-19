@@ -8,7 +8,8 @@ set -e
 #               "this should work(tm)!"
 #
 #TODO
-#   * better formating and more (specific) details on jq output
+#   * better formating with more (specific) details in jq output
+#   * learn conversational german
 ##################################################################
 
 SCRIPT_PATH=$( cd $(dirname $0) ; pwd -P )
