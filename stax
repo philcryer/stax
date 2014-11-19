@@ -1,10 +1,14 @@
 #!/bin/bash
 
-#set -e
+set -e
 
 ##################################################################
 #   stax - for aws ec2 - https://github.com/philcryer/stax
 #   https://github.com/philcryer/stax/blob/master/LICENSE
+#               "this should work(tm)!"
+#
+#TODO
+#   * better formating and more (specific) details on jq output
 ##################################################################
 
 SCRIPT_PATH=$( cd $(dirname $0) ; pwd -P )
@@ -26,7 +30,6 @@ echo; echo "Commands:"
 echo "  create            Create new stax"
 echo "  describe | desc   Describe created stax"
 echo "  getip             Get the public, or elastic IP of created stax"
-#echo "  list-stax         List all existing stax"
 echo "  destroy           Destroy existing stax"
 echo "  dryrun            Don't do anything, just show what would be done"
 
@@ -37,11 +40,8 @@ exit 1
 [ $# -gt 0 ] || stax-usage
 
 stax-logo(){
-#NUMM=`wc -l < config/stax-words`;head -$((${RANDOM} % ${NUMM} + 1)) config/stax-words | tail -1
 NUMS=`wc -l < config/stax-slogans`
   echo "${green}     _             "
-#  echo "    | | ${yellow}for aws ec2${green}"
-  #echo "    | | ${yellow}`shuf -n 1 config/stax-slogans`${green}"
   echo "    | | ${yellow}`head -$((${RANDOM} % ${NUMS} + 1)) config/stax-slogans | tail -1`${green}"
   echo " ___| |_ __ ___  __"
   echo '/ __| __/ _` \ \/ /'
@@ -58,30 +58,24 @@ stax-existing(){
 }
 
 stax-preflight(){
-  # jq check
   which jq > /dev/null 2>&1 || { echo "jq (commandline JSON processor) is not installed. Aborting."; exit 1; }
   echo "${yellow}[  ${green}ok${yellow}  ]${reset} jq installed"
-  # awscli check
   which aws > /dev/null 2>&1 || { echo "awscli is not installed. Aborting."; exit 1; }
   echo "${yellow}[  ${green}ok${yellow}  ]${reset} awscli installed"
-  # awscli config check
   if [ ! -f ${HOME}/.aws/config ]; then
      echo "awscli not configured, run 'aws configure'. Aborting."; exit 1
   fi
   echo "${yellow}[  ${green}ok${yellow}  ]${reset} awscli configured"
-  # stax dot dir check
   if [ ! -d ~/.stax ]; then
     mkdir ~/.stax
   fi
   echo "${yellow}[  ${green}ok${yellow}  ]${reset} stax config dir available"
-  # stax config check
   if [ ! -f ~/.stax/config ]; then
     cp config/stax-config ${HOME}/.stax/config
   fi
   echo "${yellow}[  ${green}ok${yellow}  ]${reset} stax config file available"
   echo "${yellow}[  ${green}ok${yellow}  ]${reset} sourcing config file"
   stax-config
-  # awscli key check
   aws ec2 describe-key-pairs --key-names $STACK_KEY_PAIR --region $STACK_REGION > /dev/null 2>&1 || { echo "${yellow}[ ${red}ERRR${yellow} ]${reset} keypair $STACK_KEY_PAIR does not exit."; exit 1; }
 }
 
@@ -90,10 +84,6 @@ stax-config(){
 }
 
 stax-summary(){
-  #if [ ! -f $HOME/.stax/stax-name ]; then
-  #  echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
-  #  exit 1
-  #fi
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} stax summary"
   echo "${yellow}[ ${blue}info${yellow} ]${reset} stax name: $STACK_NAME"
   echo "${yellow}[ ${blue}info${yellow} ]${reset} instance type: $STACK_INSTANCE_TYPE"
@@ -122,54 +112,34 @@ stax-create(){
 }
 
 stax-describe(){
-  #aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
   aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1 || { echo "${yellow}[ ${cyan}----${yellow} ]${reset} no stax defined"; rm $HOME/.stax/stax-name; exit 1; }
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} describe $STACK_NAME"
-  #aws #ecloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
   aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
 }
 
 stax-list(){
-  #aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
-  #aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null 2>&1 || { echo "${yellow}[ ${cyan}----${yellow} ]${reset} no stax defined"; rm $HOME/.stax/stax-name; exit 1; }
-  #aws #ecloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
-  #aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STACK_NAME --output table
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} list all existing stax"
-  #TODO formating, more detail on output
   aws cloudformation list-stacks |jq '.StackSummaries[].StackName'
   exit 0
 }
 
 stax-getip(){
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} looking up public ip"
-  #aws ec2 describe-stacks --stack-name $STACK_NAME
-  #TODO formating, more detail on output
   aws ec2 describe-instances | jq '.Reservations[].Instances[].PublicIpAddress'
   exit 0
 }
 
 stax-destroy(){
-  # verify stack exists, then destroy
   aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation delete-stack --stack-name $STACK_NAME 
-  #echo "aws cloudformation describe-stacks --stack-name $STACK_NAME > /dev/null && aws cloudformation destroy-stack  --stack-name $STACK_NAME"
   rm $HOME/.stax/$STACK_NAME.json > /dev/null
   rm $HOME/.stax/stax-name > /dev/null
-  ###FIXME we need to delete the securty groups it created
-  ### (looks like they are getting deleted, only partial or broken jobs were leaving them behind. manually cleaned up)
 }
 
 stax-generate(){
-  #STACK_DISCOVERY_URL=$(curl -s https://discovery.etcd.io/new)
   STACK_DISCOVERY_URL=$(curl -s http://discovery.etcd.io/new)
-  #STACK_SSHFROM="$(curl -s https://ipecho.net/plain)/32"
   STACK_SSHFROM="$(curl -s http://icanhazip.com)/32"
-  #RANDOM_NAM=`shuf -n 1 config/stax-words`
   NUMW=`wc -l < config/stax-words`
   RANDOM_NAM=`head -$((${RANDOM} % ${NUMW} + 1)) config/stax-words | tail -1`
- # d -$((${RANDOM} % `wc -l < config/stax-words` + 1)) config/stax-words | tail -1`
-  #RANDOM_NUM=`< /dev/urandom tr -dc 0-9 | head -c${1:-4};`
-  #RANDOM_NUM=`< /dev/urandom tr -dc 0-9 | head -c${1:-4};`
-  #RANDOM_NUM=`jot -r 1 10001 99999`
   RANDOM_NUM=$((RANDOM%99999+10001))
 }
 
@@ -177,16 +147,10 @@ clear
 stax-colors
 stax-logo
 stax-preflight
-#stax-generate
-#stax-config
+
 if [ -f $HOME/.stax/stax-name ]; then
   STACK_NAME=`cat $HOME/.stax/stax-name`
 fi
-#if [ ! -f $HOME/.stax/stax-name ]; then
-#  STACK_NAME="$STACK_PRE_NAME-$RANDOM"
-#  echo $STACK_NAME > $HOME/.stax/stax-name
-#fi
-#stax-summary
 
 if [[ "$1" == "dryrun" ]]; then
   stax-existing
@@ -197,7 +161,6 @@ if [[ "$1" == "dryrun" ]]; then
 fi
 
 if [[ "$1" == "create" ]]; then
-  #stax-existing
   if [ -f $HOME/.stax/stax-name ]; then
     echo "${yellow}[ ${red}ERRR${yellow} ]${reset} existing stax defined, exiting";
     exit 1
@@ -212,7 +175,6 @@ fi
 
 if [[ "$1" == "describe" || "desc" ]]; then
   stax-existing
-  #stax-summary
   if [ -f $HOME/.stax/stax-name ]; then
     stax-describe
   else
@@ -232,19 +194,11 @@ if [[ "$1" == "getip" ]]; then
   fi
 fi
 
-#if [[ "$1" == "list-stax" ]]; then
-#    stax-list
-#    #echo "${yellow}[ ${cyan}----${yellow} ]${reset} creation complete"
-#    exit 0
-#fi
-
 if [[ "$1" == "destroy" ]]; then
   stax-existing
-  #stax-summary
   if [ -f $HOME/.stax/stax-name ]; then
     read -p "${yellow}[ ${cyan}????${yellow} ]${reset} ok to destroy $STACK_NAME [y/n]? " answer
     if [[ $answer = y ]] ; then
-        # run the command
         stax-destroy
         echo "${yellow}[ ${cyan}----${yellow} ]${reset} $STACK_NAME will be destroyd"
     fi
