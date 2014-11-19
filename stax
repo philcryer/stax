@@ -37,9 +37,12 @@ exit 1
 [ $# -gt 0 ] || stax-usage
 
 stax-logo(){
+#NUMM=`wc -l < config/stax-words`;head -$((${RANDOM} % ${NUMM} + 1)) config/stax-words | tail -1
+NUMS=`wc -l < config/stax-slogans`
   echo "${green}     _             "
 #  echo "    | | ${yellow}for aws ec2${green}"
-  echo "    | | ${yellow}`shuf -n 1 config/stax-slogans`${green}"
+  #echo "    | | ${yellow}`shuf -n 1 config/stax-slogans`${green}"
+  echo "    | | ${yellow}`head -$((${RANDOM} % ${NUMS} + 1)) config/stax-slogans | tail -1`${green}"
   echo " ___| |_ __ ___  __"
   echo '/ __| __/ _` \ \/ /'
   echo '\__ \ || (_| |>  < '
@@ -154,8 +157,14 @@ stax-generate(){
   STACK_DISCOVERY_URL=$(curl -s http://discovery.etcd.io/new)
   #STACK_SSHFROM="$(curl -s https://ipecho.net/plain)/32"
   STACK_SSHFROM="$(curl -s http://icanhazip.com)/32"
-  RANDOM_NAM=`shuf -n 1 config/stax-words`
-  RANDOM_NUM=`< /dev/urandom tr -dc 0-9 | head -c${1:-4};`
+  #RANDOM_NAM=`shuf -n 1 config/stax-words`
+  NUMW=`wc -l < config/stax-words`
+  RANDOM_NAM=`head -$((${RANDOM} % ${NUMW} + 1)) config/stax-words | tail -1`
+ # d -$((${RANDOM} % `wc -l < config/stax-words` + 1)) config/stax-words | tail -1`
+  #RANDOM_NUM=`< /dev/urandom tr -dc 0-9 | head -c${1:-4};`
+  #RANDOM_NUM=`< /dev/urandom tr -dc 0-9 | head -c${1:-4};`
+  #RANDOM_NUM=`jot -r 1 10001 99999`
+  RANDOM_NUM=$((RANDOM%99999+10001))
 }
 
 clear
