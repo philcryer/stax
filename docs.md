@@ -1,6 +1,6 @@
 # Stax
 
-Create cloud stacks/stax on AWS ([Amazon Web Services](aws.amazon.com)) quickly.
+Create cloud stacks (aka stax) on AWS ([Amazon Web Services](aws.amazon.com)) quickly.
 
 ## The stax project is based on work from
 
@@ -9,17 +9,6 @@ Create cloud stacks/stax on AWS ([Amazon Web Services](aws.amazon.com)) quickly.
     https://github.com/philcryer/coreos-aws-cloudformation
     and
     https://github.com/kelseyhightower/kubernetes-coreos
-
-## Stax runs [CoreOS](https://coreos.com/) instances on AWS EC2
-
-Configuration is handled by Cloud Formation, services installed via cloud-init are
-
-* etcd
-* fleet
-
-## Fleet is then used to deploy:
-
-* registry
 
 ## Requirements
 
@@ -50,38 +39,57 @@ brew install jq curl      # Apple OS X (via Homebrew)
 yum install jq curl       # Red Hat Enterprise Linux (RHEL), Amazon Linux, Centos ???test this
 ```
 
-## Manage Stacks
+## Stax runs [CoreOS](https://coreos.com/) instances on AWS EC2
+
+Configuration is handled by Cloud Formation, services installed via cloud-init are
+
+* etcd
+* fleet
+
+## Usage
+
 ```bash
 stax create     (create a new stack)
 stax describe   (describe the stack)
 stax update     (update the stack)
-stax delete     (delete the stack)
+stax destroy    (destroy the stack)
 ```
+
+## Create cluster
+
+Copy the config file and salt to taste
+
+```bash
+cp config.json.example config.json
+vi config.json
+```
+
+Run it
+
+```bash
+./stax create
+```
+
 ## Access cluster
 
-Get a public hostname or ip from one of your new instances from the AWS console (todo: with aws cli command line instructions)
-
-By Default, the SSH is only allowed from the IP address that you provisioned the stack. If you use a different machine, go to 
-the cosole to change the security group rules for port 22. Group name looks like <stack-name>-CoreOSSecurityGroup-.
-
-* Login to a machine
-```bash
-ssh -i <key>.pem core@ec2-54-214-201-163.us-west-2.compute.amazonaws.com
-```
-* Remote access in to a machine
+To access the hosts, get a PublicIP for one of the nodes from the AWS console (a work around for now), then ssh to it
 
 ```bash
-export FLEETCTL_TUNNEL={resolvable address of one of the cloud instances}
-coreos/list_units.sh
+ssh PUBLIC-IP -l core -i ~/.ssh/the-key-you-specified.pem
 ```
 
-## Access cluster
-You can test some changes to your cloud without needing to destroy and re-create. SCP your file to a host and:
+Once there you can see that it can see the other nodes via fleet
 
-``` bash
-sudo /usr/bin/coreos-cloudinit --from-file /tmp/user-data.yml
-```
-## Tear down
 ```bash
-stax delete
+fleetctl list-machines
+```
+
+Ta... da.
+
+## Tear it down
+
+This will delete the stax, as well as the cloudformation scripts, security groups, etc that it created.
+
+```bash
+stax destroy
 ```
