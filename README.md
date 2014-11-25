@@ -6,4 +6,4 @@
 
 **where?** _amazon, specifically aws ec2_
 
-**when?** _work in progress..._
+**when?** _work in progress...checkout the [docs](docs.md) to learn more_
