@@ -1,0 +1,10 @@
+[
+    {
+        "ParameterKey":     "KeyName",
+        "ParameterValue":   "<changeMe>"
+    },
+    {
+        "ParameterKey":     "PublicInstanceType",
+        "ParameterValue":   "t2.micro"
+    }
+]
