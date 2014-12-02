@@ -98,7 +98,7 @@ stax-create-vpc(){
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} creating $CLUSTER_SIZE nodes - $STAX_NAME"
   aws --color on cloudformation create-stack \
     --stack-name $STAX_NAME \
-    --template-body file://$SCRIPT_PATH/templates/cloudformation-template-vpc.json \
+    --template-body file://$SCRIPT_PATH/templates/cloudformation-template-vpc-var.json \
     --parameters "$(<config-vpc.json.tmp)"
 }
 
