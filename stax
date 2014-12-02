@@ -68,7 +68,7 @@ stax-preflight(){
   if [ ! -f ${HOME}/.aws/config ]; then
      echo "awscli not configured, run 'aws configure'. Aborting."; exit 1
   fi
-  if [ ! -f config.json ]; then
+  if [ ! -f config.json ] && [ ! -f config-vpc.json ]; then
      echo "config.json not configured, copy example and configure'. Aborting."; exit 1
   fi
 }
@@ -93,7 +93,7 @@ stax-create(){
 
 stax-create-vpc(){
   stax-generate-vpc
-  STAX_NAME="vpc.$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
+  STAX_NAME="vpc-$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
   echo $STAX_NAME > ~/.stax/stax-name
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} creating $CLUSTER_SIZE nodes - $STAX_NAME"
   aws --color on cloudformation create-stack \
@@ -139,7 +139,7 @@ stax-generate-vpc(){
   if [ ! -f config-vpc.json ]; then
      echo "config-vpc.json not configured, copy example and configure'. Aborting."; exit 1
   fi
-  cp config-vpc.json config.json.tmp
+  cp config-vpc.json config-vpc.json.tmp
   NUMW=`wc -l < config/stax-words`
   RANDOM_NAM=`head -$((${RANDOM} % ${NUMW} + 1)) config/stax-words | tail -1`
   RANDOM_NUM=$((RANDOM%99999+10001))
