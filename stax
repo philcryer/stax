@@ -115,8 +115,8 @@ stax-describe(){
 }
 
 stax-list(){
-  echo "${yellow}[ ${cyan}----${yellow} ]${reset} list all existing stax"
-  aws cloudformation list-stacks |jq '.StackSummaries[].StackName'
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} list all running stax"
+  aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE
   exit 0
 }
 
@@ -162,6 +162,10 @@ stax-preflight
 
 if [ -f $HOME/.stax/stax-name ]; then
   STAX_NAME=`cat $HOME/.stax/stax-name`
+fi
+
+if [[ "$1" == "list" ]]; then
+  stax-list
 fi
 
 if [[ "$1" == "dryrun" ]]; then
