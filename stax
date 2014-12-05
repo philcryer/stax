@@ -32,6 +32,7 @@ echo "Usage: stax command"
 
 echo; echo "Commands:"
 echo "  create            Create new stax"
+echo "  create-vpc        Create new VPC stax"
 echo "  describe | desc   Describe created stax"
 echo "  getip             Get the public, or elastic IP of created stax"
 echo "  destroy           Destroy existing stax"
@@ -67,7 +68,11 @@ stax-preflight(){
   if [ ! -f ${HOME}/.aws/config ]; then
      echo "awscli not configured, run 'aws configure'. Aborting."; exit 1
   fi
-  if [ ! -f config.json ]; then
+  if [ ! -d ${HOME}/.stax ]; then
+      mkdir -p ${HOME}/.stax
+      echo "creating directory ${HOME}/.stax"; exit 1
+  fi
+  if [ ! -f config.json ] && [ ! -f config-vpc.json ]; then
      echo "config.json not configured, copy example and configure'. Aborting."; exit 1
   fi
 }
@@ -90,10 +95,24 @@ stax-create(){
     --parameters "$(<config.json.tmp)"
 }
 
+stax-create-vpc(){
+  stax-generate-vpc
+  STAX_NAME="vpc-$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
+  echo $STAX_NAME > ~/.stax/stax-name
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} creating $CLUSTER_SIZE nodes - $STAX_NAME"
+  aws --color on cloudformation create-stack \
+    --stack-name $STAX_NAME \
+    --template-body file://$SCRIPT_PATH/templates/cloudformation-template-vpc-var.json \
+    --parameters "$(<config-vpc.json.tmp)"
+}
+
 stax-describe(){
   aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null 2>&1 || { echo "${yellow}[ ${cyan}----${yellow} ]${reset} no stax defined"; rm $HOME/.stax/stax-name; exit 1; }
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} describe $STAX_NAME"
-  aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STAX_NAME --output table
+  #aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STAX_NAME --output table
+  aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STAX_NAME 
+  aws cloudformation describe-stacks --stack-name $STAX_NAME > ~/.stax/$STAX_NAME.json
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} saved to ~/.stax/$STAX_NAME.json"
 }
 
 stax-list(){
@@ -110,12 +129,26 @@ stax-getip(){
 
 stax-destroy(){
   aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null && aws cloudformation delete-stack --stack-name $STAX_NAME 
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} removing ~/.stax/stax-name"
   rm $HOME/.stax/$STAX_NAME.json > /dev/null
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} removing ~/.stax/$STAX_NAME.json"
   rm $HOME/.stax/stax-name > /dev/null
 }
 
 stax-generate(){
   cp config.json config.json.tmp
+  SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i "s/SSH_FROM/${SSH_FROM}/g" config.json.tmp
+  DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i "s|DISCOVERY_URL|${DISCOVERY_URL}|g" config.json.tmp
+  NUMW=`wc -l < config/stax-words`
+  RANDOM_NAM=`head -$((${RANDOM} % ${NUMW} + 1)) config/stax-words | tail -1`
+  RANDOM_NUM=$((RANDOM%99999+10001))
+}
+
+stax-generate-vpc(){
+  if [ ! -f config-vpc.json ]; then
+     echo "config-vpc.json not configured, copy example and configure'. Aborting."; exit 1
+  fi
+  cp config-vpc.json config-vpc.json.tmp
   SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i "s/SSH_FROM/${SSH_FROM}/g" config.json.tmp
   DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i "s|DISCOVERY_URL|${DISCOVERY_URL}|g" config.json.tmp
   NUMW=`wc -l < config/stax-words`
@@ -147,8 +180,21 @@ if [[ "$1" == "create" ]]; then
   else
     stax-create
     stax-describe
-    aws cloudformation describe-stacks --stack-name $STAX_NAME > ~/.stax/$STAX_NAME.json
+    #aws cloudformation describe-stacks --stack-name $STAX_NAME > ~/.stax/$STAX_NAME.json
     rm config.json.tmp
+    exit 0
+  fi
+fi
+
+if [[ "$1" == "create-vpc" ]]; then
+  if [ -f $HOME/.stax/stax-name ]; then
+    echo "${yellow}[ ${red}ERRR${yellow} ]${reset} existing stax defined, exiting";
+    exit 1
+  else
+    stax-create-vpc
+    stax-describe
+    #aws cloudformation describe-stacks --stack-name $STAX_NAME > ~/.stax/$STAX_NAME.json
+    rm config-vpc.json.tmp
     exit 0
   fi
 fi
@@ -174,7 +220,7 @@ if [[ "$1" == "destroy" ]]; then
     read -p "${yellow}[ ${cyan}????${yellow} ]${reset} ok to destroy $STAX_NAME [y/n]? " answer
     if [[ $answer = y ]] ; then
         stax-destroy
-        echo "${yellow}[ ${cyan}----${yellow} ]${reset} $STAX_NAME will be destroyd"
+        echo "${yellow}[ ${cyan}----${yellow} ]${reset} $STAX_NAME will be destroyed"
     fi
   else
     echo "${yellow}[ ${cyan}----${yellow} ]${reset} could not destroy $STAX_NAME, check name"

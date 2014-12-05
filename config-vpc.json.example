@@ -6,5 +6,29 @@
     {
         "ParameterKey":     "PublicInstanceType",
         "ParameterValue":   "t2.micro"
+    },
+    {
+        "ParameterKey":     "KeyPair",
+        "ParameterValue":   "<changeMe>"
+    },
+    {
+        "ParameterKey":     "InstanceType",
+        "ParameterValue":   "m3.medium"
+    },
+    {
+        "ParameterKey":     "AdvertisedIPAddress",
+        "ParameterValue":   "private"
+    },
+    {
+        "ParameterKey":     "ClusterSize",
+        "ParameterValue":   "3"
+    },
+    {
+        "ParameterKey":     "AllowSSHFrom",
+        "ParameterValue":   "SSH_FROM"
+    },
+    {
+        "ParameterKey":     "DiscoveryURL",
+        "ParameterValue":   "DISCOVERY_URL"
     }
 ]
