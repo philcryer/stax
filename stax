@@ -102,7 +102,7 @@ stax-create-vpc(){
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} creating $CLUSTER_SIZE nodes - $STAX_NAME"
   aws --color on cloudformation create-stack \
     --stack-name $STAX_NAME \
-    --template-body file://$SCRIPT_PATH/templates/cloudformation-template-vpc-var.json \
+    --template-body file://$SCRIPT_PATH/templates/cloudformation-template-vpc.json \
     --parameters "$(<config-vpc.json.tmp)"
 }
 
@@ -148,8 +148,8 @@ stax-generate-vpc(){
      echo "config-vpc.json not configured, copy example and configure'. Aborting."; exit 1
   fi
   cp config-vpc.json config-vpc.json.tmp
-  SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i "s/SSH_FROM/${SSH_FROM}/g" config.json.tmp
-  DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i "s|DISCOVERY_URL|${DISCOVERY_URL}|g" config.json.tmp
+  SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i "s/SSH_FROM/${SSH_FROM}/g" config-vpc.json.tmp
+  DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i "s|DISCOVERY_URL|${DISCOVERY_URL}|g" config-vpc.json.tmp
   NUMW=`wc -l < config/stax-words`
   RANDOM_NAM=`head -$((${RANDOM} % ${NUMW} + 1)) config/stax-words | tail -1`
   RANDOM_NUM=$((RANDOM%99999+10001))
