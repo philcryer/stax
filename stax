@@ -70,7 +70,7 @@ stax-preflight(){
   fi
   if [ ! -d ${HOME}/.stax ]; then
       mkdir -p ${HOME}/.stax
-      echo "creating directory ${HOME}/.stax"; exit 1
+      echo "creating directory ${HOME}/.stax"
   fi
   if [ ! -f config.json ] && [ ! -f config-vpc.json ]; then
      echo "config.json not configured, copy example and configure'. Aborting."; exit 1
