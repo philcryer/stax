@@ -8,11 +8,7 @@
         "ParameterValue":   "t2.micro"
     },
     {
-        "ParameterKey":     "KeyPair",
-        "ParameterValue":   "<changeMe>"
-    },
-    {
-        "ParameterKey":     "InstanceType",
+        "ParameterKey":     "DockerInstanceType",
         "ParameterValue":   "m3.medium"
     },
     {
