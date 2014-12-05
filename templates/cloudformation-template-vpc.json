@@ -1,6 +1,6 @@
 {
    "AWSTemplateFormatVersion":"2010-09-09",
-   "Description":"Lab 4: HA NAT with Monitoring: Lab showing how to create two NAT nodes in a new VPC in an active/active configuration. After successfully launching this CloudFormation stack, you will have 4 subnets in 2 AZs (a pair of public/private subnets in each AZ), with NAT instances routing outbound traffic for their respective private subnets.  The NAT instances will automatically monitor each other and fix outbound routing problems if the other instance is unavailable.",
+   "Description":"Autoscaling group of Docker engines in dual AZ VPC with two NAT nodes in an active/active configuration. After successfully launching this CloudFormation stack, you will have 4 subnets in 2 AZs (a pair of public/private subnets in each AZ), with NAT instances routing outbound traffic for their respective private subnets.  The NAT instances will automatically monitor each other and fix outbound routing problems if the other instance is unavailable.  The Docker engine autoscaling group will deploy to the private subnets.",
    "Parameters":{  
       "KeyName":{  
          "Description":"Name of an existing EC2 KeyPair to enable SSH access to the instances",
@@ -959,7 +959,20 @@
       "CoreOSServerAutoScale": {
          "Type": "AWS::AutoScaling::AutoScalingGroup",
          "Properties": {
-            "AvailabilityZones": {"Fn::GetAZs": ""},
+            "AvailabilityZones": [{
+               "Fn::Select":[
+                  0,
+                  {
+                     "Fn::GetAZs":""
+                  }
+               ],
+               "Fn::Select":[
+                  1,
+                  {
+                     "Fn::GetAZs":""
+                  }
+               ]
+            }],
             "LaunchConfigurationName": {"Ref": "CoreOSServerLaunchConfig"},
             "MinSize": "3",
             "MaxSize": "12",
