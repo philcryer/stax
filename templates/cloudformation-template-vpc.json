@@ -77,7 +77,7 @@
          "Description":"The number of seconds to wait for alternate NAT node to restart before resuming health checks again",
          "Type":"String",
          "Default":"300"
-      }
+      },
       "DockerInstanceType" : {
          "Description" : "EC2 HVM instance type (m3.medium, etc).",
          "Type" : "String",
@@ -106,10 +106,6 @@
          "Description": "The net block (CIDR) that SSH is available to.",
          "Default": "0.0.0.0/0",
          "Type": "String"
-      },
-      "KeyPair" : {
-         "Description" : "The name of an EC2 Key Pair to allow SSH access to the instance.",
-         "Type" : "String"
       }
    },
     "Mappings": {
@@ -938,7 +934,7 @@
       "CoreOSServerLaunchConfig": {
          "Type": "AWS::AutoScaling::LaunchConfiguration",
          "Properties": {
-            "ImageId" : { "Fn::FindInMap" : [ "RegionMap", { "Ref" : "AWS::Region" }, "CoreOSAlphaAMI" ]},
+            "ImageId" : { "Fn::FindInMap" : [ "CoreOSAlphaAMI", { "Ref" : "AWS::Region" }, "AMI" ]},
             "InstanceType": {"Ref": "DockerInstanceType"},
             "KeyName": {"Ref": "KeyName"},
             "SecurityGroups": [{"Ref": "CoreOSSecurityGroup"}],
@@ -959,7 +955,7 @@
                }
             }
          }
-      }
+      },
       "CoreOSServerAutoScale": {
          "Type": "AWS::AutoScaling::AutoScalingGroup",
          "Properties": {
@@ -969,7 +965,9 @@
             "MaxSize": "12",
             "DesiredCapacity": {"Ref": "ClusterSize"},
             "HealthCheckType": "EC2",
-            "VPCZoneIdentifier": [ "Ref": "PriSubnet1", "Ref": "PriSubnet2" ]
+            "VPCZoneIdentifier": [ 
+                {"Ref": "PriSubnet1", "Ref": "PriSubnet2"}
+            ],
             "Tags": [
                 {"Key": "Name", "Value": { "Ref" : "AWS::StackName" }, "PropagateAtLaunch": true}
             ]
@@ -1061,15 +1059,6 @@
             ]
          }
       },
-      "Private1":{  
-         "Description":"Private #1 Internal Private IP",
-         "Value":{  
-            "Fn::GetAtt":[  
-               "PrivateSubnet1Instance",
-               "PrivateIp"
-            ]
-         }
-      },
       "PublicSubnet2":{  
          "Description":"Public Subnet #2",
          "Value":{  
@@ -1133,15 +1122,6 @@
                      ]
                   }
                ]
-            ]
-         }
-      },
-      "Private2":{  
-         "Description":"Private #2 Internal Private IP",
-         "Value":{  
-            "Fn::GetAtt":[  
-               "PrivateSubnet2Instance",
-               "PrivateIp"
             ]
          }
       }
