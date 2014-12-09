@@ -86,10 +86,10 @@
          "ConstraintDescription" : "Must be a valid EC2 HVM instance type."
       },
       "ClusterSize": {
-         "Default": "3",
-         "MinValue": "3",
+         "Default": "2",
+         "MinValue": "2",
          "MaxValue": "12",
-         "Description": "Number of nodes in cluster (3-12).",
+         "Description": "Number of nodes in cluster (2-12).",
          "Type": "Number"
       },
       "DiscoveryURL": {
@@ -215,17 +215,10 @@
       "PubSubnet1":{  
          "Type":"AWS::EC2::Subnet",
          "Properties":{  
-            "VpcId":{  
+            "VpcId":{
                "Ref":"VPC"
             },
-            "AvailabilityZone":{  
-               "Fn::Select":[  
-                  0,
-                  {  
-                     "Fn::GetAZs":""
-                  }
-               ]
-            },
+            "AvailabilityZone":"us-east-1a",
             "CidrBlock":{  
                "Ref":"PublicSubnet1"
             },
@@ -246,17 +239,10 @@
       "PriSubnet1":{  
          "Type":"AWS::EC2::Subnet",
          "Properties":{  
-            "VpcId":{  
+            "VpcId":{
                "Ref":"VPC"
             },
-            "AvailabilityZone":{  
-               "Fn::Select":[  
-                  0,
-                  {  
-                     "Fn::GetAZs":""
-                  }
-               ]
-            },
+            "AvailabilityZone":"us-east-1a",
             "CidrBlock":{  
                "Ref":"PrivateSubnet1"
             },
@@ -277,17 +263,10 @@
       "PubSubnet2":{  
          "Type":"AWS::EC2::Subnet",
          "Properties":{  
-            "VpcId":{  
+            "VpcId":{
                "Ref":"VPC"
             },
-            "AvailabilityZone":{  
-               "Fn::Select":[  
-                  1,
-                  {  
-                     "Fn::GetAZs":""
-                  }
-               ]
-            },
+            "AvailabilityZone":"us-east-1b",
             "CidrBlock":{  
                "Ref":"PublicSubnet2"
             },
@@ -308,17 +287,10 @@
       "PriSubnet2":{  
          "Type":"AWS::EC2::Subnet",
          "Properties":{  
-            "VpcId":{  
+            "VpcId":{
                "Ref":"VPC"
             },
-            "AvailabilityZone":{  
-               "Fn::Select":[  
-                  1,
-                  {  
-                     "Fn::GetAZs":""
-                  }
-               ]
-            },
+            "AvailabilityZone":"us-east-1b",
             "CidrBlock":{  
                "Ref":"PrivateSubnet2"
             },
@@ -356,7 +328,7 @@
       "GatewayToInternet":{  
          "Type":"AWS::EC2::VPCGatewayAttachment",
          "Properties":{  
-            "VpcId":{  
+            "VpcId":{
                "Ref":"VPC"
             },
             "InternetGatewayId":{  
@@ -367,7 +339,7 @@
       "PublicRouteTable":{  
          "Type":"AWS::EC2::RouteTable",
          "Properties":{  
-            "VpcId":{  
+            "VpcId":{
                "Ref":"VPC"
             },
             "Tags":[  
@@ -399,7 +371,7 @@
       "PrivateRouteTable1":{  
          "Type":"AWS::EC2::RouteTable",
          "Properties":{  
-            "VpcId":{  
+            "VpcId":{
                "Ref":"VPC"
             },
             "Tags":[  
@@ -431,7 +403,7 @@
       "PrivateRouteTable2":{  
          "Type":"AWS::EC2::RouteTable",
          "Properties":{  
-            "VpcId":{  
+            "VpcId":{
                "Ref":"VPC"
             },
             "Tags":[  
@@ -508,7 +480,7 @@
          "Type":"AWS::EC2::SecurityGroup",
          "Properties":{  
             "GroupDescription":"Rules for allowing access to public subnet nodes",
-            "VpcId":{  
+            "VpcId":{
                "Ref":"VPC"
             },
             "SecurityGroupIngress":[  
@@ -883,7 +855,7 @@
          "Type":"AWS::EC2::SecurityGroup",
          "Properties":{  
             "GroupDescription":"Rules for allowing access to private subnet nodes",
-            "VpcId":{  
+            "VpcId":{
                "Ref":"VPC"
             },
             "SecurityGroupIngress":[  
@@ -910,25 +882,39 @@
          "Type": "AWS::EC2::SecurityGroup",
          "Properties": {
             "GroupDescription": "CoreOS SecurityGroup",
+            "VpcId":{
+               "Ref":"VPC"
+            },
             "SecurityGroupIngress": [
-              {"IpProtocol": "tcp", "FromPort": "22", "ToPort": "22", "CidrIp": {"Ref": "AllowSSHFrom"}}
+               {
+                  "IpProtocol": "tcp",
+                  "CidrIp":{
+                     "Ref":"VpcCidr"
+                  },
+                  "FromPort": "22",
+                  "ToPort": "22"
+               }
             ]
          }
       },
       "Ingress4001": {
          "Type": "AWS::EC2::SecurityGroupIngress",
          "Properties": {
-            "GroupName": {"Ref": "CoreOSSecurityGroup"}, "IpProtocol": "tcp", "FromPort": "4001", "ToPort": "4001", "SourceSecurityGroupId": {
-              "Fn::GetAtt" : [ "CoreOSSecurityGroup", "GroupId" ] 
-            }
+            "GroupId": {"Ref": "CoreOSSecurityGroup"},
+            "IpProtocol": "tcp",
+            "FromPort": "4001",
+            "ToPort": "4001",
+            "SourceSecurityGroupId": {"Ref": "CoreOSSecurityGroup"}
          }
       },
       "Ingress7001": {
          "Type": "AWS::EC2::SecurityGroupIngress",
          "Properties": {
-            "GroupName": {"Ref": "CoreOSSecurityGroup"}, "IpProtocol": "tcp", "FromPort": "7001", "ToPort": "7001", "SourceSecurityGroupId": {
-              "Fn::GetAtt" : [ "CoreOSSecurityGroup", "GroupId" ] 
-            } 
+            "GroupId": {"Ref": "CoreOSSecurityGroup"},
+            "IpProtocol": "tcp",
+            "FromPort": "7001",
+            "ToPort": "7001",
+            "SourceSecurityGroupId": {"Ref": "CoreOSSecurityGroup"}
          }
       },
       "CoreOSServerLaunchConfig": {
@@ -959,27 +945,15 @@
       "CoreOSServerAutoScale": {
          "Type": "AWS::AutoScaling::AutoScalingGroup",
          "Properties": {
-            "AvailabilityZones": [{
-               "Fn::Select":[
-                  0,
-                  {
-                     "Fn::GetAZs":""
-                  }
-               ],
-               "Fn::Select":[
-                  1,
-                  {
-                     "Fn::GetAZs":""
-                  }
-               ]
-            }],
+            "AvailabilityZones": ["us-east-1a","us-east-1b"],
             "LaunchConfigurationName": {"Ref": "CoreOSServerLaunchConfig"},
-            "MinSize": "3",
+            "MinSize": "2",
             "MaxSize": "12",
             "DesiredCapacity": {"Ref": "ClusterSize"},
             "HealthCheckType": "EC2",
-            "VPCZoneIdentifier": [ 
-                {"Ref": "PriSubnet1", "Ref": "PriSubnet2"}
+            "VPCZoneIdentifier": [
+                {"Ref": "PriSubnet1"},
+                {"Ref": "PriSubnet2"}
             ],
             "Tags": [
                 {"Key": "Name", "Value": { "Ref" : "AWS::StackName" }, "PropagateAtLaunch": true}
