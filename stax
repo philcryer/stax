@@ -84,6 +84,14 @@ stax-summary(){
   echo "${yellow}[ ${blue}info${yellow} ]${reset} allow ssh from: $SSH_FROM"
 }
 
+stax-validate(){
+  template="$1"
+  if ! aws --color on cloudformation validate-template --template-body "$template" > /dev/null; then
+    echo "$pkg: cloudformation template failed to validate. Aborting"
+    exit 2
+  fi
+}
+
 stax-create(){
   stax-generate
   STAX_NAME="$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
@@ -97,12 +105,14 @@ stax-create(){
 
 stax-create-vpc(){
   stax-generate-vpc
+  template="file://$SCRIPT_PATH/templates/cloudformation-template-vpc.json"
+  stax-validate "$template"
   STAX_NAME="vpc-$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
   echo $STAX_NAME > ~/.stax/stax-name
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} creating $CLUSTER_SIZE nodes - $STAX_NAME"
   aws --color on cloudformation create-stack \
     --stack-name $STAX_NAME \
-    --template-body file://$SCRIPT_PATH/templates/cloudformation-template-vpc.json \
+    --template-body "$template" \
     --parameters "$(<config-vpc.json.tmp)"
 }
 
