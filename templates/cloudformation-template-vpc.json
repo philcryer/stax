@@ -111,18 +111,32 @@
     "Mappings": {
         "CoreOSAlphaAMI": {
             "us-east-1": {
+                "AMI": "ami-1299fe7a"
+            }, 
+            "us-west-1": {
+                "AMI": "ami-37766472"
+            }, 
+            "us-west-2": {
+                "AMI": "ami-c71d4cf7"
+            },
+            "eu-west-1": {
+                "AMI": "ami-748b3403"
+            }
+        },
+        "AmazonLinuxAMI": {
+            "us-east-1": {
                 "AMI": "ami-b66ed3de"
             }, 
             "us-west-1": {
                 "AMI": "ami-4b6f650e"
-            }, 
+            },
             "us-west-2": {
                 "AMI": "ami-b5a7ea85"
             },
             "eu-west-1": {
                 "AMI": "ami-6e7bd919"
             }
-        }, 
+        },
         "AWSNATAMI": {
             "us-east-1": {
                 "AMI": "ami-6e9e4b06"
@@ -476,6 +490,94 @@
             }
          }
       },
+      "JumpSecurityGroup":{  
+         "Type":"AWS::EC2::SecurityGroup",
+         "Properties":{  
+            "GroupDescription":"Rules for allowing access to public subnet nodes",
+            "VpcId":{
+               "Ref":"VPC"
+            },
+            "SecurityGroupIngress":[  
+               {  
+                  "IpProtocol":"tcp",
+                  "CidrIp":{
+                     "Ref": "AllowSSHFrom"
+                  },
+                  "FromPort":"22",
+                  "ToPort":"22"
+               }
+            ],
+            "Tags":[  
+               {  
+                  "Key":"Name",
+                  "Value":{
+                     "Fn::Join":[
+                        "-",
+                        [
+                           "jump",
+                           {
+                               "Ref":"AWS::StackName"
+                           }
+                        ]
+                     ]
+                  }
+               }
+            ]
+         }
+      },
+      "JumpInstance":{  
+         "Type":"AWS::EC2::Instance",
+         "Properties":{  
+            "InstanceType":{  
+               "Ref":"PublicInstanceType"
+            },
+            "KeyName":{  
+               "Ref":"KeyName"
+            },
+            "SubnetId":{  
+               "Ref":"PubSubnet1"
+            },
+            "ImageId":{  
+               "Fn::FindInMap":[  
+                  "AmazonLinuxAMI",
+                  {  
+                     "Ref":"AWS::Region"
+                  },
+                  "AMI"
+               ]
+            },
+            "SecurityGroupIds":[  
+               {  
+                  "Ref":"JumpSecurityGroup"
+               }
+            ],
+            "Tags":[  
+               {  
+                  "Key":"Name",
+                  "Value":{
+                     "Fn::Join":[
+                        "-",
+                        [
+                           "jump",
+                           {
+                               "Ref":"AWS::StackName"
+                           }
+                        ]
+                     ]
+                  }
+               }
+            ]
+         }
+      },
+      "JumpEIP":{  
+         "Type":"AWS::EC2::EIP",
+         "Properties":{  
+            "Domain":"vpc",
+            "InstanceId":{  
+               "Ref":"JumpInstance"
+            }
+         }
+      },
       "NATSecurityGroup":{  
          "Type":"AWS::EC2::SecurityGroup",
          "Properties":{  
@@ -486,7 +588,9 @@
             "SecurityGroupIngress":[  
                {  
                   "IpProtocol":"tcp",
-                  "CidrIp":"0.0.0.0/0",
+                  "SourceSecurityGroupId":{
+                     "Ref":"JumpSecurityGroup"
+                  },
                   "FromPort":"22",
                   "ToPort":"22"
                },
@@ -505,6 +609,22 @@
                   "CidrIp":"0.0.0.0/0",
                   "FromPort":"0",
                   "ToPort":"65535"
+               }
+            ],
+            "Tags":[  
+               {  
+                  "Key":"Name",
+                  "Value":{
+                     "Fn::Join":[
+                        "-",
+                        [
+                           "nat",
+                           {
+                               "Ref":"AWS::StackName"
+                           }
+                        ]
+                     ]
+                  }
                }
             ]
          }
@@ -559,7 +679,17 @@
             "Tags":[  
                {  
                   "Key":"Name",
-                  "Value":"NAT #1"
+                  "Value":{
+                     "Fn::Join":[
+                        "-",
+                        [
+                           "nat1",
+                           {
+                               "Ref":"AWS::StackName"
+                           }
+                        ]
+                     ]
+                  }
                }
             ],
             "UserData":{  
@@ -729,7 +859,17 @@
             "Tags":[  
                {  
                   "Key":"Name",
-                  "Value":"NAT #2"
+                  "Value":{
+                     "Fn::Join":[
+                        "-",
+                        [
+                           "nat2",
+                           {
+                               "Ref":"AWS::StackName"
+                           }
+                        ]
+                     ]
+                  }
                }
             ],
             "UserData":{  
@@ -851,33 +991,6 @@
             }
          }
       },
-      "PrivateSubnetSecurityGroup":{  
-         "Type":"AWS::EC2::SecurityGroup",
-         "Properties":{  
-            "GroupDescription":"Rules for allowing access to private subnet nodes",
-            "VpcId":{
-               "Ref":"VPC"
-            },
-            "SecurityGroupIngress":[  
-               {  
-                  "IpProtocol":"tcp",
-                  "CidrIp":{  
-                     "Ref":"VpcCidr"
-                  },
-                  "FromPort":"22",
-                  "ToPort":"22"
-               }
-            ],
-            "SecurityGroupEgress":[  
-               {  
-                  "IpProtocol":"-1",
-                  "CidrIp":"0.0.0.0/0",
-                  "FromPort":"0",
-                  "ToPort":"65535"
-               }
-            ]
-         }
-      },
       "CoreOSSecurityGroup": {
          "Type": "AWS::EC2::SecurityGroup",
          "Properties": {
@@ -888,11 +1001,35 @@
             "SecurityGroupIngress": [
                {
                   "IpProtocol": "tcp",
-                  "CidrIp":{
-                     "Ref":"VpcCidr"
+                  "SourceSecurityGroupId":{
+                     "Ref":"JumpSecurityGroup"
                   },
                   "FromPort": "22",
                   "ToPort": "22"
+               }
+            ],
+            "SecurityGroupEgress":[  
+               {  
+                  "IpProtocol":"-1",
+                  "CidrIp":"0.0.0.0/0",
+                  "FromPort":"0",
+                  "ToPort":"65535"
+               }
+            ],
+            "Tags":[  
+               {  
+                  "Key":"Name",
+                  "Value":{
+                     "Fn::Join":[
+                        "-",
+                        [
+                           "docker",
+                           {
+                               "Ref":"AWS::StackName"
+                           }
+                        ]
+                     ]
+                  }
                }
             ]
          }
@@ -956,7 +1093,21 @@
                 {"Ref": "PriSubnet2"}
             ],
             "Tags": [
-                {"Key": "Name", "Value": { "Ref" : "AWS::StackName" }, "PropagateAtLaunch": true}
+               {
+                  "Key":"Name",
+                  "Value":{
+                     "Fn::Join":[
+                        "-",
+                        [
+                           "docker",
+                           {
+                               "Ref":"AWS::StackName"
+                           }
+                        ]
+                     ]
+                  },
+                  "PropagateAtLaunch":true
+               }
             ]
          }
       }
