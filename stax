@@ -6,11 +6,6 @@ set -e
 #   stax - for aws ec2 - https://github.com/philcryer/stax
 #   https://github.com/philcryer/stax/blob/master/LICENSE
 #               "this should work(tm)!"
-#
-#   TODO
-#   * better formating with more (specific) details in jq output
-#   * dance like no ones watching
-#   * learn conversational german
 ##################################################################
 
 STAX_PRE_NAME="stax"
@@ -33,10 +28,12 @@ echo "Usage: stax command"
 echo; echo "Commands:"
 echo "  create            Create new stax"
 echo "  create-vpc        Create new VPC stax"
-echo "  describe | desc   Describe created stax"
-echo "  getip             Get the public, or elastic IP of created stax"
+echo "  describe |desc    Describe created stax"
+#echo "  getip                 Get the public, or elastic IP of created stax"
+echo "  list              List all currently built and running stax"
 echo "  destroy           Destroy existing stax"
-echo "  dryrun            Don't do anything, just show what would be done"
+#echo "  test <template> Validate a template that is called out"
+#echo "  dryrun            Don't do anything, just show what would be done"
 
 echo; echo "For more help, check the docs; https://github.com/philcryer/stax"
 exit 1
@@ -61,6 +58,24 @@ stax-existing(){
     exit 1
   fi
 }
+
+#stax-test(){
+#  if [ ! -z "${2}" ]; then
+#    echo "${yellow}[ ${red}ERRR${yellow} ]${reset} template not defined"
+#    echo "${yellow}[ ${red}ERRR${yellow} ]${reset} stax validate <template>"
+#    exit 1
+#  else
+#    echo "${yellow}[ ${blue}info${yellow} ]${reset} validating template ${2}"
+#    echo ${2}
+#    template="file://$2"
+#    echo "$template"
+#    stax-validate "$template"
+#   # aws cloudformation validate-template --template-url ${2}
+#    echo "aws cloudformation validate-template --template-body file://\$\{2\}"
+#    #aws cloudformation validate-template --template-body file://${2}
+#    exit 1
+#  fi
+#}
 
 stax-preflight(){
   which jq > /dev/null 2>&1 || { echo "jq (commandline JSON processor) is not installed. Aborting."; exit 1; }
@@ -130,11 +145,11 @@ stax-list(){
   exit 0
 }
 
-stax-getip(){
-  echo "${yellow}[ ${cyan}----${yellow} ]${reset} looking up public ip"
-  aws ec2 describe-instances | jq '.Reservations[].Instances[].PublicIpAddress'
-  exit 0
-}
+#stax-getip(){
+#  echo "${yellow}[ ${cyan}----${yellow} ]${reset} looking up public ip"
+#  aws ec2 describe-instances | jq '.Reservations[].Instances[].PublicIpAddress'
+#  exit 0
+#}
 
 stax-destroy(){
   aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null && aws cloudformation delete-stack --stack-name $STAX_NAME 
@@ -168,6 +183,11 @@ stax-generate-vpc(){
 clear
 stax-colors
 stax-logo
+
+#if [[ "$1" == "test" ]]; then
+#  stax-test
+#fi
+
 stax-preflight
 
 if [ -f $HOME/.stax/stax-name ]; then
@@ -220,10 +240,10 @@ if [[ "$1" == "describe" || "desc" ]]; then
   fi
 fi
 
-if [[ "$1" == "getip" ]]; then
-  stax-existing
-  stax-getip
-fi
+#if [[ "$1" == "getip" ]]; then
+#  stax-existing
+#  stax-getip
+#fi
 
 if [[ "$1" == "destroy" ]]; then
   stax-existing
