@@ -11,6 +11,7 @@ set -e
 STAX_PRE_NAME="stax"
 COREOS_CHANNEL="alpha"
 SCRIPT_PATH=$( cd $(dirname $0) ; pwd -P )
+aws="aws --color on"
 
 stax-colors(){
   green=$(tput setaf 2)
@@ -102,7 +103,8 @@ stax-summary(){
 
 stax-validate(){
   template="$1"
-  if ! aws --color on cloudformation validate-template --template-body "$template" > /dev/null; then
+  echo "$template"
+  if ! $aws cloudformation validate-template --template-url "$template" > /dev/null; then
     echo "$pkg: cloudformation template failed to validate. Aborting"
     exit 2
   fi
@@ -113,7 +115,7 @@ stax-create(){
   STAX_NAME="$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
   echo $STAX_NAME > ~/.stax/stax-name
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} creating $CLUSTER_SIZE nodes - $STAX_NAME"
-  aws --color on cloudformation create-stack \
+  $aws cloudformation create-stack \
     --stack-name $STAX_NAME \
     --template-body file://$SCRIPT_PATH/templates/cloudformation-template-$COREOS_CHANNEL.json \
     --parameters "$(<config.json.tmp)"
@@ -121,15 +123,21 @@ stax-create(){
 
 stax-create-vpc(){
   stax-generate-vpc
-  template="file://$SCRIPT_PATH/templates/cloudformation-template-vpc.json"
-  stax-validate "$template"
   STAX_NAME="vpc-$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
+  # upload template to s3 to have bigger size limits
+  bucket="mon-$STAX_NAME"
+  template="$bucket/$STAX_NAME.json"
+  template_url="https://s3.amazonaws.com/$template"
+  $aws s3 mb "s3://$bucket"
+  $aws s3 cp "$SCRIPT_PATH/templates/cloudformation-template-vpc.json" "s3://$template"
+  stax-validate "$template_url"
   echo $STAX_NAME > ~/.stax/stax-name
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} creating $CLUSTER_SIZE nodes - $STAX_NAME"
-  aws --color on cloudformation create-stack \
+  $aws cloudformation create-stack \
     --stack-name $STAX_NAME \
-    --template-body "$template" \
+    --template-url "$template_url" \
     --parameters "$(<config-vpc.json.tmp)"
+  $aws s3 rb --force "s3://$bucket"
 }
 
 stax-describe(){
