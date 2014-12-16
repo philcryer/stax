@@ -48,6 +48,10 @@
     "ParameterValue":   "2"
   },
   {
+    "ParameterKey":     "AutoScaleCooldown",
+    "ParameterValue":   "300"
+  },
+  {
     "ParameterKey":     "AllowSSHFrom",
     "ParameterValue":   "SSH_FROM"
   },
