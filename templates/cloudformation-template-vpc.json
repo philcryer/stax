@@ -139,6 +139,13 @@
       "Type":"Number",
       "Default":"2"
     },
+    "AutoScaleCooldown":{
+      "Description":"Time in seconds between autoscaling events",
+      "MinValue":"60",
+      "MaxValue":"3600",
+      "Type":"Number",
+      "Default":"300"
+    },
     "DiscoveryURL":{
       "Description":"An unique etcd cluster discovery URL. Grab a new token from https://discovery.etcd.io/new",
       "Type":"String"
@@ -1838,6 +1845,32 @@
             "PropagateAtLaunch":true
           }
         ]
+      }
+    },
+    "CoreOSServerAutoScaleUpPolicy":{
+      "Type":"AWS::AutoScaling::ScalingPolicy",
+      "Properties":{
+        "AdjustmentType":"ChangeInCapacity",
+        "AutoScalingGroupName":{
+          "Ref":"CoreOSServerAutoScale"
+        },
+        "Cooldown":{
+          "Ref":"AutoScaleCooldown"
+        },
+        "ScalingAdjustment":"1"
+      }
+    },
+    "CoreOSServerAutoScaleDownPolicy":{
+      "Type":"AWS::AutoScaling::ScalingPolicy",
+      "Properties":{
+        "AdjustmentType":"ChangeInCapacity",
+        "AutoScalingGroupName":{
+          "Ref":"CoreOSServerAutoScale"
+        },
+        "Cooldown":{
+          "Ref":"AutoScaleCooldown"
+        },
+        "ScalingAdjustment":"-1"
       }
     }
   },
