@@ -28,7 +28,8 @@ echo "Usage: stax command"
 echo; echo "Commands:"
 echo "  create            Create new stax"
 echo "  create-vpc        Create new VPC stax"
-echo "  describe |desc    Describe created stax"
+echo "  desc              Describe created stax"
+echo "  desc-auto         Describe existing autoscaling policies for current stax"
 #echo "  getip                 Get the public, or elastic IP of created stax"
 echo "  list              List all currently built and running stax"
 echo "  destroy           Destroy existing stax"
@@ -145,6 +146,16 @@ stax-list(){
   exit 0
 }
 
+stax-descauto(){
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} current auto scaling policies" 
+  #AUTO_SCALING_GROUP=`aws autoscaling describe-auto-scaling-groups | grep "arn:aws:autoscaling" | grep `cat ~/.stax/stax-name` | cut -d"/" -f2 | cut -d"\"" -f1`
+  aws autoscaling describe-auto-scaling-groups | grep "arn:aws:autoscaling" | grep `cat ~/.stax/stax-name` | cut -d"/" -f2 | cut -d"\"" -f1 > /tmp/asg
+  #aws autoscaling describe-policies --auto-scaling-group-name $AUTO_SCALING_GROUP
+  aws autoscaling describe-policies --auto-scaling-group-name `cat /tmp/asg`
+  rm /tmp/asg
+  exit 0
+}
+
 #stax-getip(){
 #  echo "${yellow}[ ${cyan}----${yellow} ]${reset} looking up public ip"
 #  aws ec2 describe-instances | jq '.Reservations[].Instances[].PublicIpAddress'
@@ -196,6 +207,11 @@ fi
 
 if [[ "$1" == "list" ]]; then
   stax-list
+fi
+
+if [[ "$1" == "desc-auto" ]]; then
+  stax-existing
+  stax-descauto
 fi
 
 if [[ "$1" == "dryrun" ]]; then
