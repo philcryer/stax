@@ -1845,151 +1845,49 @@
     "VPCID":{
       "Description":"VPC Info",
       "Value":{
-        "Fn::Join":[
-          "",
-          [
-            {
-              "Ref":"VPC"
-            },
-            " (",
-            {
-              "Ref":"VpcCidr"
-            },
-            ")"
-          ]
-        ]
+        "Ref":"VPC"
       }
     },
     "PublicSubnet1":{
       "Description":"Public Subnet #1",
       "Value":{
-        "Fn::Join":[
-          "",
-          [
-            {
-              "Ref":"PubSubnet1"
-            },
-            " (",
-            {
-              "Ref":"PublicSubnet1"
-            },
-            ") ",
-            {
-              "Fn::GetAtt":[
-                "PubSubnet1",
-                "AvailabilityZone"
-              ]
-            }
-          ]
-        ]
+        "Ref":"PubSubnet1"
       }
     },
-    "NAT1":{
-      "Description":"NAT #1 EIP",
+    "JumpEIP":{
+      "Description":"Jump Box EIP",
       "Value":{
-        "Fn::Join":[
-          "",
-          [
-            {
-              "Ref":"NAT1Instance"
-            },
-            " (",
-            {
-              "Ref":"NAT1EIP"
-            },
-            ")"
-          ]
-        ]
+        "Ref":"JumpEIP"
+      }
+    },
+    "NAT1EIP":{
+      "Description":"NAT 1 EIP",
+      "Value":{
+        "Ref":"NAT1EIP"
       }
     },
     "PrivateSubnet1":{
       "Description":"Private Subnet #1",
       "Value":{
-        "Fn::Join":[
-          "",
-          [
-            {
-              "Ref":"PriSubnet1"
-            },
-            " (",
-            {
-               "Ref":"PrivateSubnet1"
-            },
-            ") ",
-            {
-              "Fn::GetAtt":[
-                "PriSubnet1",
-                "AvailabilityZone"
-              ]
-            }
-          ]
-        ]
+        "Ref":"PriSubnet1"
       }
     },
     "PublicSubnet2":{
       "Description":"Public Subnet #2",
       "Value":{
-        "Fn::Join":[
-          "",
-          [
-            {
-              "Ref":"PubSubnet2"
-            },
-            " (",
-            {
-              "Ref":"PublicSubnet2"
-            },
-            ") ",
-            {
-              "Fn::GetAtt":[
-                "PubSubnet2",
-                "AvailabilityZone"
-              ]
-            }
-          ]
-        ]
+        "Ref":"PubSubnet2"
       }
     },
-    "NAT2":{
-      "Description":"NAT #2 EIP",
+    "NAT2EIP":{
+      "Description":"NAT 2 EIP",
       "Value":{
-        "Fn::Join":[
-          "",
-          [
-            {
-              "Ref":"NAT2Instance"
-            },
-            " (",
-              {
-                "Ref":"NAT2EIP"
-              },
-            ")"
-          ]
-        ]
+        "Ref":"NAT2EIP"
       }
     },
     "PrivateSubnet2":{
       "Description":"Private Subnet #2",
       "Value":{
-        "Fn::Join":[
-          "",
-          [
-            {
-              "Ref":"PriSubnet2"
-            },
-            " (",
-              {
-                "Ref":"PrivateSubnet2"
-              },
-            ") ",
-            {
-              "Fn::GetAtt":[
-                "PriSubnet2",
-                "AvailabilityZone"
-              ]
-            }
-          ]
-        ]
+        "Ref":"PriSubnet2"
       }
     }
   }
