@@ -1,46 +1,62 @@
 [
-    {
-        "ParameterKey":     "App",
-        "ParameterValue":   "<changeMe>"
-    },
-    {
-        "ParameterKey":     "Group",
-        "ParameterValue":   "<changeMe>"
-    },
-    {
-        "ParameterKey":     "Owner",
-        "ParameterValue":   "<changeMe>"
-    },
-    {
-        "ParameterKey":     "CostCenter",
-        "ParameterValue":   "####-####-ABC#####"
-    },
-    {
-        "ParameterKey":     "KeyName",
-        "ParameterValue":   "<changeMe>"
-    },
-    {
-        "ParameterKey":     "PublicInstanceType",
-        "ParameterValue":   "t2.micro"
-    },
-    {
-        "ParameterKey":     "DockerInstanceType",
-        "ParameterValue":   "m3.medium"
-    },
-    {
-        "ParameterKey":     "AdvertisedIPAddress",
-        "ParameterValue":   "private"
-    },
-    {
-        "ParameterKey":     "ClusterSize",
-        "ParameterValue":   "2"
-    },
-    {
-        "ParameterKey":     "AllowSSHFrom",
-        "ParameterValue":   "SSH_FROM"
-    },
-    {
-        "ParameterKey":     "DiscoveryURL",
-        "ParameterValue":   "DISCOVERY_URL"
-    }
+  {
+    "ParameterKey":     "App",
+    "ParameterValue":   "<changeMe>"
+  },
+  {
+    "ParameterKey":     "Group",
+    "ParameterValue":   "<changeMe>"
+  },
+  {
+    "ParameterKey":     "Owner",
+    "ParameterValue":   "<changeMe>"
+  },
+  {
+    "ParameterKey":     "Environment",
+    "ParameterValue":   "<changeMe>"
+  },
+  {
+    "ParameterKey":     "KeepAlive",
+    "ParameterValue":   "false"
+  },
+  {
+    "ParameterKey":     "CostCenter",
+    "ParameterValue":   "####-####-ABC#####"
+  },
+  {
+    "ParameterKey":     "KeyName",
+    "ParameterValue":   "<changeMe>"
+  },
+  {
+    "ParameterKey":     "JumpInstanceType",
+    "ParameterValue":   "t2.micro"
+  },
+  {
+    "ParameterKey":     "NATInstanceType",
+    "ParameterValue":   "t2.micro"
+  },
+  {
+    "ParameterKey":     "DockerInstanceType",
+    "ParameterValue":   "m3.medium"
+  },
+  {
+    "ParameterKey":     "AdvertisedIPAddress",
+    "ParameterValue":   "private"
+  },
+  {
+    "ParameterKey":     "ClusterSize",
+    "ParameterValue":   "2"
+  },
+  {
+    "ParameterKey":     "AutoScaleCooldown",
+    "ParameterValue":   "300"
+  },
+  {
+    "ParameterKey":     "AllowSSHFrom",
+    "ParameterValue":   "SSH_FROM"
+  },
+  {
+    "ParameterKey":     "DiscoveryURL",
+    "ParameterValue":   "DISCOVERY_URL"
+  }
 ]
