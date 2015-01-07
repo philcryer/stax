@@ -24,7 +24,7 @@ stax-colors(){
 }
 
 stax-usage(){
-echo "Usage: stax command"
+echo "Usage: stax <command>"
 
 echo; echo "Commands:"
 echo "  create            Create new stax"

@@ -72,6 +72,45 @@ Run it
 
 ## Access cluster
 
+### create-vpc 
+To access the hosts
+
+* get a PublicIP for the jumpbox from AWS Console ([FIXME] use aws-cli to get this automatically)
+
+* copy the private key to the box ([FIXME] the script needs to handle this)
+```bash
+scp -i ~/.ssh/the-key-you-specified.pem ~/.ssh/the-key-you-specified.pem ec2-user@PUBLIC-IP:~/.ssh
+```
+
+* ssh to the jumpbox
+```bash
+ssh -i ~/.ssh/the-key-you-specified.pem ec2-user@PUBLIC-IP
+```
+* now access one of the core nodes to see if Docker can see the other Docker nodes.
+
+```bash
+ssh PRIVATE_IP_COREOS_HOST -l core -i ~/.ssh/the-key-you-specified.pem
+```
+
+* see if fleet can see the other Docker hosts
+```bash
+fleetctl list-machines
+```
+
+* example output
+```bash
+[ec2-user@ip-10-183-1-99 ~]$ ssh 10.183.2.219 -l core -i ~/.ssh/pccrye-20141005.pem
+CoreOS (alpha)
+core@ip-10-183-2-219 ~ $
+core@ip-10-183-2-219 ~ $ fleetctl list-machines
+MACHINE   IP    METADATA
+057d212e... 10.183.0.16 -
+4f622c15... 10.183.2.219  -
+```
+
+Ta... da.
+
+### create (just the coreOS/docker hosts)
 To access the hosts, get a PublicIP for one of the nodes from the AWS console (a work around for now), then ssh to it
 
 ```bash
