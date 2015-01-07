@@ -182,10 +182,13 @@ stax-destroy(){
 }
 
 stax-generate(){
+  if [ ! -f config.json ]; then
+     echo "config.json not configured, copy example and configure'. Aborting."; exit 1
+  fi
   cp config.json /tmp/config.json.tmp
   if [ ${SYSTEM} == 'Darwin' ]; then
-    SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed "s/SSH_FROM/${SSH_FROM}/g" /tmp/config.json.tmp
-    DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config.json.tmp
+    SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i '' "s/SSH_FROM/${SSH_FROM}/g" /tmp/config.json.tmp
+    DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i '' "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config.json.tmp
   else
     SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i "s/SSH_FROM/${SSH_FROM}/g" /tmp/config.json.tmp
     DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config.json.tmp
@@ -201,8 +204,8 @@ stax-generate-vpc(){
   fi
   cp config-vpc.json /tmp/config-vpc.json.tmp
   if [ ${SYSTEM} == 'Darwin' ]; then
-    SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed "s/SSH_FROM/${SSH_FROM}/g" /tmp/config-vpc.json.tmp
-    DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config-vpc.json.tmp
+    SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i '' "s/SSH_FROM/${SSH_FROM}/g" /tmp/config-vpc.json.tmp
+    DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i '' "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config-vpc.json.tmp
   else
     SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i "s/SSH_FROM/${SSH_FROM}/g" /tmp/config-vpc.json.tmp
     DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config-vpc.json.tmp
