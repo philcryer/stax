@@ -119,7 +119,8 @@ stax-create(){
   $aws cloudformation create-stack \
     --stack-name $STAX_NAME \
     --template-body file://$SCRIPT_PATH/templates/cloudformation-template-$COREOS_CHANNEL.json \
-    --parameters "$(<config.json.tmp)"
+    --parameters "$(<config.json.tmp)" \
+    --capabilities CAPABILITY_IAM
 }
 
 stax-create-vpc(){
@@ -137,7 +138,8 @@ stax-create-vpc(){
   $aws cloudformation create-stack \
     --stack-name $STAX_NAME \
     --template-url "$template_url" \
-    --parameters "$(<config-vpc.json.tmp)"
+    --parameters "$(<config-vpc.json.tmp)" \
+    --capabilities CAPABILITY_IAM
   $aws s3 rb --force "s3://$bucket"
 }
 
