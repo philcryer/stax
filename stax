@@ -30,10 +30,11 @@ echo "Usage: stax <command>"
 echo; echo "Commands:"
 echo "  create            Create new stax"
 echo "  create-vpc        Create new VPC stax"
-echo "  desc              Describe created stax"
-echo "  desc-auto         Describe existing autoscaling policies for current stax"
-#echo "  getip                 Get the public, or elastic IP of created stax"
 echo "  list              List all currently built and running stax"
+echo "  describe | desc   Describe created stax"
+echo "  desc-auto         Describe existing autoscaling policies for current stax"
+echo "  getip             Get the public or elastic IP (EIP) of the jumpbox"
+echo "  pushkey           Push the (private) key to the elastic IP (EIP) of the jumpbox"
 echo "  destroy           Destroy existing stax"
 #echo "  test <template> Validate a template that is called out"
 #echo "  dryrun            Don't do anything, just show what would be done"
@@ -146,7 +147,7 @@ stax-create-vpc(){
 stax-describe(){
   aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null 2>&1 || { echo "${yellow}[ ${cyan}----${yellow} ]${reset} no stax defined"; rm $HOME/.stax/stax-name; exit 1; }
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} describe $STAX_NAME"
-  aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STAX_NAME 
+  #aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null && aws cloudformation describe-stacks --stack-name $STAX_NAME 
   aws cloudformation describe-stacks --stack-name $STAX_NAME > ~/.stax/$STAX_NAME.json
   echo "${yellow}[ ${cyan}----${yellow} ]${reset} saved to ~/.stax/$STAX_NAME.json"
 }
@@ -167,11 +168,33 @@ stax-descauto(){
   exit 0
 }
 
-#stax-getip(){
-#  echo "${yellow}[ ${cyan}----${yellow} ]${reset} looking up public ip"
+stax-getip(){
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} looking up public IP for the $STAX_NAME jumpbox"
+  #STAX_PUB_IP=`aws cloudformation describe-stacks --stack-name $STAX_NAME | grep -A3 'JumpEIP'|grep -o '^\|[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*'`
+  #STAX_PUB_IP=`cat ~/.stax/$STAX_NAME.json | grep -A3 'JumpEIP'|grep -o '^\|[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*'`
+  STAX_PUB_IP=`cat ~/.stax/$STAX_NAME.json | grep -B2 -A2 'JumpEIP' | grep -o '^\|[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*'`
+  #if [ -z $STAX_PUB_IP ]; then 
+  #  echo "${yellow}[ ${red}ERRR${yellow} ]${reset} public IP not found, possible creation error, exiting";
+  #  echo $STAX_PUB_IP
+  #  exit 1
+  #fi
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} public IP for $STAX_NAME is $STAX_PUB_IP"
 #  aws ec2 describe-instances | jq '.Reservations[].Instances[].PublicIpAddress'
-#  exit 0
-#}
+}
+
+stax-pushkey(){
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} copying private key to $STAX_NAME jumpbox"
+  STAX_KEY=`cat ~/.stax/$STAX_NAME.json | grep -B1 -A1 'KeyName'|grep "ParameterValue" | cut -d"\"" -f4`
+  scp -i ~/.ssh/$STAX_KEY.pem ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP:.ssh > /dev/null
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset} key copied to $STAX_NAME"
+  #ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'ls -la .ssh/$STAX_KEY.pem'
+  #ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'ls -l .ssh/$STAX_KEY.pem'
+  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset} setting permissions on key"
+  ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'chmod 0600 .ssh/*.pem'
+  echo ", done"
+  ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'ls -l .ssh/*.pem'
+  #ssh -i ~/.ssh/pccrye-20141005.pem ec2-user@54.174.166.28 'ls -la .ssh/pccrye-20141005.pem'
+}
 
 stax-destroy(){
   aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null && aws cloudformation delete-stack --stack-name $STAX_NAME 
@@ -280,10 +303,18 @@ if [[ "$1" == "describe" || "desc" ]]; then
   fi
 fi
 
-#if [[ "$1" == "getip" ]]; then
-#  stax-existing
-#  stax-getip
-#fi
+if [[ "$1" == "getip" ]]; then
+  stax-existing
+  stax-getip
+  exit 0
+fi
+
+if [[ "$1" == "pushkey" ]]; then
+  stax-existing
+  stax-getip
+  stax-pushkey
+  exit 0
+fi
 
 if [[ "$1" == "destroy" ]]; then
   stax-existing
