@@ -37,12 +37,12 @@ You will be prompted to enter your AWS access key and secret access key (this wi
 
 Download it, placing it in ~/.ssh
 
-* Install [curl](), to talk to the web and [jq](), to parse json output from the awscli
+* Install [curl](), if you don't have it, to talk to the web
 
 ```bash
-apt-get install jq curl   # Debian GNU/Linux, Ubuntu ???maybe test this
-brew install jq curl      # Apple OS X (via Homebrew)
-yum install jq curl       # Red Hat Enterprise Linux (RHEL), Amazon Linux, Centos ???test this
+apt-get install curl   # Debian GNU/Linux, Ubuntu ???maybe test this
+brew install curl      # Apple OS X (via Homebrew)
+yum install curl       # Red Hat Enterprise Linux (RHEL), Amazon Linux, Centos ???test this
 ```
 
 ## Stax runs [CoreOS](https://coreos.com/) instances on AWS EC2
@@ -55,10 +55,14 @@ Configuration is handled by Cloud Formation, services installed via cloud-init a
 ## Usage
 
 ```bash
-stax create     (create a new stack)
-stax describe   (describe the stack)
-stax update     (update the stack)
-stax destroy    (destroy the stack)
+  create            Create new stax
+  create-vpc        Create new VPC stax
+  list              List all currently built and running stax
+  describe | desc   Describe created stax
+  desc-auto         Describe existing autoscaling policies for current stax
+  getip             Get the public or elastic IP (EIP) of the jumpbox
+  pushkey           Push the (private) key to the elastic IP (EIP) of the jumpbox
+  destroy           Destroy existing stax
 ```
 
 ## Create cluster
