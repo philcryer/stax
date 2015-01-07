@@ -81,7 +81,7 @@ Run it
 To access the hosts, get a PublicIP for one of the nodes from the AWS console (a work around for now), then ssh to it
 
 ```bash
-ssh PUBLIC-IP -l core -i ~/.ssh/the-key-you-specified.pem
+ssh ec2-user@PUBLIC-IP -l core -i ~/.ssh/the-key-you-specified.pem
 ```
 
 Once there you can see that it can see the other nodes via fleet
