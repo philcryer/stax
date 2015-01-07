@@ -63,6 +63,23 @@ stax destroy    (destroy the stack)
 
 ## Create cluster
 
+### create-vpc
+
+Copy the config file and salt to taste
+
+```bash
+cp config-vpc.json.example config-vpc.json
+vi config-vpc.json
+```
+
+Run it
+
+```bash
+./stax create-vpc
+```
+
+### create
+
 Copy the config file and salt to taste
 
 ```bash
