@@ -28,8 +28,14 @@ aws configure
 
 You will be prompted to enter your AWS access key and secret access key (this will write and store them in ~/.aws/credentials)
 
-* Get AWS ssh private key for the 'coreoscluster01' keypair in s3, and then `ssh-add` it. Alternatively, use an existing key pair already on AWS, or generate your own on your AWS account
-(you'll need to refer to this key in the create_stack command below).
+* In the AWS Console, create a new Key Pair 
+
+```
+* AWS Console > EC2 > Netork & Security > Key Pairs > Create Key Pair
+* Name it whatever you want, click 'Create'
+```
+
+Download it, placing it in ~/.ssh
 
 * Install [curl](), to talk to the web and [jq](), to parse json output from the awscli
 
