@@ -2,11 +2,11 @@
 
 set -e
 
-##################################################################
-#   stax - for aws ec2 - https://github.com/philcryer/stax
+########################################################################
+#   stax - builds a VPC in aws ec2 - https://github.com/philcryer/stax
 #   https://github.com/philcryer/stax/blob/master/LICENSE
-#               "this should work(tm)!"
-##################################################################
+#   this should work(tm)!
+########################################################################
 
 STAX_PRE_NAME="stax"
 COREOS_CHANNEL="alpha"
@@ -28,15 +28,11 @@ stax-usage(){
 echo "Usage: stax <command>"
 
 echo; echo "Commands:"
-echo "  create            Create a new VPC stax on AWS"
-#echo "  create-vpc        Create new VPC stax"
-echo "  describe | desc   Describe the created VPC stax"
-#echo "  desc-auto         Describe existing autoscaling policies for current stax"
-#echo "  getip             Get the public or elastic IP (EIP) of the jumpbox"
-#echo "  pushkey           Push the (private) key to the elastic IP (EIP) of the jumpbox"
-echo "  connect           Connect to the jumpbox in the VPC over SSH"
-echo "  list              List all currently built and running stax"
-echo "  destroy           Destroy existing stax"
+echo "  list          List all currently built and running stax"
+echo "  create        Create a new VPC stax in AWS"
+echo "  describe      Describe the created VPC stax"
+echo "  connect       Connect to the jumpbox in the VPC stax over SSH"
+echo "  destroy       Destroy the existing VPC stax"
 
 echo; echo "For more help, check the docs; https://github.com/philcryer/stax"
 exit 1
@@ -87,18 +83,6 @@ stax-validate(){
   fi
 }
 
-#stax-create(){
-#  stax-generate
-#  STAX_NAME="$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
-#  echo $STAX_NAME > ~/.stax/stax-name
-#  echo "${yellow}[ ${cyan}----${yellow} ]${reset} creating $CLUSTER_SIZE nodes - $STAX_NAME"
-#  $aws cloudformation create-stack \
-#    --stack-name $STAX_NAME \
-#    --template-body file://$SCRIPT_PATH/templates/cloudformation-template-$COREOS_CHANNEL.json \
-#    --parameters "$(</tmp/config.json.tmp)" \
-#    --capabilities CAPABILITY_IAM
-#}
-
 stax-create(){
   stax-generate-vpc
   STAX_NAME="vpc-$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
@@ -148,7 +132,7 @@ stax-describe(){
 }
 
 stax-list(){
-  echo "${yellow}[ ${cyan}NAME${yellow} ]${reset} $STAX_NAME"
+  #echo "${yellow}[ ${cyan}NAME${yellow} ]${reset} $STAX_NAME"
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}   list running stax"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
   aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE > /tmp/cls
@@ -189,8 +173,6 @@ stax-pushkey(){
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     setting permissions on key: "
   ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'chmod 0600 .ssh/*.pem' > /dev/null
   echo "done"
-  #echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     "
-  #ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'ls -l .ssh/*.pem'
 }
 
 stax-motd(){
@@ -322,25 +304,11 @@ if [[ "$1" == "desc-auto" ]]; then
   stax-descauto
 fi
 
-#if [[ "$1" == "create" ]]; then
-#  if [ -f $HOME/.stax/stax-name ]; then
-#    echo "${yellow}[ ${red}ERRR${yellow} ]${reset} existing stax defined, exiting";
-#    exit 1
-#  else
-#    stax-create
-#    stax-describe
-#    rm /tmp/config.json.tmp
-#    exit 0
-#  fi
-#fi
-
-#if [[ "$1" == "create-vpc" ]]; then
 if [[ "$1" == "create" ]]; then
   if [ -f $HOME/.stax/stax-name ]; then
     echo "${yellow}[ ${red}ERRR${yellow} ]${reset} existing stax defined, exiting";
     exit 1
   else
-    #stax-create-vpc
     stax-create
     stax-describe
     rm /tmp/config-vpc.json.tmp
