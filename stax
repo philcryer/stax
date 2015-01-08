@@ -12,7 +12,7 @@ STAX_PRE_NAME="stax"
 COREOS_CHANNEL="alpha"
 SCRIPT_PATH=$( cd $(dirname $0) ; pwd -P )
 SYSTEM=`uname`
-aws="aws --color on"
+#aws="aws --color on"
 
 stax-colors(){
   green=$(tput setaf 2)
@@ -221,7 +221,7 @@ stax-pushmotd(){
   scp -q -i ~/.ssh/$STAX_KEY.pem /tmp/motd ec2-user@$STAX_PUB_IP:~ > /dev/null
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}   populate bashrc on jumpbox: "
-  scp -q -i ~/.ssh/$STAX_KEY.pem templates/bashrc ec2-user@$STAX_PUB_IP:~/.bashrc > /dev/null
+  scp -q -i ~/.ssh/$STAX_KEY.pem config/bashrc ec2-user@$STAX_PUB_IP:~/.bashrc > /dev/null
   echo "done"
   rm /tmp/motd
 }
