@@ -1,0 +1,10 @@
+# .bashrc
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+    . /etc/bashrc
+fi
+
+# User specific aliases and functions
+[ -z "$PS1" ] && return; clear; cat motd; echo -n "System    "; echo `cat /etc/issue.net | head -n1`; echo ""
+
