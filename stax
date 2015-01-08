@@ -28,14 +28,14 @@ stax-usage(){
 echo "Usage: stax <command>"
 
 echo; echo "Commands:"
-echo "  create            Create new stax"
-echo "  create-vpc        Create new VPC stax"
-echo "  list              List all currently built and running stax"
-echo "  describe | desc   Describe created stax"
-echo "  desc-auto         Describe existing autoscaling policies for current stax"
+echo "  create            Create a new VPC stax on AWS"
+#echo "  create-vpc        Create new VPC stax"
+echo "  describe | desc   Describe the created VPC stax"
+#echo "  desc-auto         Describe existing autoscaling policies for current stax"
 #echo "  getip             Get the public or elastic IP (EIP) of the jumpbox"
 #echo "  pushkey           Push the (private) key to the elastic IP (EIP) of the jumpbox"
-echo "  connect           Connect to the jumpbox over SSH (experimental)"
+echo "  connect           Connect to the jumpbox in the VPC over SSH"
+echo "  list              List all currently built and running stax"
 echo "  destroy           Destroy existing stax"
 
 echo; echo "For more help, check the docs; https://github.com/philcryer/stax"
@@ -87,19 +87,19 @@ stax-validate(){
   fi
 }
 
-stax-create(){
-  stax-generate
-  STAX_NAME="$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
-  echo $STAX_NAME > ~/.stax/stax-name
-  echo "${yellow}[ ${cyan}----${yellow} ]${reset} creating $CLUSTER_SIZE nodes - $STAX_NAME"
-  $aws cloudformation create-stack \
-    --stack-name $STAX_NAME \
-    --template-body file://$SCRIPT_PATH/templates/cloudformation-template-$COREOS_CHANNEL.json \
-    --parameters "$(</tmp/config.json.tmp)" \
-    --capabilities CAPABILITY_IAM
-}
+#stax-create(){
+#  stax-generate
+#  STAX_NAME="$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
+#  echo $STAX_NAME > ~/.stax/stax-name
+#  echo "${yellow}[ ${cyan}----${yellow} ]${reset} creating $CLUSTER_SIZE nodes - $STAX_NAME"
+#  $aws cloudformation create-stack \
+#    --stack-name $STAX_NAME \
+#    --template-body file://$SCRIPT_PATH/templates/cloudformation-template-$COREOS_CHANNEL.json \
+#    --parameters "$(</tmp/config.json.tmp)" \
+#    --capabilities CAPABILITY_IAM
+#}
 
-stax-create-vpc(){
+stax-create(){
   stax-generate-vpc
   STAX_NAME="vpc-$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
   echo "${yellow}[ ${cyan}NAME${yellow} ]${reset} $STAX_NAME"
@@ -322,24 +322,26 @@ if [[ "$1" == "desc-auto" ]]; then
   stax-descauto
 fi
 
+#if [[ "$1" == "create" ]]; then
+#  if [ -f $HOME/.stax/stax-name ]; then
+#    echo "${yellow}[ ${red}ERRR${yellow} ]${reset} existing stax defined, exiting";
+#    exit 1
+#  else
+#    stax-create
+#    stax-describe
+#    rm /tmp/config.json.tmp
+#    exit 0
+#  fi
+#fi
+
+#if [[ "$1" == "create-vpc" ]]; then
 if [[ "$1" == "create" ]]; then
   if [ -f $HOME/.stax/stax-name ]; then
     echo "${yellow}[ ${red}ERRR${yellow} ]${reset} existing stax defined, exiting";
     exit 1
   else
+    #stax-create-vpc
     stax-create
-    stax-describe
-    rm /tmp/config.json.tmp
-    exit 0
-  fi
-fi
-
-if [[ "$1" == "create-vpc" ]]; then
-  if [ -f $HOME/.stax/stax-name ]; then
-    echo "${yellow}[ ${red}ERRR${yellow} ]${reset} existing stax defined, exiting";
-    exit 1
-  else
-    stax-create-vpc
     stax-describe
     rm /tmp/config-vpc.json.tmp
     exit 0
