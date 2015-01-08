@@ -6,5 +6,5 @@ if [ -f /etc/bashrc ]; then
 fi
 
 # User specific aliases and functions
-[ -z "$PS1" ] && return; clear; cat motd; echo -n "System    "; echo `cat /etc/issue.net | head -n1`; echo ""
+[ -z "$PS1" ] && return; PATH=$PATH:~; clear; cat motd; echo -n "System    "; echo `cat /etc/issue.net | head -n1`; echo "Dockers   `cat docker_hosts | sed '$!N;s/\n/ /'`"; echo ""; echo "Type 'dockconnect' to connect to a random docker host"; echo ""
 
