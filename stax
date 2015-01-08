@@ -12,7 +12,7 @@ STAX_PRE_NAME="stax"
 COREOS_CHANNEL="alpha"
 SCRIPT_PATH=$( cd $(dirname $0) ; pwd -P )
 SYSTEM=`uname`
-#aws="aws --color on"
+aws="aws --color on"
 
 stax-colors(){
   green=$(tput setaf 2)
@@ -169,20 +169,15 @@ stax-descauto(){
 }
 
 stax-getip(){
-  echo "${yellow}[ ${cyan}----${yellow} ]${reset}   get pulic IP (EIP)"
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset}   get public IP (EIP)"
+  if [ `cat ~/.stax/$STAX_NAME.json | grep CREATE_COMPLETE | wc -l` -eq "0" ]; then
+    echo "${yellow}[ ${cyan}NULL${yellow} ]${reset}     IP is undefined, this means the build is not complete, try again in a few minutes"
+    exit 1
+  fi
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
   STAX_PUB_IP=`cat ~/.stax/$STAX_NAME.json | grep -B2 -A2 'JumpEIP' | grep -o '^\|[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*'`
   echo "done"
-  if [ `cat ~/.stax/*.json | grep CREATE_COMPLETE | wc -l` -eq 0 ]; then
-    echo "${yellow}[ ${cyan}NULL${yellow} ]${reset}     public IP (EIP): undefined, build not complete, try again in a few minutes"
-    exit 1
-  fi
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}     public IP (EIP): $STAX_PUB_IP"
-}
-
-stax-getnodeips(){
-  STAX_NODE_IPS=`cat ~/.stax/$STAX_NAME.json | grep -B2 -A2 'JumpEIP' | grep -o '^\|[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*'`
-
 }
 
 stax-pushkey(){
@@ -213,17 +208,44 @@ stax-motd(){
 }
 
 stax-pushmotd(){
-  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}   populate motd on jumpbox: "
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset}   setup motd and bashrc on jumpbox"
+  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     pushing motd to $STAX_PUB_IP: "
   if [ ! -f '/tmp/motd' ]; then
     echo "${yellow}[ ${red}ERRR${yellow} ]${reset}     motd file not found, exiting";
     exit 1
   fi
   scp -q -i ~/.ssh/$STAX_KEY.pem /tmp/motd ec2-user@$STAX_PUB_IP:~ > /dev/null
   echo "done"
-  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}   populate bashrc on jumpbox: "
+  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     pushing bashrc to $STAX_PUB_IP: "
   scp -q -i ~/.ssh/$STAX_KEY.pem config/bashrc ec2-user@$STAX_PUB_IP:~/.bashrc > /dev/null
   echo "done"
   rm /tmp/motd
+}
+
+stax-getdockerips(){
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset}   get docker IP(s)"
+  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
+  aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | grep -A10 -B8 docker-$STAX_NAME | grep PRIVATEIPADDRESSES  | grep -o '^\|[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*' > /tmp/dockerlists
+  echo "done"
+  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building dockerlist: "
+  mv /tmp/dockerlists /tmp/docker_hosts
+  echo "done"
+  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building docker connect: "
+  cp templates/dockconnect /tmp/dockconnect
+  if [ ${SYSTEM} == 'Darwin' ]; then
+    sed -i '' "s|STAX_KEY|${STAX_KEY}|g" /tmp/dockconnect
+  else
+    sed -i "s|STAX_KEY|${STAX_KEY}|g" /tmp/dockconnect
+  fi
+  echo "done"
+  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     putting docker files on jumpbox: "
+  scp -q -i ~/.ssh/$STAX_KEY.pem /tmp/docker_hosts ec2-user@$STAX_PUB_IP:~ > /dev/null
+  scp -q -i ~/.ssh/$STAX_KEY.pem /tmp/dockconnect ec2-user@$STAX_PUB_IP:~ > /dev/null
+  ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'chmod 0755 dockconnect' > /dev/null
+  echo "done"
+  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     cleaning files: "
+  rm /tmp/docker_hosts; rm /tmp/dockconnect
+  echo "done"
 }
 
 stax-connect(){
@@ -340,6 +362,11 @@ if [[ "$1" == "getip" ]]; then
   exit 0
 fi
 
+if [[ "$1" == "test" ]]; then
+  stax-getdockerips
+  exit 0
+fi
+
 if [[ "$1" == "pushkey" ]]; then
   stax-existing
   stax-getip
@@ -353,6 +380,7 @@ if [[ "$1" == "connect" ]]; then
   stax-pushkey
   stax-motd
   stax-pushmotd
+  stax-getdockerips
   stax-connect
   exit 0
 fi

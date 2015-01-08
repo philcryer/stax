@@ -4,3 +4,4 @@
 * move config-vpc.json >> config
 * move vpc >> docs
 * move docs.md content >> readme.md
+* don't populate bashrc if we've already done it on that jumper
