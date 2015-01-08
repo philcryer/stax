@@ -33,8 +33,8 @@ echo "  create-vpc        Create new VPC stax"
 echo "  list              List all currently built and running stax"
 echo "  describe | desc   Describe created stax"
 echo "  desc-auto         Describe existing autoscaling policies for current stax"
-echo "  getip             Get the public or elastic IP (EIP) of the jumpbox"
-echo "  pushkey           Push the (private) key to the elastic IP (EIP) of the jumpbox"
+#echo "  getip             Get the public or elastic IP (EIP) of the jumpbox"
+#echo "  pushkey           Push the (private) key to the elastic IP (EIP) of the jumpbox"
 echo "  connect           Connect to the jumpbox over SSH (experimental)"
 echo "  destroy           Destroy existing stax"
 
@@ -118,13 +118,12 @@ stax-create-vpc(){
   stax-validate "$template_url" > /dev/null
   echo "done"
   echo $STAX_NAME > ~/.stax/stax-name
-  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     creating vpc in aws"
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset}     creating vpc in aws"
   $aws cloudformation create-stack \
     --stack-name $STAX_NAME \
     --template-url "$template_url" \
     --parameters "$(</tmp/config-vpc.json.tmp)" \
     --capabilities CAPABILITY_IAM
-  echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     cleaning s3 bucket: "
   $aws s3 rb --force "s3://$bucket" > /dev/null
   echo "done"
@@ -138,7 +137,14 @@ stax-describe(){
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     saving output"
   aws cloudformation describe-stacks --stack-name $STAX_NAME > ~/.stax/$STAX_NAME.json; echo ": done"
-  echo "${yellow}[ ${cyan}----${yellow} ]${reset}     saved to: ~/.stax/$STAX_NAME.json"
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset}     see ~/.stax/$STAX_NAME.json for details"
+  #echo "${yellow}[ ${cyan}----${yellow} ]${reset}     output summary (see ~/.stax/$STAX_NAME.json for full details)"
+  #echo "["
+  #cat ~/.stax/vpc* | grep "StackName" 
+  #cat ~/.stax/vpc* | grep "StackId\"\:"
+  #cat ~/.stax/vpc* | grep "StackStatus\"\:"
+  #cat ~/.stax/vpc* | grep "Description\"\:\ \"Autoscaling"
+  #echo "]"
 }
 
 stax-list(){
@@ -167,7 +173,16 @@ stax-getip(){
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
   STAX_PUB_IP=`cat ~/.stax/$STAX_NAME.json | grep -B2 -A2 'JumpEIP' | grep -o '^\|[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*'`
   echo "done"
+  if [ `cat ~/.stax/*.json | grep CREATE_COMPLETE | wc -l` -eq 0 ]; then
+    echo "${yellow}[ ${cyan}NULL${yellow} ]${reset}     public IP (EIP): undefined, build not complete, try again in a few minutes"
+    exit 1
+  fi
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}     public IP (EIP): $STAX_PUB_IP"
+}
+
+stax-getnodeips(){
+  STAX_NODE_IPS=`cat ~/.stax/$STAX_NAME.json | grep -B2 -A2 'JumpEIP' | grep -o '^\|[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*'`
+
 }
 
 stax-pushkey(){
@@ -177,10 +192,38 @@ stax-pushkey(){
   scp -q -i ~/.ssh/$STAX_KEY.pem ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP:.ssh > /dev/null
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     setting permissions on key: "
-  ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'chmod 0600 .ssh/*.pem'
+  ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'chmod 0600 .ssh/*.pem' > /dev/null
   echo "done"
-  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     "
-  ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'ls -l .ssh/*.pem'
+  #echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     "
+  #ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'ls -l .ssh/*.pem'
+}
+
+stax-motd(){
+  echo "     _             " > /tmp/motd
+  echo "    | |" >> /tmp/motd
+  echo " ___| |_ __ ___  __" >> /tmp/motd
+  echo '/ __| __/ _` \ \/ /' >> /tmp/motd
+  echo "\__ \ || (_| |>  <" >> /tmp/motd
+  echo "|___/\__\__,_/_/\_\\" >> /tmp/motd
+  echo >> /tmp/motd
+  echo "IP        `echo $STAX_PUB_IP`" >> /tmp/motd
+  echo "Name      `cat ~/.stax/stax-name`" >> /tmp/motd
+  #echo "Built     `date +'%Y%m%d-%H%M'`" >> /tmp/motd
+  echo "Built     `date`" >> /tmp/motd
+}
+
+stax-pushmotd(){
+  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}   populate motd on jumpbox: "
+  if [ ! -f '/tmp/motd' ]; then
+    echo "${yellow}[ ${red}ERRR${yellow} ]${reset}     motd file not found, exiting";
+    exit 1
+  fi
+  scp -q -i ~/.ssh/$STAX_KEY.pem /tmp/motd ec2-user@$STAX_PUB_IP:~ > /dev/null
+  echo "done"
+  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}   populate bashrc on jumpbox: "
+  scp -q -i ~/.ssh/$STAX_KEY.pem templates/bashrc ec2-user@$STAX_PUB_IP:~/.bashrc > /dev/null
+  echo "done"
+  rm /tmp/motd
 }
 
 stax-connect(){
@@ -308,6 +351,8 @@ if [[ "$1" == "connect" ]]; then
   stax-existing
   stax-getip
   stax-pushkey
+  stax-motd
+  stax-pushmotd
   stax-connect
   exit 0
 fi
