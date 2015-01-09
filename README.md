@@ -31,7 +31,7 @@ brew install aws-cli    # Apple OS X ([via Homebrew](http://brew.sh/))
 yum install awscli      # Red Hat Enterprise Linux (RHEL), CentOS, Amazon Linux
 ```
 
-* Configure the aws client with your AWS credentials.
+* Configure the aws client with your AWS credentials. Find yours from the [users page](https://console.aws.amazon.com/iam/home#users) on the AWS Console. Choose your username, scroll down to Security Credentials > Access Credentials > Access Keys, and click Manage Access Keys.
 
 ```bash
 aws configure
@@ -71,7 +71,7 @@ cp config/config.json.example config.json
 vi config.json
 ```
 
-* Run it
+* Run stax
 
 ```bash
 $ stax
@@ -103,19 +103,19 @@ stax connect
 
 The command will check if the cluster is built, and if it is, it will populate the jumpbox with needed information and then connect you to it.
 
-* Once on the jumpbox you ca get to randomly available CoreOS/Docker host with the dockconnect command.
+* Once on the jumpbox you can get to randomly available CoreOS/Docker host with the dockconnect command.
 
 ```bash
 dockconnect
 ```
 
-* Once on a CoreOS/Docker host see if fleet can see the other Docker hosts
+* Once on a CoreOS/Docker host see if fleet can see the other Docker hosts.
 
 ```bash
 fleetctl list-machines
 ```
 
-* example output
+* Example output
 ```bash
 [ec2-user@ip-10-183-1-99 ~]$ dockconnect
 CoreOS (alpha)
@@ -138,7 +138,7 @@ stax destroy
 
 ## Other details
 
-* The stax configuration is handled by Cloud Formation scripts, see them in the [templates directory](templaes).
+* The stax configuration is handled by Cloud Formation scripts, see them in the templates directory.
 * Services installed on CoreOS are etcd and fleet by default.
 * Future plans call for use of an orchestrator to run Docker instances across the cluster using fleet (or something else).
 
@@ -174,8 +174,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-## Studio
+## Stax Studio
 
-* Stax, besides being a clever take on the word stacks, is named after the famous Stax Studio in Memphis, TN. If you're ever in Memphis, visit the [Stax Museum](http://www.staxmuseum.com/)... it's far more interesting than Sun Studios, but I digress.
+* Stax, besides being a clever take on the word stacks, is named after the famous Stax Recording Studio in Memphis, TN. If you're ever in Memphis, visit the awesome [Stax Museum](http://www.staxmuseum.com/)... it's far more interesting than Sun Studios, but I digress.
 
-![Stax](http://www.soul-patrol.com/funk/images/stax.jpg)
+![Stax Museum](https://media-cdn.tripadvisor.com/media/photo-s/01/70/29/68/stax-recording-studio.jpg)
