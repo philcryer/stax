@@ -144,11 +144,13 @@ stax destroy
 
 ## Acknowledgements
 
-The stax project started off with ideas from the following projects, thanks!
+The stax project started off with ideas from the following projects:
 
-    https://github.com/emmanuel/coreos-skydns-cloudformation
-    https://github.com/philcryer/coreos-aws-cloudformation
-    https://github.com/kelseyhightower/kubernetes-coreos
+* [emmanuel/coreos-skydns-cloudformation](https://github.com/emmanuel/coreos-skydns-cloudformation)
+* [xueshanf/coreos-aws-cloudformation](https://github.com/xueshanf/coreos-aws-cloudformation)
+* [kelseyhightower/kubernetes-coreos](https://github.com/kelseyhightower/kubernetes-coreos)
+
+Thanks everyone, Open Source FTW!
 
 ## License
 
