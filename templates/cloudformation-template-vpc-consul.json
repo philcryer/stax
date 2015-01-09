@@ -1788,7 +1788,7 @@
                 "                             -p 8400:8400 \\n",
                 "                             -p 8500:8500 \\n",
                 "                             -p 53:53/udp \\n",
-                "                             progrium/consul:latest -server -advertise $", { "Ref": "AdvertisedIPAddress" }, "_ipv4" -bootstrap-expect 3\n",
+                "                             progrium/consul:latest -server -advertise 127.0.0.1 -bootstrap-expect 3\n",
                 "      ExecStop=/usr/bin/docker stop consul\n"
               ]
             ]
