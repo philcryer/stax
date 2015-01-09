@@ -1,0 +1,88 @@
+#cloud-config
+---
+
+coreos:
+  etcd:
+    discovery: _____ETCD_KEY_____
+    addr: $public_ipv4:4001
+    peer-addr: $public_ipv4:7001
+    :set
+
+    discovery: ", { "Ref": "DiscoveryURL" }, "\n",
+    addr: $", { "Ref": "AdvertisedIPAddress" }, "_ipv4:4001\n",
+    peer-addr: $", { "Ref": "AdvertisedIPAddress" }, "_ipv4:7001\n",
+
+  fleet:
+    public-ip: $public_ipv4
+    metadata: hostname=%H
+
+  update:
+    reboot-strategy: off
+
+  units:
+    - name: etcd.service
+      command: start
+
+    - name: fleet.service
+      command: start
+
+    # Run consul
+    - name: consul.service
+      command: start
+      content: |
+        [Unit]
+        Description=Run consul
+        After=docker.service
+        Requires=docker.service
+
+        [Service]
+        Restart=always
+        ExecStartPre=-/usr/bin/docker kill consul
+        ExecStartPre=-/usr/bin/docker rm consul
+        ExecStartPre=/usr/bin/docker pull progrium/consul:latest
+        ExecStart=/usr/bin/docker run --name consul -h %H -v /data/consul:/data \
+                               -p 8300:8300 \
+                               -p 8301:8301 \
+                               -p 8301:8301/udp \
+                               -p 8302:8302 \
+                               -p 8302:8302/udp \
+                               -p 8400:8400 \
+                               -p 8500:8500 \
+                               -p 53:53/udp \
+                               progrium/consul:latest -server -advertise $public_ipv4 -bootstrap-expect 3
+
+        ExecStop=/usr/bin/docker stop consul
+
+    # Run registrator
+    - name: registrator.service
+      command: start
+      content: |
+        [Unit]
+        Description=Run registrator
+        After=docker.service
+        Requires=docker.service
+
+        [Service]
+        Restart=always
+        ExecStartPre=-/usr/bin/docker kill registrator
+        ExecStartPre=-/usr/bin/docker rm registrator
+        ExecStartPre=/usr/bin/docker pull progrium/registrator:latest
+        ExecStart=/usr/bin/docker run --name registrator -v /var/run/docker.sock:/tmp/docker.sock -h %H progrium/registrator:latest consul://$public_ipv4:8500
+        ExecStop=/usr/bin/docker stop registrator
+
+    # Run srv-router
+    - name: srv-router.service
+      command: start
+      content: |
+        [Unit]
+        Description=Run srv-router
+        After=docker.service
+        Requires=docker.service
+
+        [Service]
+        Restart=always
+        ExecStartPre=-/usr/bin/docker kill srv-router
+        ExecStartPre=-/usr/bin/docker rm srv-router
+        ExecStartPre=/usr/bin/docker pull stluengtst01.monsanto.com:5000/srv-router:latest
+        ExecStart=/usr/bin/docker run -t --name srv-router stluengtst01.monsanto.com:5000/srv-router:latest
+        ExecStop=/usr/bin/docker stop srv-router
