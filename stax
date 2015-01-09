@@ -98,8 +98,8 @@ stax-create(){
   $aws s3 mb "s3://$bucket" > /dev/null
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     uploading template: "
-  #$aws s3 cp "$SCRIPT_PATH/templates/cloudformation-template.json" "s3://$template" > /dev/null
   $aws s3 cp "$SCRIPT_PATH/templates/cloudformation-template-vpc.json" "s3://$template" > /dev/null
+  #$aws s3 cp "$SCRIPT_PATH/templates/cloudformation-template-vpc-consul.json" "s3://$template" > /dev/null
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     validating template: "
   stax-validate "$template_url" > /dev/null
