@@ -2,11 +2,11 @@
 
 set -e
 
-########################################################################
-#   stax - builds a VPC in aws ec2 - https://github.com/philcryer/stax
+#####################################################################
+#   stax - builds a VPC in AWS - https://github.com/philcryer/stax
 #   https://github.com/philcryer/stax/blob/master/LICENSE
-#   this should work(tm)!
-########################################################################
+#   this should work(tm)!                                  2015/01
+#####################################################################
 
 STAX_PRE_NAME="stax"
 COREOS_CHANNEL="alpha"
@@ -69,8 +69,10 @@ stax-preflight(){
       mkdir -p ${HOME}/.stax
       echo "creating directory ${HOME}/.stax"
   fi
-  if [ ! -f config.json ] && [ ! -f config-vpc.json ]; then
-     echo "config.json not configured, copy example and configure'. Aborting."; exit 1
+  if [ ! -f config.json ]; then
+     echo "config.json not configured, copy example to this directory, configure it and run again."
+     echo " cp config/config.json.example config.json"
+     echo "Aborting."; exit 1
   fi
 }
 
@@ -84,7 +86,7 @@ stax-validate(){
 }
 
 stax-create(){
-  stax-generate-vpc
+  stax-generate
   STAX_NAME="vpc-$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
   echo "${yellow}[ ${cyan}NAME${yellow} ]${reset} $STAX_NAME"
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}   create stax"
@@ -96,6 +98,7 @@ stax-create(){
   $aws s3 mb "s3://$bucket" > /dev/null
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     uploading template: "
+  #$aws s3 cp "$SCRIPT_PATH/templates/cloudformation-template.json" "s3://$template" > /dev/null
   $aws s3 cp "$SCRIPT_PATH/templates/cloudformation-template-vpc.json" "s3://$template" > /dev/null
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     validating template: "
@@ -106,7 +109,7 @@ stax-create(){
   $aws cloudformation create-stack \
     --stack-name $STAX_NAME \
     --template-url "$template_url" \
-    --parameters "$(</tmp/config-vpc.json.tmp)" \
+    --parameters "$(</tmp/config.json.tmp)" \
     --capabilities CAPABILITY_IAM
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     cleaning s3 bucket: "
   $aws s3 rb --force "s3://$bucket" > /dev/null
@@ -207,7 +210,7 @@ stax-pushmotd(){
 stax-getdockerips(){
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}   get docker IP(s)"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
-  aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | grep -A10 -B8 docker-$STAX_NAME | grep PRIVATEIPADDRESSES  | grep -o '^\|[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*' > /tmp/dockerlists
+  aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | grep -A11 -B11 docker-$STAX_NAME | grep PRIVATEIPADDRESSES  | grep -o '^\|[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*' > /tmp/dockerlists
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building dockerlist: "
   mv /tmp/dockerlists /tmp/docker_hosts
@@ -269,17 +272,17 @@ stax-generate(){
   RANDOM_NUM=$((RANDOM%99999+10001))
 }
 
-stax-generate-vpc(){
-  if [ ! -f config-vpc.json ]; then
-     echo "config-vpc.json not configured, copy example and configure'. Aborting."; exit 1
+stax-generate(){
+  if [ ! -f config.json ]; then
+     echo "config.json not configured, copy example and configure'. Aborting."; exit 1
   fi
-  cp config-vpc.json /tmp/config-vpc.json.tmp
+  cp config.json /tmp/config.json.tmp
   if [ ${SYSTEM} == 'Darwin' ]; then
-    SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i '' "s/SSH_FROM/${SSH_FROM}/g" /tmp/config-vpc.json.tmp
-    DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i '' "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config-vpc.json.tmp
+    SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i '' "s/SSH_FROM/${SSH_FROM}/g" /tmp/config.json.tmp
+    DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i '' "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config.json.tmp
   else
-    SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i "s/SSH_FROM/${SSH_FROM}/g" /tmp/config-vpc.json.tmp
-    DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config-vpc.json.tmp
+    SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i "s/SSH_FROM/${SSH_FROM}/g" /tmp/config.json.tmp
+    DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config.json.tmp
   fi
   NUMW=`wc -l < config/stax-words`
   RANDOM_NAM=`head -$((${RANDOM} % ${NUMW} + 1)) config/stax-words | tail -1`
@@ -311,7 +314,7 @@ if [[ "$1" == "create" ]]; then
   else
     stax-create
     stax-describe
-    rm /tmp/config-vpc.json.tmp
+    rm /tmp/config.json.tmp
     exit 0
   fi
 fi
