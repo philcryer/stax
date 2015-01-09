@@ -28,7 +28,7 @@ stax-usage(){
 echo "Usage: stax <command>"
 
 echo; echo "Commands:"
-echo "  list          List all currently built and running stax"
+echo "  list          List all completely built and running stax"
 echo "  create        Create a new VPC stax in AWS"
 echo "  describe      Describe the created VPC stax"
 echo "  connect       Connect to the jumpbox in the VPC stax over SSH"
