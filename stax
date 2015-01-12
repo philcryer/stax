@@ -74,6 +74,10 @@ stax-preflight(){
      echo " cp config/config.json.example config.json"
      echo "Aborting."; exit 1
   fi
+  if [ ! -d ${HOME}/.stax ]; then
+     mkdir -p ${HOME}/.stax
+     echo "Created ${HOME}/.stax directory."
+  fi
 }
 
 stax-validate(){
@@ -256,6 +260,11 @@ stax-destroy(){
 }
 
 stax-generate(){
+<<<<<<< HEAD
+  cp config.json config.json.tmp
+  SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed "s/SSH_FROM/${SSH_FROM}/g" config.json.tmp
+  DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed "s|DISCOVERY_URL|${DISCOVERY_URL}|g" config.json.tmp
+=======
   if [ ! -f config.json ]; then
      echo "config.json not configured, copy example and configure'. Aborting."; exit 1
   fi
@@ -267,6 +276,7 @@ stax-generate(){
     SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i "s/SSH_FROM/${SSH_FROM}/g" /tmp/config.json.tmp
     DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config.json.tmp
   fi
+>>>>>>> 4ba9634872e07b5ceb316f0dcf8699148d69ccf5
   NUMW=`wc -l < config/stax-words`
   RANDOM_NAM=`head -$((${RANDOM} % ${NUMW} + 1)) config/stax-words | tail -1`
   RANDOM_NUM=$((RANDOM%99999+10001))
