@@ -216,7 +216,7 @@ stax-getdockerips(){
   mv /tmp/dockerlists /tmp/docker_hosts
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building docker connect: "
-  cp templates/dockconnect /tmp/dockconnect
+  cp assets/stax/dockconnect /tmp/dockconnect
   if [ ${SYSTEM} == 'Darwin' ]; then
     sed -i '' "s|STAX_KEY|${STAX_KEY}|g" /tmp/dockconnect
   else
