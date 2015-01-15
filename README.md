@@ -9,6 +9,7 @@ Create stacks (aka stax) on AWS ([Amazon Web Services](aws.amazon.com)) in a pri
 After running `stax create` you'll have the following on Amazon AWS:
 
 * __1 Cloudformation script__ (vpc-) instuctions to AWS on how to build the items below
+* __1 VPC instace__ (vpc-vpc-) isolated virtual private cloud network
 * __1 EC2 instance__ Jumpbox (jump-) used to connect to the network from the outside (public internet)
 * __2 EC2 instances__ NAT (NAT1-, NAT2-) proxy network connections to and from the internal CoreOS hosts to the public internet
 * __x EC2 instances__ CoreOS/Docker (docker-) these instances run Docker, by default it will create 2 of these, but that number can be changed in the config.json to be as many as you want. As described, these instances only access the public internet through one of the NAT boxes, a script on the instances constantly monitor the NAT instances to rollover to a secondary if one goes down
