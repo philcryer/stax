@@ -41,9 +41,9 @@ exit 1
 [ $# -gt 0 ] || stax-usage
 
 stax-logo(){
-NUMS=`wc -l < config/stax-slogans`
+NUMS=`wc -l < assets/stax/stax-slogans`
   echo "${green}     _             "
-  echo "    | | ${yellow}`head -$((${RANDOM} % ${NUMS} + 1)) config/stax-slogans | tail -1`${green}"
+  echo "    | | ${yellow}`head -$((${RANDOM} % ${NUMS} + 1)) assets/stax/stax-slogans | tail -1`${green}"
   echo " ___| |_ __ ___  __"
   echo '/ __| __/ _` \ \/ /'
   echo '\__ \ || (_| |>  < '
@@ -69,9 +69,9 @@ stax-preflight(){
       mkdir -p ${HOME}/.stax
       echo "creating directory ${HOME}/.stax"
   fi
-  if [ ! -f config.json ]; then
-     echo "config.json not configured, copy example to this directory, configure it and run again."
-     echo " cp config/config.json.example config.json"
+  if [ ! -f config/config.json ]; then
+     echo "config.json not configured, copy example to this config directory, configure it and run again."
+     echo " cp config/config.json.example config/config.json"
      echo "Aborting."; exit 1
   fi
 }
@@ -202,7 +202,7 @@ stax-pushmotd(){
   scp -q -i ~/.ssh/$STAX_KEY.pem /tmp/motd ec2-user@$STAX_PUB_IP:~ > /dev/null
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     pushing bashrc to $STAX_PUB_IP: "
-  scp -q -i ~/.ssh/$STAX_KEY.pem config/bashrc ec2-user@$STAX_PUB_IP:~/.bashrc > /dev/null
+  scp -q -i ~/.ssh/$STAX_KEY.pem assets/stax/bashrc ec2-user@$STAX_PUB_IP:~/.bashrc > /dev/null
   echo "done"
   rm /tmp/motd
 }
@@ -256,10 +256,10 @@ stax-destroy(){
 }
 
 stax-generate(){
-  if [ ! -f config.json ]; then
+  if [ ! -f config/config.json ]; then
      echo "config.json not configured, copy example and configure'. Aborting."; exit 1
   fi
-  cp config.json /tmp/config.json.tmp
+  cp config/config.json /tmp/config.json.tmp
   if [ ${SYSTEM} == 'Darwin' ]; then
     SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i '' "s/SSH_FROM/${SSH_FROM}/g" /tmp/config.json.tmp
     DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i '' "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config.json.tmp
@@ -267,16 +267,16 @@ stax-generate(){
     SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i "s/SSH_FROM/${SSH_FROM}/g" /tmp/config.json.tmp
     DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config.json.tmp
   fi
-  NUMW=`wc -l < config/stax-words`
-  RANDOM_NAM=`head -$((${RANDOM} % ${NUMW} + 1)) config/stax-words | tail -1`
+  NUMW=`wc -l < assets/stax/stax-words`
+  RANDOM_NAM=`head -$((${RANDOM} % ${NUMW} + 1)) assets/stax/stax-words | tail -1`
   RANDOM_NUM=$((RANDOM%99999+10001))
 }
 
 stax-generate(){
-  if [ ! -f config.json ]; then
+  if [ ! -f config/config.json ]; then
      echo "config.json not configured, copy example and configure'. Aborting."; exit 1
   fi
-  cp config.json /tmp/config.json.tmp
+  cp config/config.json /tmp/config.json.tmp
   if [ ${SYSTEM} == 'Darwin' ]; then
     SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i '' "s/SSH_FROM/${SSH_FROM}/g" /tmp/config.json.tmp
     DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i '' "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config.json.tmp
@@ -284,8 +284,8 @@ stax-generate(){
     SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i "s/SSH_FROM/${SSH_FROM}/g" /tmp/config.json.tmp
     DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config.json.tmp
   fi
-  NUMW=`wc -l < config/stax-words`
-  RANDOM_NAM=`head -$((${RANDOM} % ${NUMW} + 1)) config/stax-words | tail -1`
+  NUMW=`wc -l < assets/stax/stax-words`
+  RANDOM_NAM=`head -$((${RANDOM} % ${NUMW} + 1)) assets/stax/stax-words | tail -1`
   RANDOM_NUM=$((RANDOM%99999+10001))
 }
 
