@@ -6,11 +6,11 @@ Create stacks (aka stax) on AWS ([Amazon Web Services](aws.amazon.com)) in a pri
 
 ![AWS high availability NAT](docs/aws-ha-nat.png)
 
-So after running `stax create` you'll have the following on Amazon AWS:
+After running `stax create` you'll have the following on Amazon AWS:
 
-* 1 Cloudformation (vpc-) instuctions to AWS on how to build the items below
-* 1 EC2 instance: Jumpbox (jump-) used to connect to the network from the outside (public internet)
-* 2 EC2 instances: NAT (NAT1-, NAT2-) proxy network connections to and from the internal CoreOS hosts to the public internet
+* _1 Cloudformation_ (vpc-) instuctions to AWS on how to build the items below
+* _1 EC2_ instance: Jumpbox (jump-) used to connect to the network from the outside (public internet)
+* _2 EC2_ instances: NAT (NAT1-, NAT2-) proxy network connections to and from the internal CoreOS hosts to the public internet
 * x EC2 instances: CoreOS (docker-) these instances run Docker, default there will be 2 of these, but that number can be changed in the config.json to be as many as you want. As described, these instances only access the public internet through one of the NAT boxes, a script on the instances constantly monitor the NAT instances to rollover to a secondary if one goes down
 * 5 Volumes: disk storage, 8 Gigs each by default
 * 3 Security Groups: defining ingress and egress rules for network traffic
