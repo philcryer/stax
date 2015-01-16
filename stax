@@ -162,7 +162,8 @@ stax-getip(){
     exit 1
   fi
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
-  STAX_PUB_IP=`cat ~/.stax/$STAX_NAME.json | grep -B2 -A2 'JumpEIP' | grep -o '^\|[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*'`
+  #STAX_PUB_IP=`cat ~/.stax/$STAX_NAME.json | grep -B2 -A2 'JumpEIP' | grep -o '^\|[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*'`
+  STAX_PUB_IP=`cat ~/.stax/$STAX_NAME.json | grep -B2 -A2 'JumpEIP' | grep -o '[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*'`
   echo "done"
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}     public IP (EIP): $STAX_PUB_IP"
 }
@@ -210,7 +211,8 @@ stax-pushmotd(){
 stax-getdockerips(){
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}   get docker IP(s)"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
-  aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | grep -A11 -B11 docker-$STAX_NAME | grep PRIVATEIPADDRESSES  | grep -o '^\|[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*' > /tmp/dockerlists
+  #aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | grep -A11 -B11 docker-$STAX_NAME | grep PRIVATEIPADDRESSES  | grep -o '^\|[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*' > /tmp/dockerlists
+  aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | grep -A11 -B11 docker-$STAX_NAME | grep PRIVATEIPADDRESSES  | grep -o '[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*' > /tmp/dockerlists
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building dockerlist: "
   mv /tmp/dockerlists /tmp/docker_hosts
@@ -234,7 +236,7 @@ stax-getdockerips(){
 }
 
 stax-connect(){
-  ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 
+  ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP
 }
 
 stax-destroy(){
