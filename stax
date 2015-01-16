@@ -181,7 +181,7 @@ stax-pushkey(){
 
 stax-motd(){
   echo "     _             " > /tmp/motd
-  echo "    | |" >> /tmp/motd
+  echo "    | | welcome to the jumpbox" >> /tmp/motd
   echo " ___| |_ __ ___  __" >> /tmp/motd
   echo '/ __| __/ _` \ \/ /' >> /tmp/motd
   echo "\__ \ || (_| |>  <" >> /tmp/motd

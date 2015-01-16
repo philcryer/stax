@@ -1728,6 +1728,118 @@
         }
       }
     },
+    "Ingress8300":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties":{
+        "GroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        },
+        "IpProtocol":"tcp",
+        "FromPort":"8300",
+        "ToPort":"8300",
+        "SourceSecurityGroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        }
+      }
+    },
+    "Ingress8301":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties":{
+        "GroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        },
+        "IpProtocol":"tcp",
+        "FromPort":"8301",
+        "ToPort":"8301",
+        "SourceSecurityGroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        }
+      }
+    },
+    "Ingress8301udp":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties":{
+        "GroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        },
+        "IpProtocol":"udp",
+        "FromPort":"8301",
+        "ToPort":"8301",
+        "SourceSecurityGroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        }
+      }
+    },
+    "Ingress8302":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties":{
+        "GroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        },
+        "IpProtocol":"tcp",
+        "FromPort":"8302",
+        "ToPort":"8302",
+        "SourceSecurityGroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        }
+      }
+    },
+    "Ingress8302udp":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties":{
+        "GroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        },
+        "IpProtocol":"udp",
+        "FromPort":"8302",
+        "ToPort":"8302",
+        "SourceSecurityGroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        }
+      }
+    },
+    "Ingress8400":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties":{
+        "GroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        },
+        "IpProtocol":"tcp",
+        "FromPort":"8400",
+        "ToPort":"8400",
+        "SourceSecurityGroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        }
+      }
+    },
+    "Ingress8500":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties":{
+        "GroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        },
+        "IpProtocol":"tcp",
+        "FromPort":"8500",
+        "ToPort":"8500",
+        "SourceSecurityGroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        }
+      }
+    },
+    "Ingress53udp":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties":{
+        "GroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        },
+        "IpProtocol":"udp",
+        "FromPort":"53",
+        "ToPort":"53",
+        "SourceSecurityGroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        }
+      }
+    },
     "CoreOSServerLaunchConfig":{
       "Type":"AWS::AutoScaling::LaunchConfiguration",
       "Properties":{
@@ -1766,7 +1878,31 @@
                 "    - name: etcd.service\n",
                 "      command: start\n",
                 "    - name: fleet.service\n",
-                "      command: start\n"
+                "      command: start\n",
+                "    - name: consul.service\n",
+                "      command: start\n",
+                "      content: |\n",
+                "       [Unit]\n",
+                "       Description=Run consul\n",
+                "       After=docker.service\n",
+                "       Requires=docker.service\n",
+                "       [Service]\n",
+                "         Restart=always\n",
+                "         ExecStartPre=-/usr/bin/docker kill consul\n",
+                "         ExecStartPre=-/usr/bin/docker rm consul\n",
+                "         ExecStartPre=/usr/bin/docker pull progrium/consul:latest\n",
+                "         ExecStart=/usr/bin/docker run --name consul -h %H -v /data/consul:/data \\\n",
+                "              -p 8300:8300 \\\n",
+                "              -p 8301:8301 \\\n",
+                "              -p 8301:8301/udp \\\n",
+                "              -p 8302:8302 \\\n",
+                "              -p 8302:8302/udp \\\n",
+                "              -p 8400:8400 \\\n",
+                "              -p 8500:8500 \\\n",
+                "              -p 53:53/udp \\\n",
+                "              progrium/consul:latest -server -advertise $", { "Ref": "AdvertisedIPAddress" }, "_ipv4 -bootstrap-expect 3\n",
+                "         ExecStartPost=/usr/bin/bash -c \"x=0; while [ $x -ne 1 ]; do x=`/usr/bin/docker ps -f status=running | grep consul | wc -l`; done; /usr/bin/docker exec -it consul consul join `curl -Ls http://172.17.42.1:4001/v2/machines | sed -e 's|http://\\([.0-9]*\\):[0-9]*,*|\\1|g'`\"\n",
+                "         ExecStop=/usr/bin/docker stop consul\n"
               ]
             ]
           }
