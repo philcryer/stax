@@ -45,7 +45,7 @@
   },
   {
     "ParameterKey":     "ClusterSize",
-    "ParameterValue":   "2"
+    "ParameterValue":   "3"
   },
   {
     "ParameterKey":     "AutoScaleCooldown",
