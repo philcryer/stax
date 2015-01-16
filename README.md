@@ -78,7 +78,7 @@ cd stax
 cp config/config.json.example config.json
 ```
 
-* Configure the config file replacing all instances of [<changeMe]. Notice the cluster size option that defines the minimal amount of CoreOS nodes running, start with [2] for now.
+* Configure the config file replacing all instances of [<changeMe]. Notice the cluster size option that defines the minimal amount of CoreOS nodes running, start with the default of [3] for now.
 
 ```bash
 vi config.json
