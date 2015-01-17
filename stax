@@ -118,7 +118,7 @@ stax-create(){
     --stack-name $STAX_NAME \
     --template-url "$template_url" \
     --parameters "$(</tmp/config.json.tmp)" \
-    --capabilities CAPABILITY_IAM
+    --capabilities CAPABILITY_IAM > /dev/null
   then
     echo "${yellow}[ ${cyan}----${yellow} ]${reset}   stax creation complete"
   else
@@ -270,7 +270,7 @@ stax-destroy(){
     read -p "${yellow}[ ${cyan}????${yellow} ]${reset}     ok to destroy $STAX_NAME [y/n]? " answer
     if [[ $answer = y ]] ; then
       echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     deleting: "
-      aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null && aws cloudformation delete-stack --stack-name $STAX_NAME 
+      $aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null && aws cloudformation delete-stack --stack-name $STAX_NAME 
       echo "done"
       stax-destroy-bucket
       stax-destroy-files
