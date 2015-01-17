@@ -1294,114 +1294,14 @@
                 "#!/bin/bash -v\n",
                 "yum update -y aws*\n",
                 ". /etc/profile.d/aws-apitools-common.sh\n",
-                "# Configure iptables\n",
-                "/sbin/iptables -t nat -A POSTROUTING -o eth0 -s 0.0.0.0/0 -j MASQUERADE\n",
-                "/sbin/iptables-save > /etc/sysconfig/iptables\n",
-                "# Configure ip forwarding and redirects\n",
-                "echo 1 >  /proc/sys/net/ipv4/ip_forward && echo 0 >  /proc/sys/net/ipv4/conf/eth0/send_redirects\n",
-                "mkdir -p /etc/sysctl.d/\n",
-                "cat <<EOF > /etc/sysctl.d/nat.conf\n",
-                "net.ipv4.ip_forward = 1\n",
-                "net.ipv4.conf.eth0.send_redirects = 0\n",
-                "EOF\n",
-                "# Download nat_monitor.sh and configure\n",
                 "cd /root\n",
-                "wget http://media.amazonwebservices.com/articles/nat_monitor_files/nat_monitor.sh\n",
-                "NAT_ID=\n",
-                "# CloudFormation should have updated the PrivateRouteTable2 by now (due to yum update), however loop to make sure\n",
-                "while [ \"$NAT_ID\" == \"\" ]; do\n",
-                "  sleep 60\n",
-                "  NAT_ID=`/opt/aws/bin/ec2-describe-route-tables ",
-                {
-                   "Ref":"PrivateRouteTable2"
-                },
-                " -U https://ec2.",
-                {
-                   "Ref":"AWS::Region"
-                },
-                ".amazonaws.com | grep 0.0.0.0/0 | awk '{print $2;}'`\n",
-                "  #echo `date` \"-- NAT_ID=$NAT_ID\" >> /tmp/test.log\n",
-                "done\n",
-                "# Update NAT_ID, NAT_RT_ID, and My_RT_ID\n",
-                "sed \"s/NAT_ID=/NAT_ID=$NAT_ID/g\" /root/nat_monitor.sh > /root/nat_monitor.tmp\n",
-                "sed \"s/NAT_RT_ID=/NAT_RT_ID=",
-                {
-                   "Ref":"PrivateRouteTable2"
-                },
-                "/g\" /root/nat_monitor.tmp > /root/nat_monitor.sh\n",
-                "sed \"s/My_RT_ID=/My_RT_ID=",
-                {
-                   "Ref":"PrivateRouteTable1"
-                },
-                "/g\" /root/nat_monitor.sh > /root/nat_monitor.tmp\n",
-                "sed \"s/EC2_URL=/EC2_URL=https:\\/\\/ec2.",
-                {
-                   "Ref":"AWS::Region"
-                },
-                ".amazonaws.com",
-                "/g\" /root/nat_monitor.tmp > /root/nat_monitor.sh\n",
-                "sed \"s/Num_Pings=3/Num_Pings=",
-                {
-                   "Ref":"NumberOfPings"
-                },
-                "/g\" /root/nat_monitor.sh > /root/nat_monitor.tmp\n",
-                "sed \"s/Ping_Timeout=1/Ping_Timeout=",
-                {
-                   "Ref":"PingTimeout"
-                },
-                "/g\" /root/nat_monitor.tmp > /root/nat_monitor.sh\n",
-                "sed \"s/Wait_Between_Pings=2/Wait_Between_Pings=",
-                {
-                   "Ref":"WaitBetweenPings"
-                },
-                "/g\" /root/nat_monitor.sh > /root/nat_monitor.tmp\n",
-                "sed \"s/Wait_for_Instance_Stop=60/Wait_for_Instance_Stop=",
-                {
-                   "Ref":"WaitForInstanceStop"
-                },
-                "/g\" /root/nat_monitor.tmp > /root/nat_monitor.sh\n",
-                "sed \"s/Wait_for_Instance_Start=300/Wait_for_Instance_Start=",
-                {
-                   "Ref":"WaitForInstanceStart"
-                },
-                "/g\" /root/nat_monitor.sh > /root/nat_monitor.tmp\n",
-                "mv /root/nat_monitor.tmp /root/nat_monitor.sh\n",
-                "chmod a+x /root/nat_monitor.sh\n",
-                "echo '@reboot /root/nat_monitor.sh > /tmp/nat_monitor.log' | crontab\n",
-                "/root/nat_monitor.sh > /tmp/nat_monitor.log &\n",
-                "#### 20141202 - added to provide traffic logging\n",
-                "## Enable logging of this userdata script for review post build\n",
-                "exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1\n",
-                "##Tell Rsyslog to log all Netfilter traffic to its own file\n",
-                "echo ':msg, contains, \"NETFILTER\"       /var/log/iptables.log' >>/etc/rsyslog.conf\n",
-                "echo ':msg, contains, \"NETFILTER\"     ~' >>/etc/rsyslog.conf\n",
-                "##Restart rsyslog\n",
-                "service rsyslog restart\n",
-                "##Create log rotation for connection logging\n",
-                "cat > /etc/logrotate.d/iptables << EOF\n",
-                "/var/log/iptables.log {\n",
-                "   missingok\n",
-                "   notifempty\n",
-                "   compress\n",
-                "   size 20k\n",
-                "   daily\n",
-                "   rotate 28\n",
-                "   create 0600 root root\n",
-                "}\n",
-                "EOF\n",
-                "##Stop IPtables if started\n",
-                "service iptables stop\n",
-                "##Backup current IPtables\n",
-                "cp /etc/sysconfig/iptables /etc/sysconfig/iptables.bkup\n",
-                "##Start IP Tables\n",
-                "service iptables start\n",
-                "##Clear all current rules\n",
-                "iptables --flush\n",
-                "##Enable logging on all new connections inbound and outbound\n",
-                "iptables -I INPUT -m state --state NEW -j LOG --log-prefix \"NETFILTER\"\n",                        "iptables -I OUTPUT -m state --state NEW -j LOG --log-prefix \"NETFILTER\"\n",
-                "##Save our IPtables rules to persist reboot\n",
-                "service iptables save\n",
-                "#### 20141202 - added to provide traffic logging\n"
+                "wget https://s3.amazonaws.com/stax-user-data/user-data-nat.sh\n",
+                "/bin/bash user-data-nat.sh",
+                " ", { "Ref":"PrivateRouteTable2" },
+                " ", { "Ref":"PrivateRouteTable1" },
+                " ", { "Ref":"AWS::Region" },
+                " https://s3.amazonaws.com/stax-user-data/nat_monitor.sh\n",
+                "# EOF\n"
               ]
             ]
           }
@@ -1509,103 +1409,15 @@
               [
                 "#!/bin/bash -v\n",
                 "yum update -y aws*\n",
-                "# Configure iptables\n",
-                "/sbin/iptables -t nat -A POSTROUTING -o eth0 -s 0.0.0.0/0 -j MASQUERADE\n",
-                "/sbin/iptables-save > /etc/sysconfig/iptables\n",
-                "# Configure ip forwarding and redirects\n",
-                "echo 1 >  /proc/sys/net/ipv4/ip_forward && echo 0 >  /proc/sys/net/ipv4/conf/eth0/send_redirects\n",
-                "mkdir -p /etc/sysctl.d/\n",
-                "cat <<EOF > /etc/sysctl.d/nat.conf\n",
-                "net.ipv4.ip_forward = 1\n",
-                "net.ipv4.conf.eth0.send_redirects = 0\n",
-                "EOF\n",
-                "# Download nat_monitor.sh and configure\n",
+                ". /etc/profile.d/aws-apitools-common.sh\n",
                 "cd /root\n",
-                "wget http://media.amazonwebservices.com/articles/nat_monitor_files/nat_monitor.sh\n",
-                "# Update NAT_ID, NAT_RT_ID, and My_RT_ID\n",
-                "sed \"s/NAT_ID=/NAT_ID=",
-                {
-                   "Ref":"NAT1Instance"
-                },
-                "/g\" /root/nat_monitor.sh > /root/nat_monitor.tmp\n",
-                "sed \"s/NAT_RT_ID=/NAT_RT_ID=",
-                {
-                   "Ref":"PrivateRouteTable1"
-                },
-                "/g\" /root/nat_monitor.tmp > /root/nat_monitor.sh\n",
-                "sed \"s/My_RT_ID=/My_RT_ID=",
-                {
-                   "Ref":"PrivateRouteTable2"
-                },
-                "/g\" /root/nat_monitor.sh > /root/nat_monitor.tmp\n",
-                "sed \"s/EC2_URL=/EC2_URL=https:\\/\\/ec2.",
-                {
-                   "Ref":"AWS::Region"
-                },
-                ".amazonaws.com",
-                "/g\" /root/nat_monitor.tmp > /root/nat_monitor.sh\n",
-                "sed \"s/Num_Pings=3/Num_Pings=",
-                {
-                   "Ref":"NumberOfPings"
-                },
-                "/g\" /root/nat_monitor.sh > /root/nat_monitor.tmp\n",
-                "sed \"s/Ping_Timeout=1/Ping_Timeout=",
-                {
-                   "Ref":"PingTimeout"
-                },
-                "/g\" /root/nat_monitor.tmp > /root/nat_monitor.sh\n",
-                "sed \"s/Wait_Between_Pings=2/Wait_Between_Pings=",
-                {
-                   "Ref":"WaitBetweenPings"
-                },
-                "/g\" /root/nat_monitor.sh > /root/nat_monitor.tmp\n",
-                "sed \"s/Wait_for_Instance_Stop=60/Wait_for_Instance_Stop=",
-                {
-                   "Ref":"WaitForInstanceStop"
-                },
-                "/g\" /root/nat_monitor.tmp > /root/nat_monitor.sh\n",
-                "sed \"s/Wait_for_Instance_Start=300/Wait_for_Instance_Start=",
-                {
-                   "Ref":"WaitForInstanceStart"
-                },
-                "/g\" /root/nat_monitor.sh > /root/nat_monitor.tmp\n",
-                "mv /root/nat_monitor.tmp /root/nat_monitor.sh\n",
-                "chmod a+x /root/nat_monitor.sh\n",
-                "echo '@reboot /root/nat_monitor.sh > /tmp/nat_monitor.log' | crontab\n",
-                "/root/nat_monitor.sh >> /tmp/nat_monitor.log &\n",
-                "#### 20141202 - added to provide traffic logging\n",
-                "## Enable logging of this userdata script for review post build\n",
-                "exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1\n",
-                "##Tell Rsyslog to log all Netfilter traffic to its own file\n",
-                "echo ':msg, contains, \"NETFILTER\"       /var/log/iptables.log' >>/etc/rsyslog.conf\n",
-                "echo ':msg, contains, \"NETFILTER\"     ~' >>/etc/rsyslog.conf\n",
-                "##Restart rsyslog\n",
-                "service rsyslog restart\n",
-                "##Create log rotation for connection logging\n",
-                "cat > /etc/logrotate.d/iptables << EOF\n",
-                "/var/log/iptables.log {\n",
-                "   missingok\n",
-                "   notifempty\n",
-                "   compress\n",
-                "   size 20k\n",
-                "   daily\n",
-                "   rotate 28\n",
-                "   create 0600 root root\n",
-                "}\n",
-                "EOF\n",
-                "##Stop IPtables if started\n",
-                "service iptables stop\n",
-                "##Backup current IPtables\n",
-                "cp /etc/sysconfig/iptables /etc/sysconfig/iptables.bkup\n",
-                "##Start IP Tables\n",
-                "service iptables start\n",
-                "##Clear all current rules\n",
-                "iptables --flush\n",
-                "##Enable logging on all new connections inbound and outbound\n",
-                "iptables -I INPUT -m state --state NEW -j LOG --log-prefix \"NETFILTER\"\n",                        "iptables -I OUTPUT -m state --state NEW -j LOG --log-prefix \"NETFILTER\"\n",
-                "##Save our IPtables rules to persist reboot\n",
-                "service iptables save\n",
-                "#### 20141202 - added to provide traffic logging\n"
+                "wget https://s3.amazonaws.com/stax-user-data/user-data-nat.sh\n",
+                "/bin/bash user-data-nat.sh",
+                " ", { "Ref":"PrivateRouteTable1" },
+                " ", { "Ref":"PrivateRouteTable2" },
+                " ", { "Ref":"AWS::Region" },
+                " https://s3.amazonaws.com/stax-user-data/nat_monitor.sh\n",
+                "# EOF\n"
               ]
             ]
           }
