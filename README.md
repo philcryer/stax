@@ -23,7 +23,7 @@ After running `stax create` you'll have the following on Amazon AWS:
 
 Stax runs, and has been fully tested, on Linux (Debian GNU/Linux 7 and Ubuntu 14.04, but others should work fine) and Apple OS X (tested on 10.10 and 10.9).
 
-### Brew (OS X only)
+### Homebrew (OS X only)
 
 * Install [Homebrew](http://brew.sh/) for OS X, which '...installs the stuff you need that Apple didn’t'. Basically it's a *nix package manager like we have in Linux. It's easy to install vi their setup script:
  
