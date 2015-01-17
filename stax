@@ -13,6 +13,8 @@ COREOS_CHANNEL="alpha"
 SCRIPT_PATH=$( cd $(dirname $0) ; pwd -P )
 SYSTEM=`uname`
 aws="aws --color on"
+STAX_DIR="$HOME/.stax"
+STAX_NAME_FILE="$STAX_DIR/stax-name"
 
 stax-colors(){
   green=$(tput setaf 2)
@@ -52,22 +54,22 @@ NUMS=`wc -l < assets/stax/stax-slogans`
 }
 
 stax-existing(){
-  if [ ! -f $HOME/.stax/stax-name ]; then
+  if [ ! -f $STAX_NAME_FILE ]; then
     echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
     exit 1
   else
-    STAX_EXIST=`cat ~/.stax/stax-name`
+    STAX_EXIST=$(<$STAX_NAME_FILE)
   fi
 }
 
 stax-preflight(){
   which aws > /dev/null 2>&1 || { echo "awscli is not installed. Aborting."; exit 1; }
-  if [ ! -f ${HOME}/.aws/config ]; then
+  if [ ! -f "$HOME/.aws/config" ]; then
      echo "awscli not configured, run 'aws configure'. Aborting."; exit 1
   fi
-  if [ ! -d ${HOME}/.stax ]; then
-      mkdir -p ${HOME}/.stax
-      echo "creating directory ${HOME}/.stax"
+  if [ ! -d "$STAX_DIR" ]; then
+      echo "creating directory $STAX_DIR"
+      mkdir -p "$STAX_DIR"
   fi
   if [ ! -f config/config.json ]; then
      echo "config.json not configured, copy example to this config directory, configure it and run again."
@@ -85,18 +87,22 @@ stax-validate(){
   fi
 }
 
+stax-create-bucket(){
+  bucket="$1"
+  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     creating bucket: "
+  $aws s3 mb "s3://$bucket" > /dev/null
+  echo "done"
+}
+
 stax-create(){
   stax-generate
   STAX_NAME="vpc-$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
   echo "${yellow}[ ${cyan}NAME${yellow} ]${reset} $STAX_NAME"
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}   create stax"
-  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     creating bucket: "
+  stax-create-bucket "$STAX_NAME"
   # upload template to s3 to have bigger size limits
-  bucket="mon-$STAX_NAME"
-  template="$bucket/$STAX_NAME.json"
+  template="$STAX_NAME/$STAX_NAME.json"
   template_url="https://s3.amazonaws.com/$template"
-  $aws s3 mb "s3://$bucket" > /dev/null
-  echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     uploading template: "
   $aws s3 cp "$SCRIPT_PATH/templates/cloudformation-template-vpc.json" "s3://$template" > /dev/null
   #$aws s3 cp "$SCRIPT_PATH/templates/cloudformation-template-vpc-consul.json" "s3://$template" > /dev/null
@@ -104,27 +110,30 @@ stax-create(){
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     validating template: "
   stax-validate "$template_url" > /dev/null
   echo "done"
-  echo $STAX_NAME > ~/.stax/stax-name
+  echo $STAX_NAME > $STAX_NAME_FILE
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}     creating vpc in aws"
   $aws cloudformation create-stack \
     --stack-name $STAX_NAME \
     --template-url "$template_url" \
     --parameters "$(</tmp/config.json.tmp)" \
     --capabilities CAPABILITY_IAM
-  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     cleaning s3 bucket: "
-  $aws s3 rb --force "s3://$bucket" > /dev/null
-  echo "done"
 }
 
 stax-describe(){
   echo "${yellow}[ ${cyan}NAME${yellow} ]${reset} $STAX_NAME"
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}   describe stax"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
-  aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null 2>&1 || { echo; echo "${yellow}[ ${cyan}----${yellow} ]${reset} no stax defined"; rm $HOME/.stax/stax-name; exit 1; }
+  if ! aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null 2>&1; then
+    echo
+    echo "${yellow}[ ${cyan}----${yellow} ]${reset} stax $STAX_NAME does not exist in AWS"
+    stax-destroy-bucket
+    stax-destroy-files
+    exit 1
+  fi
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     saving output"
-  aws cloudformation describe-stacks --stack-name $STAX_NAME > ~/.stax/$STAX_NAME.json; echo ": done"
-  echo "${yellow}[ ${cyan}----${yellow} ]${reset}     see ~/.stax/$STAX_NAME.json for details"
+  aws cloudformation describe-stacks --stack-name $STAX_NAME > "$STAX_DIR/$STAX_NAME.json"; echo ": done"
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset}     see $STAX_DIR/$STAX_NAME.json for details"
   #echo "${yellow}[ ${cyan}----${yellow} ]${reset}     output summary (see ~/.stax/$STAX_NAME.json for full details)"
   #echo "["
   #cat ~/.stax/vpc* | grep "StackName" 
@@ -148,7 +157,7 @@ stax-descauto(){
   echo "${yellow}[ ${cyan}NAME${yellow} ]${reset} $STAX_NAME"
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}   define autoscaling policies"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
-  aws autoscaling describe-auto-scaling-groups | grep "arn:aws:autoscaling" | grep `cat ~/.stax/stax-name` | cut -d"/" -f2 | cut -d"\"" -f1 > /tmp/asg; 
+  aws autoscaling describe-auto-scaling-groups | grep "arn:aws:autoscaling" | grep `cat $STAX_NAME_FILE` | cut -d"/" -f2 | cut -d"\"" -f1 > /tmp/asg; 
   echo "done"
   aws autoscaling describe-policies --auto-scaling-group-name `cat /tmp/asg`
   rm /tmp/asg
@@ -157,13 +166,12 @@ stax-descauto(){
 
 stax-getip(){
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}   get public IP (EIP)"
-  if [ `cat ~/.stax/$STAX_NAME.json | grep CREATE_COMPLETE | wc -l` -eq "0" ]; then
+  if [ `cat "$STAX_DIR/$STAX_NAME.json" | grep CREATE_COMPLETE | wc -l` -eq "0" ]; then
     echo "${yellow}[ ${cyan}NULL${yellow} ]${reset}     IP is undefined, this means the build is not complete, try again in a few minutes"
     exit 1
   fi
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
-  #STAX_PUB_IP=`cat ~/.stax/$STAX_NAME.json | grep -B2 -A2 'JumpEIP' | grep -o '^\|[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*'`
-  STAX_PUB_IP=`cat ~/.stax/$STAX_NAME.json | grep -B2 -A2 'JumpEIP' | grep -o '[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*'`
+  STAX_PUB_IP=`cat "$STAX_DIR/$STAX_NAME.json" | grep -B2 -A2 'JumpEIP' | grep -o '[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*'`
   echo "done"
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}     public IP (EIP): $STAX_PUB_IP"
 }
@@ -171,7 +179,7 @@ stax-getip(){
 stax-pushkey(){
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}   push key to jumpbox"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     pushing key to $STAX_PUB_IP: "
-  STAX_KEY=`cat ~/.stax/$STAX_NAME.json | grep -B1 -A1 'KeyName'|grep "ParameterValue" | cut -d"\"" -f4`
+  STAX_KEY=`cat $STAX_DIR/$STAX_NAME.json | grep -B1 -A1 'KeyName'|grep "ParameterValue" | cut -d"\"" -f4`
   scp -q -i ~/.ssh/$STAX_KEY.pem ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP:.ssh > /dev/null
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     setting permissions on key: "
@@ -188,7 +196,7 @@ stax-motd(){
   echo "|___/\__\__,_/_/\_\\" >> /tmp/motd
   echo >> /tmp/motd
   echo "IP        `echo $STAX_PUB_IP`" >> /tmp/motd
-  echo "Name      `cat ~/.stax/stax-name`" >> /tmp/motd
+  echo "Name      `cat $STAX_NAME_FILE`" >> /tmp/motd
   #echo "Built     `date +'%Y%m%d-%H%M'`" >> /tmp/motd
   echo "Built     `date`" >> /tmp/motd
 }
@@ -239,6 +247,20 @@ stax-connect(){
   ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP
 }
 
+stax-destroy-files(){
+  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     cleaning files: "
+  rm -f "$STAX_DIR/$STAX_NAME.json" "$STAX_NAME_FILE" > /dev/null
+  echo "done"
+}
+
+stax-destroy-bucket(){
+  if [ "$STAX_NAME" ]; then
+    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     removing s3 bucket: "
+    $aws s3 rb --force "s3://$STAX_NAME" > /dev/null
+    echo "done"
+  fi
+}
+
 stax-destroy(){
     echo "${yellow}[ ${cyan}----${yellow} ]${reset}   destroy stax"
     read -p "${yellow}[ ${cyan}????${yellow} ]${reset}     ok to destroy $STAX_NAME [y/n]? " answer
@@ -246,10 +268,8 @@ stax-destroy(){
       echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     deleting: "
       aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null && aws cloudformation delete-stack --stack-name $STAX_NAME 
       echo "done"
-      echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     cleaning files: "
-      rm ~/.stax/$STAX_NAME.json > /dev/null
-      rm ~/.stax/stax-name > /dev/null
-      echo "done"
+      stax-destroy-bucket
+      stax-destroy-files
       exit 0
     else
       echo "${yellow}[ ${cyan}----${yellow} ]${reset}     could not destroy $STAX_NAME, check name"
@@ -296,8 +316,8 @@ stax-colors
 stax-logo
 stax-preflight
 
-if [ -f $HOME/.stax/stax-name ]; then
-  STAX_NAME=`cat $HOME/.stax/stax-name`
+if [ -f "$STAX_NAME_FILE" ]; then
+  STAX_NAME=$(<$STAX_NAME_FILE)
 fi
 
 if [[ "$1" == "list" ]]; then
@@ -310,7 +330,7 @@ if [[ "$1" == "desc-auto" ]]; then
 fi
 
 if [[ "$1" == "create" ]]; then
-  if [ -f $HOME/.stax/stax-name ]; then
+  if [ -f $STAX_NAME_FILE ]; then
     echo "${yellow}[ ${red}ERRR${yellow} ]${reset} existing stax defined, exiting";
     exit 1
   else
@@ -323,7 +343,7 @@ fi
 
 if [[ "$1" == "describe" || "desc" ]]; then
   stax-existing
-  if [ -f $HOME/.stax/stax-name ]; then
+  if [ -f $STAX_NAME_FILE ]; then
     stax-describe
   else
     echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
