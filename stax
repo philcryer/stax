@@ -82,7 +82,9 @@ stax-validate(){
   template="$1"
   echo "$template"
   if ! $aws cloudformation validate-template --template-url "$template" > /dev/null; then
-    echo "$pkg: cloudformation template failed to validate. Aborting"
+    echo "${yellow}[ ${red}ERRR${yellow} ]${reset}     template failed to validate, exiting"
+    stax-destroy-bucket
+    stax-destroy-files
     exit 2
   fi
 }
@@ -98,7 +100,7 @@ stax-create(){
   stax-generate
   STAX_NAME="vpc-$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
   echo "${yellow}[ ${cyan}NAME${yellow} ]${reset} $STAX_NAME"
-  echo "${yellow}[ ${cyan}----${yellow} ]${reset}   create stax"
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset}   creating stax"
   stax-create-bucket "$STAX_NAME"
   # upload template to s3 to have bigger size limits
   template="$STAX_NAME/$STAX_NAME.json"
@@ -112,11 +114,19 @@ stax-create(){
   echo "done"
   echo $STAX_NAME > $STAX_NAME_FILE
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}     creating vpc in aws"
-  $aws cloudformation create-stack \
+  if $aws cloudformation create-stack \
     --stack-name $STAX_NAME \
     --template-url "$template_url" \
     --parameters "$(</tmp/config.json.tmp)" \
     --capabilities CAPABILITY_IAM
+  then
+    echo "${yellow}[ ${cyan}----${yellow} ]${reset}   stax creation complete"
+  else
+    echo "${yellow}[ ${red}ERRR${yellow} ]${reset}     creation failed, exiting"
+    stax-destroy-bucket
+    stax-destroy-files
+    exit 2
+  fi
 }
 
 stax-describe(){
@@ -219,19 +229,13 @@ stax-pushmotd(){
 stax-getdockerips(){
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}   get docker IP(s)"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
-  #aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | grep -A11 -B11 docker-$STAX_NAME | grep PRIVATEIPADDRESSES  | grep -o '^\|[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*' > /tmp/dockerlists
-  aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | grep -A11 -B11 docker-$STAX_NAME | grep PRIVATEIPADDRESSES  | grep -o '[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*' > /tmp/dockerlists
+  aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"docker-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$3 } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > /tmp/dockerlists
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building dockerlist: "
   mv /tmp/dockerlists /tmp/docker_hosts
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building docker connect: "
-  cp assets/stax/dockconnect /tmp/dockconnect
-  if [ ${SYSTEM} == 'Darwin' ]; then
-    sed -i '' "s|STAX_KEY|${STAX_KEY}|g" /tmp/dockconnect
-  else
-    sed -i "s|STAX_KEY|${STAX_KEY}|g" /tmp/dockconnect
-  fi
+  sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/dockconnect > /tmp/dockconnect
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     putting docker files on jumpbox: "
   scp -q -i ~/.ssh/$STAX_KEY.pem /tmp/docker_hosts ec2-user@$STAX_PUB_IP:~ > /dev/null
@@ -275,23 +279,6 @@ stax-destroy(){
       echo "${yellow}[ ${cyan}----${yellow} ]${reset}     could not destroy $STAX_NAME, check name"
       exit 1
     fi
-}
-
-stax-generate(){
-  if [ ! -f config/config.json ]; then
-     echo "config.json not configured, copy example and configure'. Aborting."; exit 1
-  fi
-  cp config/config.json /tmp/config.json.tmp
-  if [ ${SYSTEM} == 'Darwin' ]; then
-    SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i '' "s/SSH_FROM/${SSH_FROM}/g" /tmp/config.json.tmp
-    DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i '' "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config.json.tmp
-  else
-    SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i "s/SSH_FROM/${SSH_FROM}/g" /tmp/config.json.tmp
-    DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config.json.tmp
-  fi
-  NUMW=`wc -l < assets/stax/stax-words`
-  RANDOM_NAM=`head -$((${RANDOM} % ${NUMW} + 1)) assets/stax/stax-words | tail -1`
-  RANDOM_NUM=$((RANDOM%99999+10001))
 }
 
 stax-generate(){
