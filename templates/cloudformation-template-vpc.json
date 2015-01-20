@@ -1713,7 +1713,7 @@
                 "              -p 8500:8500 \\\n",
                 "              -p 53:53/udp \\\n",
                 "              progrium/consul:latest -server -advertise $", { "Ref": "AdvertisedIPAddress" }, "_ipv4 -bootstrap-expect 3\n",
-                "         ExecStartPost=/usr/bin/bash -c \"x=0; while [ $x -ne 1 ]; do x=`/usr/bin/docker ps -f status=running | grep consul | wc -l`; done; /usr/bin/docker exec -it consul consul join `curl -Ls http://172.17.42.1:4001/v2/machines | sed -e 's|http://\\([.0-9]*\\):[0-9]*,*|\\1|g'`\"\n",
+                "         ExecStartPost=/usr/bin/bash -c \"sleep 90; x=0; while [ $x -ne 1 ]; do x=`/usr/bin/docker ps -f status=running | grep consul | wc -l`; done; /usr/bin/docker exec -it consul consul join `curl -Ls http://172.17.42.1:4001/v2/machines | sed -e 's|http://\\([.0-9]*\\):[0-9]*,*|\\1|g'`\"\n",
                 "         ExecStop=/usr/bin/docker stop consul\n"
               ]
             ]

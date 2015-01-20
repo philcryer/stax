@@ -121,6 +121,12 @@ stax-create(){
     --capabilities CAPABILITY_IAM > /dev/null
   then
     echo "${yellow}[ ${cyan}----${yellow} ]${reset}   stax creation complete"
+    # new 'audit' functionality, save names and create date of stax you've created
+    # if useful, we could save this to S3: and make it persist
+    if [ ! -d $STAX_DIR/audit ]; then
+      mkdir -p $STAX_DIR/audit
+    fi
+    touch $STAX_DIR/audit/`date +'%Y%m%d-%H%M%S'`-created-$STAX_NAME
   else
     echo "${yellow}[ ${red}ERRR${yellow} ]${reset}     creation failed, exiting"
     stax-destroy-bucket
@@ -274,6 +280,7 @@ stax-destroy(){
       echo "done"
       stax-destroy-bucket
       stax-destroy-files
+      touch $STAX_DIR/audit/`date +'%Y%m%d-%H%M%S'`-destroyed-$STAX_NAME
       exit 0
     else
       echo "${yellow}[ ${cyan}----${yellow} ]${reset}     could not destroy $STAX_NAME, check name"
