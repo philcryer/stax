@@ -130,7 +130,7 @@ The command will check if the cluster is built, and if it is, it will populate t
 dockconnect
 ```
 
-* Once on a CoreOS/Docker host see if fleet can see the other Docker hosts.
+* Once on a CoreOS host, see if fleet can see the other CoreOS hosts.
 
 ```bash
 fleetctl list-machines
@@ -143,8 +143,31 @@ CoreOS (alpha)
 core@ip-10-183-2-219 ~ $
 core@ip-10-183-2-219 ~ $ fleetctl list-machines
 MACHINE   IP    METADATA
-057d212e... 10.183.0.16 -
-4f622c15... 10.183.2.219  -
+5203d410... 10.183.2.219  -
+5cc5c4cf... 10.183.0.124  -
+a0692146... 10.183.0.125  -
+```
+
+* Next connect to a running Docker container on that CoreOS system
+
+```bash
+docker exec -it `docker ps|tail -n1|cut -d" " -f1` /bin/bash
+```
+
+* and make sure the running consul service knows about all of the other CoreOS/Docker instances
+
+```bash
+bash-4.3# consul members
+```
+
+* Example output
+```bash
+core@ip-10-183-2-219 ~ $ docker exec -it `docker ps|tail -n1|cut -d" " -f1` /bin/bash
+bash-4.3# consul members
+Node                          Address            Status  Type    Build  Protocol
+ip-10-183-2-219.ec2.internal  10.183.2.219:8301  alive   server  0.4.1  2
+ip-10-183-0-124.ec2.internal  10.183.0.124:8301  alive   server  0.4.1  2
+ip-10-183-0-125.ec2.internal  10.183.0.125:8301  alive   server  0.4.1  2
 ```
 
 Ta... da.
