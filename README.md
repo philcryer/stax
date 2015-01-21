@@ -26,7 +26,7 @@ Stax runs, and has been fully tested, on Linux (Debian GNU/Linux 7 and Ubuntu 14
 ### Homebrew (OS X only)
 
 * Install [Homebrew](http://brew.sh/) for OS X, which '...installs the stuff you need that Apple didn’t'. Basically it's a *nix package manager like we have in Linux. It's easy to install vi their setup script:
- 
+
 ```
 ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 ```
@@ -83,13 +83,13 @@ cd stax
 * Copy the example config file
 
 ```bash
-cp config/config.json.example config.json
+cp config/config.json.example config/config.json
 ```
 
-* Configure the config file replacing all instances of [<changeMe]. Notice the cluster size option that defines the minimal amount of CoreOS nodes running, start with the default of [3] for now.
+* Configure the config file replacing all instances of [<changeMe] and the "CostCenter" definition (something like 1111-1111-ABC11111 will work for testing). Notice the cluster size option that defines the minimal amount of CoreOS nodes running, start with the default of [3] for now.
 
 ```bash
-vi config.json
+vi config/config.json
 ```
 
 * Run stax
