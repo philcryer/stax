@@ -35,6 +35,7 @@ echo "  create        Create a new VPC stax in AWS"
 echo "  describe      Describe the created VPC stax"
 echo "  connect       Connect to the jumpbox in the VPC stax over SSH"
 echo "  destroy       Destroy the existing VPC stax"
+echo "  history       View history of recently created/destroyed stax"
 
 echo; echo "For more help, check the docs; https://github.com/philcryer/stax"
 exit 1
@@ -183,6 +184,18 @@ stax-descauto(){
   exit 0
 }
 
+stax-history(){
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset}   history"
+  if [ ! -d $STAX_DIR/audit ]; then
+      mkdir -p $STAX_DIR/audit
+  fi
+  echo "${yellow}[ ${cyan}----${yellow} ]${reset}     recenntly created and destoryed stax"
+  echo "{"
+  ls -1 $STAX_DIR/audit
+  echo "}"
+  exit 0
+}
+
 stax-getip(){
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}   get public IP (EIP)"
   if [ `cat "$STAX_DIR/$STAX_NAME.json" | grep CREATE_COMPLETE | wc -l` -eq "0" ]; then
@@ -312,6 +325,10 @@ clear
 stax-colors
 stax-logo
 stax-preflight
+
+if [[ "$1" == "history" ]]; then
+  stax-history
+fi
 
 if [ -f "$STAX_NAME_FILE" ]; then
   STAX_NAME=$(<$STAX_NAME_FILE)
