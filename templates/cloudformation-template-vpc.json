@@ -1638,6 +1638,34 @@
         }
       }
     },
+    "Ingress49153":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties":{
+        "GroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        },
+        "IpProtocol":"tcp",
+        "FromPort":"49153",
+        "ToPort":"49153",
+        "SourceSecurityGroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        }
+      }
+    },
+    "Ingress80":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties":{
+        "GroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        },
+        "IpProtocol":"tcp",
+        "FromPort":"80",
+        "ToPort":"80",
+        "SourceSecurityGroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        }
+      }
+    },
     "Ingress53udp":{
       "Type":"AWS::EC2::SecurityGroupIngress",
       "Properties":{
@@ -1691,6 +1719,18 @@
                 "      command: start\n",
                 "    - name: fleet.service\n",
                 "      command: start\n",
+                "    - name: fleet.socket\n",
+                "      command: start\n",
+                "      enable: yes\n",
+                "      content: |\n",
+                "        [Unit]\n",
+                "        Description=Fleet Socket for the API\n",
+                "        [Socket]\n",
+                "        ListenStream=49153\n",
+                "        BindIPv6Only=both\n",
+                "        Service=fleet.service\n\n",
+                "        [Install]\n",
+                "        WantedBy=sockets.target\n",
                 "    - name: consul.service\n",
                 "      command: start\n",
                 "      content: |\n",
@@ -1714,7 +1754,37 @@
                 "              -p 53:53/udp \\\n",
                 "              progrium/consul:latest -server -advertise $", { "Ref": "AdvertisedIPAddress" }, "_ipv4 -bootstrap-expect 3\n",
                 "         ExecStartPost=/usr/bin/bash -c \"sleep 90; x=0; while [ $x -ne 1 ]; do x=`/usr/bin/docker ps -f status=running | grep consul | wc -l`; done; /usr/bin/docker exec -it consul consul join `curl -Ls http://172.17.42.1:4001/v2/machines | sed -e 's|http://\\([.0-9]*\\):[0-9]*,*|\\1|g'`\"\n",
-                "         ExecStop=/usr/bin/docker stop consul\n"
+                "         ExecStop=/usr/bin/docker stop consul\n\n",
+                "# Run registrator\n",
+                "    - name: registrator.service\n",
+                "      command: start\n",
+                "      content: |\n",
+                "       [Unit]\n",
+                "       Description=Run registrator\n",
+                "       After=docker.service\n",
+                "       Requires=docker.service\n\n",
+                "       [Service]\n",
+                "         Restart=always\n",
+                "         ExecStartPre=-/usr/bin/docker kill registrator\n",
+                "         ExecStartPre=-/usr/bin/docker rm registrator\n",
+                "         ExecStartPre=/usr/bin/docker pull progrium/registrator:latest\n",
+                "         ExecStart=/usr/bin/docker run --name registrator -v /var/run/docker.sock:/tmp/docker.sock -h %H progrium/registrator:latest consul://$", { "Ref": "AdvertisedIPAddress" }, "_ipv4:8500\n",
+                "         ExecStop=/usr/bin/docker stop registrator\n",
+                "# Run srv-router\n",
+                "    - name: srv-router.service\n",
+                "      command: start\n",
+                "      content: |\n",
+                "       [Unit]\n",
+                "       Description=Run srv-router\n",
+                "       After=docker.service\n",
+                "       Requires=docker.service\n\n",
+                "       [Service]\n",
+                "         Restart=always\n",
+                "         ExecStartPre=-/usr/bin/docker kill srv-router\n",
+                "         ExecStartPre=-/usr/bin/docker rm srv-router\n",
+                "         ExecStartPre=/usr/bin/docker pull philcryer/min-srv-router:latest\n",
+                "         ExecStart=/usr/bin/docker run -t --name srv-router -p 80:80 philcryer/min-srv-router:latest\n",
+                "         ExecStop=/usr/bin/docker stop srv-router\n"
               ]
             ]
           }
