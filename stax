@@ -229,11 +229,10 @@ stax-motd(){
   echo >> /tmp/motd
   echo "IP        `echo $STAX_PUB_IP`" >> /tmp/motd
   echo "Name      `cat $STAX_NAME_FILE`" >> /tmp/motd
-  #echo "Built     `date +'%Y%m%d-%H%M'`" >> /tmp/motd
   echo "Built     `date`" >> /tmp/motd
 }
 
-stax-pushmotd(){
+stax-popjumpbox(){
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}   setup motd and bashrc on jumpbox"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     pushing motd to $STAX_PUB_IP: "
   if [ ! -f '/tmp/motd' ]; then
@@ -244,6 +243,9 @@ stax-pushmotd(){
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     pushing bashrc to $STAX_PUB_IP: "
   scp -q -i ~/.ssh/$STAX_KEY.pem assets/stax/bashrc ec2-user@$STAX_PUB_IP:~/.bashrc > /dev/null
+  echo "done"
+  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     copying service definitions to $STAX_PUB_IP: "
+  scp -q -r -i ~/.ssh/$STAX_KEY.pem assets/services ec2-user@$STAX_PUB_IP:~ > /dev/null
   echo "done"
   rm /tmp/motd
 }
@@ -259,13 +261,18 @@ stax-getdockerips(){
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building docker connect: "
   sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/dockconnect > /tmp/dockconnect
   echo "done"
+  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building fleetstats connect: "
+  sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/fleetstats > /tmp/fleetstats
+  echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     putting docker files on jumpbox: "
   scp -q -i ~/.ssh/$STAX_KEY.pem /tmp/docker_hosts ec2-user@$STAX_PUB_IP:~ > /dev/null
   scp -q -i ~/.ssh/$STAX_KEY.pem /tmp/dockconnect ec2-user@$STAX_PUB_IP:~ > /dev/null
+  scp -q -i ~/.ssh/$STAX_KEY.pem /tmp/fleetstats ec2-user@$STAX_PUB_IP:~ > /dev/null
   ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'chmod 0755 dockconnect' > /dev/null
+  ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'chmod 0755 fleetstats' > /dev/null
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     cleaning files: "
-  rm /tmp/docker_hosts; rm /tmp/dockconnect
+  rm /tmp/docker_hosts; rm /tmp/dockconnect; rm /tmp/fleetstats
   echo "done"
 }
 
@@ -388,7 +395,7 @@ if [[ "$1" == "connect" ]]; then
   stax-getip
   stax-pushkey
   stax-motd
-  stax-pushmotd
+  stax-popjumpbox
   stax-getdockerips
   stax-connect
   exit 0
