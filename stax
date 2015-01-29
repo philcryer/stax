@@ -315,14 +315,14 @@ stax-connect(){
 }
 
 stax-destroy-files(){
-  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     cleaning files: "
+  echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     deleting $STAX_NAME files: "
   rm -f "$STAX_DIR/$STAX_NAME.json" "$STAX_NAME_FILE" > /dev/null
   echo "done"
 }
 
 stax-destroy-bucket(){
   if [ "$STAX_NAME" ]; then
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     removing s3 bucket: "
+    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     removing $STAX_NAME s3 bucket: "
     $aws s3 rb --force "s3://$STAX_NAME" > /dev/null
     echo "done"
   fi
@@ -335,12 +335,8 @@ stax-destroy(){
       echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     destroying $STAX_NAME stax: "
       $aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null && aws cloudformation delete-stack --stack-name $STAX_NAME 
       echo "done"
-      echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     deleting $STAX_NAME bucket: "
       stax-destroy-bucket
-      echo "done"
-      echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     deleting $STAX_NAME files: "
       stax-destroy-files
-      echo "done"
       echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     recording $STAX_NAME deletion time for audit: "
       touch $STAX_DIR/audit/`date +'%Y%m%d-%H%M%S'`-destroyed-$STAX_NAME
       echo "done"
