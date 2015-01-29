@@ -434,6 +434,7 @@ if [[ "$1" == "start" ]]; then
   sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/servicerunner > /tmp/servicerunner.tmp
   sed "s|SOME_SERVICE|`echo $2`|g" /tmp/servicerunner.tmp > /tmp/servicerunner
   stax-start-services
+  exit 0
 fi
 
 if [[ "$1" == "describe" || "desc" ]]; then
