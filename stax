@@ -191,10 +191,10 @@ stax-start-services(){
   scp -q -i ~/.ssh/$STAX_KEY.pem /tmp/servicerunner ec2-user@$STAX_PUB_IP:~ > /dev/null
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     setting permissions on service file: "
-  ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'chmod 755 servicerunner' > /dev/null
+  ssh -q -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'chmod 755 servicerunner' > /dev/null
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     running service file: "
-  ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'sh servicerunner' > /dev/null
+  ssh -q -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'sh servicerunner' > /dev/null
   echo "done"
   rm /tmp/servicerunner*
   sleep 5
@@ -203,7 +203,7 @@ stax-start-services(){
 
 stax-fleetstats(){
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}  status from fleetctl on the cluster: "
-  ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'sh fleetstats'
+  ssh -q -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'sh fleetstats'
   #exit 0
 }
 
@@ -249,7 +249,7 @@ stax-pushkey(){
   scp -q -i ~/.ssh/$STAX_KEY.pem ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP:.ssh > /dev/null
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     setting permissions on key: "
-  ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'chmod 0600 .ssh/*.pem' > /dev/null
+  ssh -q -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'chmod 0600 .ssh/*.pem' > /dev/null
   echo "done"
 }
 
@@ -302,8 +302,8 @@ stax-getdockerips(){
   scp -q -i ~/.ssh/$STAX_KEY.pem /tmp/docker_hosts ec2-user@$STAX_PUB_IP:~ > /dev/null
   scp -q -i ~/.ssh/$STAX_KEY.pem /tmp/dockconnect ec2-user@$STAX_PUB_IP:~ > /dev/null
   scp -q -i ~/.ssh/$STAX_KEY.pem /tmp/fleetstats ec2-user@$STAX_PUB_IP:~ > /dev/null
-  ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'chmod 0755 dockconnect' > /dev/null
-  ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'chmod 0755 fleetstats' > /dev/null
+  ssh -q -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'chmod 0755 dockconnect' > /dev/null
+  ssh -q -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP 'chmod 0755 fleetstats' > /dev/null
   echo "done"
   echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     cleaning files: "
   rm /tmp/docker_hosts; rm /tmp/dockconnect; rm /tmp/fleetstats
@@ -311,7 +311,7 @@ stax-getdockerips(){
 }
 
 stax-connect(){
-  ssh -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP
+  ssh -q -i ~/.ssh/$STAX_KEY.pem ec2-user@$STAX_PUB_IP
 }
 
 stax-destroy-files(){
