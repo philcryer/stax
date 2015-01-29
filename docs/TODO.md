@@ -21,3 +21,7 @@ and how to disable consul update_check
 
 put ipv6 back in ntp.conf
  restrict [::1]
+
+
+
+verify ntpd is running on dockerstart
