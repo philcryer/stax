@@ -1,3 +1,2 @@
 scp -q -r -i ~/.ssh/STAX_KEY.pem -o "StrictHostKeyChecking no" services core@`python -c "import random, sys; print random.choice(open(sys.argv[1]).readlines())," docker_hosts`:~
-
-ssh -i ~/.ssh/STAX_KEY.pem -l core -o "StrictHostKeyChecking no" `python -c "import random, sys; print random.choice(open(sys.argv[1]).readlines())," docker_hosts` 'fleetctl start services/SOME_SERVICE.service' > /dev/null
+ssh -i ~/.ssh/STAX_KEY.pem -o "StrictHostKeyChecking no" core@`python -c "import random, sys; print random.choice(open(sys.argv[1]).readlines())," docker_hosts` 'fleetctl start ~/services/SOME_SERVICE.service'
