@@ -12,6 +12,7 @@
   { "ParameterKey":     "DockerInstanceType", "ParameterValue":   "m3.medium" },
   { "ParameterKey":     "AdvertisedIPAddress", "ParameterValue":   "private" },
   { "ParameterKey":     "AutoScaleCooldown", "ParameterValue":   "300" },
-  { "ParameterKey":     "AllowSSHFrom", "ParameterValue":   "SSH_FROM" },
-  { "ParameterKey":     "DiscoveryURL", "ParameterValue":   "DISCOVERY_URL" }
+  { "ParameterKey":     "StaxName", "ParameterValue":   "@STAX_NAME@" },
+  { "ParameterKey":     "AllowSSHFrom", "ParameterValue":   "@SSH_FROM@" },
+  { "ParameterKey":     "DiscoveryURL", "ParameterValue":   "@DISCOVERY_URL@" }
 ]
