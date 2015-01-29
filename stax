@@ -332,12 +332,18 @@ stax-destroy(){
     echo "${yellow}[ ${cyan}----${yellow} ]${reset}   destroy stax"
     read -p "${yellow}[ ${cyan}????${yellow} ]${reset}     ok to destroy $STAX_NAME [y/n]? " answer
     if [[ $answer = y ]] ; then
-      echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     deleting: "
+      echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     destroying $STAX_NAME stax: "
       $aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null && aws cloudformation delete-stack --stack-name $STAX_NAME 
       echo "done"
+      echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     deleting $STAX_NAME bucket: "
       stax-destroy-bucket
+      echo "done"
+      echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     deleting $STAX_NAME files: "
       stax-destroy-files
+      echo "done"
+      echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     recording $STAX_NAME deletion time for audit: "
       touch $STAX_DIR/audit/`date +'%Y%m%d-%H%M%S'`-destroyed-$STAX_NAME
+      echo "done"
       exit 0
     else
       echo "${yellow}[ ${cyan}----${yellow} ]${reset}     could not destroy $STAX_NAME, check name"
