@@ -1716,7 +1716,26 @@
                 "        After=consul.service\n",
                 "        [Service]\n",
                 "        ExecStart=/bin/sh -c \"while true; do etcdctl set /consul/bootstrap/machines/$(cat /etc/machine-id) $private_ipv4 --ttl 60; /usr/bin/docker exec consul consul join $(etcdctl get $(etcdctl ls /consul/bootstrap/machines | tail -1)); sleep 45; done\"\n",
-                "        ExecStop=/bin/sh -c \"/usr/bin/etcdctl rm /consul/bootstrap/machines/$(cat /etc/machine-id)\"\n"
+                "        ExecStop=/bin/sh -c \"/usr/bin/etcdctl rm /consul/bootstrap/machines/$(cat /etc/machine-id)\"\n",
+                "  units:\n",
+                "    - name: settimezone.service\n",
+                "      command: start\n",
+                "      content: |\n",
+                "        [Unit]\n",
+                "        Description=Set the timezone\n",
+                "        [Service]\n",
+                "        ExecStart=/usr/bin/timedatectl set-timezone UTC\n",
+                "        RemainAfterExit=yes\n",
+                "        Type=oneshot\n",
+                "write_files:\n",
+                "  - path: /etc/ntp.conf\n",
+                "    content: |\n",
+                "      server 0.pool.ntp.org\n",
+                "      server 1.pool.ntp.org\n",
+                "      server 2.pool.ntp.org\n",
+                "      server 3.pool.ntp.org\n",
+                "      restrict default nomodify nopeer noquery limited kod\n",
+                "      restrict 127.0.0.1\n"
               ]
             ]
           }
