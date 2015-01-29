@@ -16,6 +16,8 @@ aws="aws --color on"
 STAX_DIR="$HOME/.stax"
 STAX_NAME_FILE="$STAX_DIR/stax-name"
 #DEBUG="ON"
+config="config/config.json"
+config_tmp="/tmp/config.json"
 
 stax-colors(){
   green=$(tput setaf 2)
@@ -76,10 +78,12 @@ stax-preflight(){
       echo "creating directory $STAX_DIR"
       mkdir -p "$STAX_DIR"
   fi
-  if [ ! -f config/config.json ]; then
-     echo "config.json not configured, copy example to this config directory, configure it and run again."
-     echo " cp config/config.json.example config/config.json"
-     echo "Aborting."; exit 1
+  if [ ! -f "$config" ]; then
+     echo "$pkg: $config does not exist, configuration required"
+     echo "$pkg: copy example to config directory, configure it and run again."
+     echo "    $ cp $config.example $config"
+     echo "$pkg: Aborting."
+     exit 1
   fi
 }
 
@@ -103,7 +107,6 @@ stax-create-bucket(){
 
 stax-create(){
   stax-generate
-  STAX_NAME="vpc-$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
   echo "${yellow}[ ${cyan}NAME${yellow} ]${reset} $STAX_NAME"
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}   creating stax"
   stax-create-bucket "$STAX_NAME"
@@ -125,7 +128,7 @@ stax-create(){
   if $aws cloudformation create-stack \
     --stack-name $STAX_NAME \
     --template-url "$template_url" \
-    --parameters "$(</tmp/config.json.tmp)" \
+    --parameters "$(<$config_tmp)" \
     --capabilities CAPABILITY_IAM > /dev/null
   then
     echo "${yellow}[ ${cyan}----${yellow} ]${reset}   stax creation complete"
@@ -347,21 +350,37 @@ stax-destroy(){
     fi
 }
 
+# bootstrap: set up STAX_NAME and config file
 stax-generate(){
-  if [ ! -f config/config.json ]; then
-     echo "config.json not configured, copy example and configure'. Aborting."; exit 1
-  fi
-  cp config/config.json /tmp/config.json.tmp
-  if [ ${SYSTEM} == 'Darwin' ]; then
-    SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i '' "s/SSH_FROM/${SSH_FROM}/g" /tmp/config.json.tmp
-    DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i '' "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config.json.tmp
-  else
-    SSH_FROM="$(curl -s http://icanhazip.com)\/32"; sed -i "s/SSH_FROM/${SSH_FROM}/g" /tmp/config.json.tmp
-    DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"; sed -i "s|DISCOVERY_URL|${DISCOVERY_URL}|g" /tmp/config.json.tmp
-  fi
-  NUMW=`wc -l < assets/stax/stax-words`
-  RANDOM_NAM=`head -$((${RANDOM} % ${NUMW} + 1)) assets/stax/stax-words | tail -1`
-  RANDOM_NUM=$((RANDOM%99999+10001))
+    stax_words="assets/stax/stax-words"
+    NUMW=`wc -l < $stax_words`
+    RANDOM_NAM=`head -$((${RANDOM} % ${NUMW} + 1)) $stax_words | tail -1`
+    RANDOM_NUM=$((RANDOM%99999+10001))
+    STAX_NAME="vpc-$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
+    # initialize sed command
+    sed="sed -e s/@STAX_NAME@/$STAX_NAME/g"
+    # see if we need to substitute for SSH_FROM
+    if grep -q SSH_FROM "$config" > /dev/null 2>&1; then
+        SSH_FROM="$(curl -s http://icanhazip.com)\/32"
+        if [ -z "$SSH_FROM" ]; then
+            echo "$pkg: failed to get IP address for local machine"
+            exit 1
+        fi
+        sed="$sed -e s/@SSH_FROM@/$SSH_FROM/"
+    fi
+    # see if we need to substitute for DISCOVERY_URL
+    if grep -q DISCOVERY_URL "$config" > /dev/null 2>&1; then
+        DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"
+        if [ -z "$DISCOVERY_URL" ]; then
+            echo "$pkg: failed to get discovery URL"
+            exit 1
+        fi
+        sed="$sed -e s|@DISCOVERY_URL@|$DISCOVERY_URL|g"
+    fi
+    if ! $sed "$config" > "$config_tmp"; then
+        echo "$pkg: sed failed to replace elements in $config: $sed"
+        exit 1
+    fi
 }
 
 clear
@@ -416,7 +435,7 @@ if [[ "$1" == "create" ]]; then
   else
     stax-create
     stax-describe
-    rm /tmp/config.json.tmp
+    rm $config_tmp
     exit 0
   fi
 fi
