@@ -146,10 +146,6 @@
       "Type":"Number",
       "Default":"300"
     },
-    "StaxName":{
-      "Description":"An unique name for the stack name, also the name of the S3 bucket containing stax objects",
-      "Type":"String"
-    },
     "DiscoveryURL":{
       "Description":"An unique etcd cluster discovery URL. Grab a new token from https://discovery.etcd.io/new",
       "Type":"String"
@@ -246,29 +242,6 @@
                     "ec2:StopInstances"
                   ],
                   "Resource":"*"
-                }
-              ]
-            }
-          },
-          {
-            "PolicyName":"StaxS3Access",
-            "PolicyDocument":{
-              "Statement":[
-                {
-                  "Effect":"Allow",
-                  "Action":[
-                    "s3:GetObject"
-                  ],
-                  "Resource":{
-                    "Fn::Join":[
-                      "",
-                      [
-                        "arn:aws:s3:::",
-                        { "Ref" : "StaxName" } ,
-                        "/*"
-                      ]
-                    ]
-                  }
                 }
               ]
             }
@@ -1665,34 +1638,6 @@
         }
       }
     },
-    "Ingress49153":{
-      "Type":"AWS::EC2::SecurityGroupIngress",
-      "Properties":{
-        "GroupId":{
-          "Ref":"CoreOSSecurityGroup"
-        },
-        "IpProtocol":"tcp",
-        "FromPort":"49153",
-        "ToPort":"49153",
-        "SourceSecurityGroupId":{
-          "Ref":"CoreOSSecurityGroup"
-        }
-      }
-    },
-    "Ingress80":{
-      "Type":"AWS::EC2::SecurityGroupIngress",
-      "Properties":{
-        "GroupId":{
-          "Ref":"CoreOSSecurityGroup"
-        },
-        "IpProtocol":"tcp",
-        "FromPort":"80",
-        "ToPort":"80",
-        "SourceSecurityGroupId":{
-          "Ref":"CoreOSSecurityGroup"
-        }
-      }
-    },
     "Ingress53udp":{
       "Type":"AWS::EC2::SecurityGroupIngress",
       "Properties":{
@@ -1746,18 +1691,6 @@
                 "      command: start\n",
                 "    - name: fleet.service\n",
                 "      command: start\n",
-                "    - name: fleet.socket\n",
-                "      command: start\n",
-                "      enable: yes\n",
-                "      content: |\n",
-                "        [Unit]\n",
-                "        Description=Fleet Socket for the API\n",
-                "        [Socket]\n",
-                "        ListenStream=49153\n",
-                "        BindIPv6Only=both\n",
-                "        Service=fleet.service\n\n",
-                "        [Install]\n",
-                "        WantedBy=sockets.target\n",
                 "    - name: consul.service\n",
                 "      command: start\n",
                 "      content: |\n",
@@ -1784,57 +1717,20 @@
                 "        [Service]\n",
                 "        ExecStart=/bin/sh -c \"while true; do etcdctl set /consul/bootstrap/machines/$(cat /etc/machine-id) $private_ipv4 --ttl 60; /usr/bin/docker exec consul consul join $(etcdctl get $(etcdctl ls /consul/bootstrap/machines | tail -1)); sleep 45; done\"\n",
                 "        ExecStop=/bin/sh -c \"/usr/bin/etcdctl rm /consul/bootstrap/machines/$(cat /etc/machine-id)\"\n",
-                "# Run registrator\n",
                 "    - name: registrator.service\n",
-                "  units:\n",
-                "    - name: settimezone.service\n",
-                "      command: start\n",
-                "      content: |\n",
-                "       [Unit]\n",
-                "       Description=Run registrator\n",
-                "       After=docker.service\n",
-                "       Requires=docker.service\n\n",
-                "       [Service]\n",
-                "         Restart=always\n",
-                "         ExecStartPre=-/usr/bin/docker kill registrator\n",
-                "         ExecStartPre=-/usr/bin/docker rm registrator\n",
-                "         ExecStartPre=/usr/bin/docker pull progrium/registrator:latest\n",
-                "         ExecStart=/usr/bin/docker run --name registrator -v /var/run/docker.sock:/tmp/docker.sock -h %H progrium/registrator:latest consul://$", { "Ref": "AdvertisedIPAddress" }, "_ipv4:8500\n",
-                "         ExecStop=/usr/bin/docker stop registrator\n",
-                "# Run srv-router\n",
-                "    - name: srv-router.service\n",
-                "      command: start\n",
-                "      content: |\n",
-                "       [Unit]\n",
-                "       Description=Run srv-router\n",
-                "       After=docker.service\n",
-                "       Requires=docker.service\n\n",
-                "       [Service]\n",
-                "         Restart=always\n",
-                "         ExecStartPre=-/usr/bin/docker kill srv-router\n",
-                "         ExecStartPre=-/usr/bin/docker rm srv-router\n",
-                "         ExecStartPre=/usr/bin/docker pull philcryer/min-srv-router:latest\n",
-                "         ExecStart=/usr/bin/docker run -t --name srv-router -p 80:80 philcryer/min-srv-router:latest\n",
-                "         ExecStop=/usr/bin/docker stop srv-router\n",
-                "  units:\n",
-                "    - name: settimezone.service\n",
                 "      command: start\n",
                 "      content: |\n",
                 "        [Unit]\n",
-                "        Description=Set the timezone\n",
+                "        Description=Registrator\n",
+                "        PartOf=consul.service\n",
+                "        After=consul.service\n",
                 "        [Service]\n",
-                "        ExecStart=/usr/bin/timedatectl set-timezone UTC\n",
-                "        RemainAfterExit=yes\n",
-                "        Type=oneshot\n",
-                "write_files:\n",
-                "  - path: /etc/ntp.conf\n",
-                "    content: |\n",
-                "      server 0.pool.ntp.org\n",
-                "      server 1.pool.ntp.org\n",
-                "      server 2.pool.ntp.org\n",
-                "      server 3.pool.ntp.org\n",
-                "      restrict default nomodify nopeer noquery limited kod\n",
-                "      restrict 127.0.0.1\n"
+                "        Restart=on-failure\n",
+                "        ExecStartPre=-/usr/bin/docker kill registrator\n",
+                "        ExecStartPre=-/usr/bin/docker rm registrator\n",
+                "        ExecStartPre=/usr/bin/docker pull progrium/registrator\n",
+                "        ExecStart=/bin/sh -c \"/usr/bin/docker run --name registrator -h registrator -v /var/run/docker.sock:/tmp/docker.sock  progrium/registrator consul://$private_ipv4:8500\"\n",
+                "        ExecStop=/usr/bin/docker stop registrator\n"
               ]
             ]
           }
