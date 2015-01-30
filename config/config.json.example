@@ -5,6 +5,7 @@
   { "ParameterKey":     "Environment", "ParameterValue":   "<changeMe>" },
   { "ParameterKey":     "CostCenter", "ParameterValue":   "####-####-ABC#####" },
   { "ParameterKey":     "ClusterSize", "ParameterValue":   "3" },
+  { "ParameterKey":     "RouterClusterSize", "ParameterValue":   "2" },
   { "ParameterKey":     "KeepAlive", "ParameterValue":   "false" },
   { "ParameterKey":     "JumpInstanceType", "ParameterValue":   "t2.micro" },
   { "ParameterKey":     "NATInstanceType", "ParameterValue":   "t2.micro" },
