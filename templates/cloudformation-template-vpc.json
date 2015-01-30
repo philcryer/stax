@@ -1481,7 +1481,7 @@
       }
     },
 
-    "RouterCoreOSToCoreOS":{
+    "CoreOSFromRouterCoreOS":{
       "Type":"AWS::EC2::SecurityGroupIngress",
       "Properties": {
         "GroupId": {
@@ -2026,7 +2026,7 @@
       }
     },
 
-    "RouterELBToRouterCoreOS":{
+    "RouterCoreOSFromRouterELB":{
       "Type":"AWS::EC2::SecurityGroupIngress",
       "Properties": {
         "GroupId": {
