@@ -60,17 +60,6 @@ aws configure
 
 You will be prompted to enter your AWS access key and secret access key, and will write and store them in ~/.aws/credentials.
 
-### AWS Key Pair
-
-* Create a new Key Pair so aws-cli can talk to AWS. From the [AWS Console](https://console.aws.amazon.com/ec2/v2/home) navigate to EC2 > Netork & Security > Key Pairs > Create Key Pair
-* Name it whatever you want, click 'Create'
-* It will create a new Key Pair and automatically download it
-* Move the new keypair into the .ssh directory in your home directory
-
-```bash
-mv ~/Downloads/NEW_KEY_PAIR.pem ~/.ssh
-```
-
 ## Usage
 
 * To get started, clone stax
@@ -99,11 +88,15 @@ $ stax
 Usage: stax <command>
 
 Commands:
-  list          List all currently built and running stax
-  create        Create a new VPC stax in AWS
-  describe      Describe the created VPC stax
-  connect       Connect to the jumpbox in the VPC stax over SSH
-  destroy       Destroy the existing VPC stax
+  list              List all completely built and running stax
+  create            Create a new VPC stax in AWS
+  describe          Describe the stax created from this host
+  connect           Connect to the jumpbox in the VPC stax over SSH
+  services          List servers that are available to run across a stax
+  start <service>   Start a service across the stax cluster
+  fleet             Describe currently created fleet stax
+  destroy           Destroy the existing VPC stax
+  history           View history of recently created/destroyed stax
 ```
 
 * Create a stax cluster on AWS
