@@ -1,5 +1,5 @@
 [
-  { "ParameterKey":     "KeyName", "ParameterValue":   "<changeMe>" },
+  { "ParameterKey":     "KeyName", "ParameterValue":   "@KEY_NAME@" },
   { "ParameterKey":     "App", "ParameterValue":   "<changeMe>" },
   { "ParameterKey":     "Group", "ParameterValue":   "<changeMe>" },
   { "ParameterKey":     "Owner", "ParameterValue":   "<changeMe>" },
