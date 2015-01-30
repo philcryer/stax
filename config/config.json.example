@@ -1,5 +1,4 @@
 [
-  { "ParameterKey":     "KeyName", "ParameterValue":   "@KEY_NAME@" },
   { "ParameterKey":     "App", "ParameterValue":   "<changeMe>" },
   { "ParameterKey":     "Group", "ParameterValue":   "<changeMe>" },
   { "ParameterKey":     "Owner", "ParameterValue":   "<changeMe>" },
@@ -12,6 +11,7 @@
   { "ParameterKey":     "DockerInstanceType", "ParameterValue":   "m3.medium" },
   { "ParameterKey":     "AdvertisedIPAddress", "ParameterValue":   "private" },
   { "ParameterKey":     "AutoScaleCooldown", "ParameterValue":   "300" },
+  { "ParameterKey":     "KeyName", "ParameterValue":   "@KEY_NAME@" },
   { "ParameterKey":     "StaxName", "ParameterValue":   "@STAX_NAME@" },
   { "ParameterKey":     "AllowSSHFrom", "ParameterValue":   "@SSH_FROM@" },
   { "ParameterKey":     "DiscoveryURL", "ParameterValue":   "@DISCOVERY_URL@" }
