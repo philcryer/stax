@@ -234,7 +234,7 @@ stax-start-services(){
 
 stax-fleetstats(){
   echo "${yellow}[ ${cyan}----${yellow} ]${reset}  status from fleetctl on the cluster: "
-  ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'sh fleetstats'
+  ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'sh fleetstats' > /dev/null
   #exit 0
 }
 
@@ -341,7 +341,7 @@ stax-getdockerips(){
 }
 
 stax-connect(){
-  ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP
+  ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP > /dev/null
 }
 
 stax-destroy-key(){
