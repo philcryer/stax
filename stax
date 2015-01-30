@@ -18,7 +18,7 @@ STAX_NAME_FILE="$STAX_DIR/stax-name"
 #DEBUG="ON"
 config="config/config.json"
 config_tmp="/tmp/config.json"
-SSH_OPTIONS="-q -o StrictHostKeyChecking=no"
+SSH_OPTIONS="-q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 
 stax-colors(){
   green=$(tput setaf 2)
