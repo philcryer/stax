@@ -4,18 +4,18 @@
 
 # NAT instance variables
 # Other instance's IP to ping and route to grab if other node goes down
-NAT_ID=i-0b87624e
-NAT_RT_ID=rtb-6cdc0809
+NAT_ID="$1"
+NAT_RT_ID="$2"
 
 # My route to grab when I come back up
-My_RT_ID=rtb-6fdc080a
+My_RT_ID="$3"
 
 # Specify the EC2 region that this will be running in (e.g. https://ec2.us-east-1.amazonaws.com)
-EC2_URL=https://ec2.eu-west-1.amazonaws.com
+EC2_URL="$4"
 
 # Health Check variables
 Num_Pings=3
-Ping_Timeout=10
+Ping_Timeout=1
 Wait_Between_Pings=2
 Wait_for_Instance_Stop=60
 Wait_for_Instance_Start=300
@@ -74,7 +74,7 @@ while [ . ]; do
       fi
       # Check NAT state to see if we should stop it or start it again
 	  # This sample script works well with EC2 API tools version 1.6.12.2 2013-10-15. If you are using a different version and your script is stuck at NAT_STATE, please modify the script to "print $5;" instead of "print $4;".
-      NAT_STATE=`/opt/aws/bin/ec2-describe-instances $NAT_ID -U $EC2_URL | grep INSTANCE | awk '{print $4;}'`
+      NAT_STATE=`/opt/aws/bin/ec2-describe-instances $NAT_ID -U $EC2_URL | grep INSTANCE | awk '{print $5}'`
       if [ "$NAT_STATE" == "stopped" ]; then
     	echo `date` "-- Other NAT instance stopped, starting it back up"
         /opt/aws/bin/ec2-start-instances $NAT_ID -U $EC2_URL
