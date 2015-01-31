@@ -1526,6 +1526,14 @@
             },
             "FromPort":"22",
             "ToPort":"22"
+          },
+          {
+            "IpProtocol":"tcp",
+            "SourceSecurityGroupId":{
+              "Ref":"JumpSecurityGroup"
+            },
+            "FromPort":"80",
+            "ToPort":"80"
           }
         ],
         "Tags":[
@@ -1716,7 +1724,7 @@
     "CoreOSServerAutoScale":{
       "Type":"AWS::AutoScaling::AutoScalingGroup",
       "Properties":{
-        "AvailabilityZones":["us-east-1a","us-east-1b"],
+        "AvailabilityZones":["us-east-1a", "us-east-1b"],
         "LaunchConfigurationName":{"Ref":"CoreOSServerLaunchConfig"},
         "MinSize":"2",
         "MaxSize":"12",
@@ -1829,16 +1837,29 @@
       }
     },
 
-    "NATToRouterELB":{
+    "RouterELBToRouterCoreOSetcd":{
+      "Type":"AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "RouterELBSecurityGroup"
+        },
+        "IpProtocol":"tcp",
+        "DestinationSecurityGroupId": {
+          "Ref":"RouterCoreOSSecurityGroup"
+        },
+        "FromPort":"4001",
+        "ToPort":"4001"
+      }
+    },
+
+    "AnyHTTPToRouterELB":{
       "Type":"AWS::EC2::SecurityGroupIngress",
       "Properties": {
         "GroupId": {
           "Ref": "RouterELBSecurityGroup"
         },
         "IpProtocol":"tcp",
-        "SourceSecurityGroupId":{
-          "Ref":"NATSecurityGroup"
-        },
+        "CidrIp":"0.0.0.0/0",
         "FromPort":"80",
         "ToPort":"80"
       }
@@ -1919,14 +1940,16 @@
     "RouterELB": {
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties" : {
-        "Subnets" : [ { "Ref" : "PubSubnet1" } ],
+        "CrossZone": true,
+        "SecurityGroups": [ {"Ref" : "RouterELBSecurityGroup"} ],
+        "Subnets" : [ { "Ref" : "PubSubnet1" }, { "Ref" : "PubSubnet2" } ],
         "Listeners" : [ {
           "LoadBalancerPort" : "80",
           "InstancePort" : "80",
           "Protocol" : "HTTP"
         } ],
         "HealthCheck" : {
-          "Target" : "HTTP:80/",
+          "Target" : "HTTP:4001/version",
           "HealthyThreshold" : "3",
           "UnhealthyThreshold" : "5",
           "Interval" : "30",
@@ -1938,7 +1961,7 @@
     "RouterCoreOSServerAutoScale":{
       "Type":"AWS::AutoScaling::AutoScalingGroup",
       "Properties":{
-        "AvailabilityZones":["us-east-1a","us-east-1b"],
+        "AvailabilityZones":["us-east-1a", "us-east-1b"],
         "LaunchConfigurationName":{"Ref":"RouterCoreOSServerLaunchConfig"},
         "LoadBalancerNames" : [ { "Ref" : "RouterELB" } ],
         "MinSize":"2",
@@ -2011,6 +2034,36 @@
       }
     },
 
+    "RouterELBtoRouterCoreOS": {
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "RouterCoreOSSecurityGroup"
+        },
+        "IpProtocol":"tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "RouterELBSecurityGroup"
+        },
+        "FromPort":"80",
+        "ToPort":"80"
+      }
+    },
+
+    "RouterELBtoRouterCoreOSetcd": {
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "RouterCoreOSSecurityGroup"
+        },
+        "IpProtocol":"tcp",
+        "SourceSecurityGroupId": {
+          "Ref": "RouterELBSecurityGroup"
+        },
+        "FromPort":"4001",
+        "ToPort":"4001"
+      }
+    },
+
     "CoreOSToRouterCoreOS":{
       "Type":"AWS::EC2::SecurityGroupIngress",
       "Properties": {
@@ -2020,6 +2073,21 @@
         "IpProtocol":"-1",
         "SourceSecurityGroupId": {
           "Ref": "CoreOSSecurityGroup"
+        },
+        "FromPort":"0",
+        "ToPort":"65535"
+      }
+    },
+
+    "RouterCoreOSToRouterCoreOS":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "RouterCoreOSSecurityGroup"
+        },
+        "IpProtocol":"-1",
+        "SourceSecurityGroupId": {
+          "Ref": "RouterCoreOSSecurityGroup"
         },
         "FromPort":"0",
         "ToPort":"65535"
@@ -2084,6 +2152,22 @@
             },
             "FromPort":"22",
             "ToPort":"22"
+          },
+          {
+            "IpProtocol":"tcp",
+            "SourceSecurityGroupId":{
+              "Ref":"JumpSecurityGroup"
+            },
+            "FromPort":"80",
+            "ToPort":"80"
+          },
+          {
+            "IpProtocol":"tcp",
+            "SourceSecurityGroupId":{
+              "Ref":"JumpSecurityGroup"
+            },
+            "FromPort":"4001",
+            "ToPort":"4001"
           }
         ],
         "Tags":[
@@ -2190,7 +2274,7 @@
                 "        ExecStartPre=-/usr/bin/docker kill consul\n",
                 "        ExecStartPre=-/usr/bin/docker rm consul\n",
                 "        ExecStartPre=/usr/bin/docker pull progrium/consul\n",
-                "        ExecStart=/usr/bin/docker run -h %H -p 8300:8300 -p 8301:8301 -p 8301:8301/udp -p 8302:8302 -p 8302:8302/udp -p 8400:8400 -p 8500:8500 -p 53:53/udp progrium/consul $private_ipv4 -e SERVICE_IGNORE=true\n",
+                "        ExecStart=/usr/bin/docker run -h %H --name consul -p 8300:8300 -p 8301:8301 -p 8301:8301/udp -p 8302:8302 -p 8302:8302/udp -p 8400:8400 -p 8500:8500 -p 53:53/udp progrium/consul $private_ipv4 -e SERVICE_IGNORE=true\n",
                 "        ExecStop=/usr/bin/docker stop consul\n",
                 "    - name: consul-announce.service\n",
                 "      command: start\n",
