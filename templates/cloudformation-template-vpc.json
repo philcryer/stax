@@ -1647,7 +1647,7 @@
                 "        ExecStartPre=-/usr/bin/docker kill consul\n",
                 "        ExecStartPre=-/usr/bin/docker rm consul\n",
                 "        ExecStartPre=/usr/bin/docker pull progrium/consul\n",
-                "        ExecStart=/bin/sh -c \"eval $(/usr/bin/docker run --rm progrium/consul cmd:run $private_ipv4 -e SERVICE_IGNORE=true -v /var/run/docker.sock:/var/run/docker.sock)\"\n",
+                "        ExecStart=/bin/sh -c \"eval $(/usr/bin/docker run --rm progrium/consul cmd:run $private_ipv4 -e SERVICE_IGNORE=true)\"\n",
                 "        ExecStop=/usr/bin/docker stop consul\n",
                 "    - name: consul-announce.service\n",
                 "      command: start\n",
@@ -1657,7 +1657,7 @@
                 "        PartOf=consul.service\n",
                 "        After=consul.service\n",
                 "        [Service]\n",
-                "        ExecStart=/bin/sh -c \"while true; do etcdctl set /consul/bootstrap/machines/$(cat /etc/machine-id) $private_ipv4 --ttl 60; /usr/bin/docker exec consul consul join $(etcdctl get $(etcdctl ls /consul/bootstrap/machines | tail -1)); sleep 45; done\"\n",
+                "        ExecStart=/bin/sh -c \"while true; do etcdctl set /consul/bootstrap/machines/$(cat /etc/machine-id) $private_ipv4 --ttl 60; /usr/bin/docker exec consul consul join $(etcdctl ls /consul/bootstrap/machines | xargs -n 1 etcdctl get | tr '\\n' ' '); sleep 45; done\"\n",
                 "        ExecStop=/bin/sh -c \"/usr/bin/etcdctl rm /consul/bootstrap/machines/$(cat /etc/machine-id)\"\n",
                 "# Run registrator\n",
                 "    - name: registrator.service\n",
@@ -2011,6 +2011,21 @@
       }
     },
 
+    "CoreOSToRouterCoreOS":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "RouterCoreOSSecurityGroup"
+        },
+        "IpProtocol":"-1",
+        "SourceSecurityGroupId": {
+          "Ref": "CoreOSSecurityGroup"
+        },
+        "FromPort":"0",
+        "ToPort":"65535"
+      }
+    },
+
     "RouterCoreOSToCoreOS":{
       "Type":"AWS::EC2::SecurityGroupEgress",
       "Properties": {
@@ -2021,6 +2036,19 @@
         "DestinationSecurityGroupId": {
           "Ref": "CoreOSSecurityGroup"
         },
+        "FromPort":"0",
+        "ToPort":"65535"
+      }
+    },
+
+    "RouterCoreOSToAny":{
+      "Type":"AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "RouterCoreOSSecurityGroup"
+        },
+        "IpProtocol":"-1",
+        "CidrIp":"0.0.0.0/0",
         "FromPort":"0",
         "ToPort":"65535"
       }
@@ -2162,7 +2190,7 @@
                 "        ExecStartPre=-/usr/bin/docker kill consul\n",
                 "        ExecStartPre=-/usr/bin/docker rm consul\n",
                 "        ExecStartPre=/usr/bin/docker pull progrium/consul\n",
-                "        ExecStart=/usr/bin/docker run -h %H -p 8300:8300 -p 8301:8301 -p 8301:8301/udp -p 8302:8302 -p 8302:8302/udp -p 8400:8400 -p 8500:8500 -p 53:53/udp progrium/consul $private_ipv4 -e SERVICE_IGNORE=true -v /var/run/docker.sock:/var/run/docker.sock\n",
+                "        ExecStart=/usr/bin/docker run -h %H -p 8300:8300 -p 8301:8301 -p 8301:8301/udp -p 8302:8302 -p 8302:8302/udp -p 8400:8400 -p 8500:8500 -p 53:53/udp progrium/consul $private_ipv4 -e SERVICE_IGNORE=true\n",
                 "        ExecStop=/usr/bin/docker stop consul\n",
                 "    - name: consul-announce.service\n",
                 "      command: start\n",
@@ -2172,7 +2200,7 @@
                 "        PartOf=consul.service\n",
                 "        After=consul.service\n",
                 "        [Service]\n",
-                "        ExecStart=/bin/sh -c \"while true; do etcdctl set /consul/bootstrap/machines/$(cat /etc/machine-id) $private_ipv4 --ttl 60; /usr/bin/docker exec consul consul join $(etcdctl get $(etcdctl ls /consul/bootstrap/machines | tail -1)); sleep 45; done\"\n",
+                "        ExecStart=/bin/sh -c \"while true; do etcdctl set /consul/bootstrap/machines/$(cat /etc/machine-id) $private_ipv4; /usr/bin/docker exec consul consul join $(etcdctl ls /consul/bootstrap/machines | xargs -n 1 etcdctl get | tr '\\n' ' '); sleep 45; done\"\n",
                 "        ExecStop=/bin/sh -c \"/usr/bin/etcdctl rm /consul/bootstrap/machines/$(cat /etc/machine-id)\"\n",
                 "# Run axon-router\n",
                 "    - name: axon-router.service\n",
@@ -2187,7 +2215,7 @@
                 "         ExecStartPre=-/usr/bin/docker kill axon-router\n",
                 "         ExecStartPre=-/usr/bin/docker rm axon-router\n",
                 "         ExecStartPre=/usr/bin/docker pull monsantoco/axon-router:latest\n",
-                "         ExecStart=/usr/bin/docker run -t --name axon-router -p 80:80 monsantoco/axon-router:latest\n",
+                "         ExecStart=/usr/bin/docker run -t -e \"NS_IP=172.17.42.1\" --name axon-router -p 80:80 monsantoco/axon-router:latest\n",
                 "         ExecStop=/usr/bin/docker stop axon-router\n",
                 "    - name: settimezone.service\n",
                 "      command: start\n",

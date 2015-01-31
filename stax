@@ -316,25 +316,31 @@ stax-getdockerips(){
     echo "${yellow}[ ${cyan}----${yellow} ]${reset}   get docker IP(s)"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
     aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"docker-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$3 } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > /tmp/dockerlists
+    aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"router-docker-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$3 } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > /tmp/routerdockerlists
     echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building dockerlist: "
     mv /tmp/dockerlists /tmp/docker_hosts
+    mv /tmp/routerdockerlists /tmp/router_docker_hosts
     echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building docker connect: "
     sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/dockconnect > /tmp/dockconnect
+    sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/routerdockconnect > /tmp/routerdockconnect
     echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building fleetstats connect: "
     sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/fleetstats > /tmp/fleetstats
     echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     putting docker files on jumpbox: "
     scp $SSH_OPTIONS /tmp/docker_hosts ec2-user@$STAX_PUB_IP:~ > /dev/null
+    scp $SSH_OPTIONS /tmp/router_docker_hosts ec2-user@$STAX_PUB_IP:~ > /dev/null
     scp $SSH_OPTIONS /tmp/dockconnect ec2-user@$STAX_PUB_IP:~ > /dev/null
+    scp $SSH_OPTIONS /tmp/routerdockconnect ec2-user@$STAX_PUB_IP:~ > /dev/null
     scp $SSH_OPTIONS /tmp/fleetstats ec2-user@$STAX_PUB_IP:~ > /dev/null
     ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'chmod 0755 dockconnect' > /dev/null
+    ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'chmod 0755 routerdockconnect' > /dev/null
     ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'chmod 0755 fleetstats' > /dev/null
     echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     cleaning files: "
-    rm /tmp/docker_hosts; rm /tmp/dockconnect; rm /tmp/fleetstats
+    rm /tmp/docker_hosts; rm /tmp/dockconnect; rm /tmp/routerdockconnect; rm /tmp/fleetstats
     echo "done"
 }
 
