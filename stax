@@ -269,6 +269,9 @@ stax-getip(){
     STAX_PUB_IP=`cat "$STAX_DIR/$STAX_NAME.json" | grep -B2 -A2 'JumpEIP' | grep -o '[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*'`
     echo "done"
     echo "${yellow}[ ${cyan}----${yellow} ]${reset}     public IP (EIP): $STAX_PUB_IP"
+    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     writing to $STAX_IPS_FILE: "
+    echo $STAX_PUB_IP > $STAX_IPS_FILE
+    echo "done"
 }
 
 stax-pushkey(){
@@ -339,14 +342,17 @@ stax-getdockerips(){
     ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'chmod 0755 routerdockconnect' > /dev/null
     ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'chmod 0755 fleetstats' > /dev/null
     echo "done"
+    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     writing to $STAX_IPS_FILE: "
+    cat /tmp/docker_hosts >> $STAX_IPS_FILE
+    echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     cleaning files: "
     rm /tmp/docker_hosts; rm /tmp/dockconnect; rm /tmp/routerdockconnect; rm /tmp/fleetstats
     echo "done"
 }
 
 stax-connect(){
-    #ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP > /dev/null
-    ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP
+    #ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP
+    ssh $SSH_OPTIONS ec2-user@`cat $STAX_IPS_FILE | head -n1`
 }
 
 stax-destroy-key(){
@@ -432,6 +438,7 @@ if [ -f "$STAX_NAME_FILE" ]; then
     STAX_NAME=$(<$STAX_NAME_FILE)
     STAX_KEY="$STAX_NAME"
     STAX_KEY_FILE="$STAX_DIR/$STAX_NAME.pem"
+    STAX_IPS_FILE="$STAX_DIR/$STAX_NAME.ips"
     SSH_OPTIONS="$SSH_OPTIONS -i $STAX_KEY_FILE"
 fi
 
@@ -537,11 +544,14 @@ fi
 if [[ "$1" == "connect" ]]; then
     if [ '${DEBUG}' == "ON" ]; then echo "----- DEBUG :::: connect -----"; fi
     stax-existing
-    stax-getip
-    stax-pushkey
-    stax-motd
-    stax-popjumpbox
-    stax-getdockerips
+    if [ ! -f "$STAX_IPS_FILE" ]; then
+        stax-getip
+        stax-pushkey
+        stax-motd
+        stax-popjumpbox
+        stax-getdockerips
+    fi
+    echo "OUT"
     stax-connect
     exit 0
 fi
