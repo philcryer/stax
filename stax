@@ -365,6 +365,7 @@ stax-destroy-key(){
 stax-destroy-files(){
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     deleting $STAX_NAME files: "
     rm -f "$STAX_DIR/$STAX_NAME.json" "$STAX_NAME_FILE" > /dev/null
+    rm -f "$STAX_DIR/$STAX_NAME.ips" "$STAX_NAME_FILE" > /dev/null
     echo "done"
 }
 
