@@ -351,8 +351,8 @@ stax-getdockerips(){
 }
 
 stax-connect(){
-    #ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP
-    ssh $SSH_OPTIONS ec2-user@`cat $STAX_IPS_FILE | head -n1`
+    ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP
+    #ssh $SSH_OPTIONS ec2-user@`cat $STAX_IPS_FILE | head -n1`
 }
 
 stax-destroy-key(){
@@ -462,11 +462,14 @@ fi
 if [[ "$1" == "fleet" ]]; then
     if [ '${DEBUG}' == "ON" ]; then echo "----- DEBUG :::: fleet -----"; fi
     stax-existing
-    stax-getip
-    stax-pushkey
-    stax-motd
-    stax-popjumpbox
-    stax-getdockerips
+    if [ ! -f "$STAX_IPS_FILE" ]; then
+        stax-getip
+        stax-pushkey
+        stax-motd
+        stax-popjumpbox
+        stax-getdockerips
+    fi
+    STAX_PUB_IP=`cat $STAX_IPS_FILE | head -n1`
     stax-fleetstats
     exit 0
 fi
@@ -552,7 +555,7 @@ if [[ "$1" == "connect" ]]; then
         stax-popjumpbox
         stax-getdockerips
     fi
-    echo "OUT"
+    STAX_PUB_IP=`cat $STAX_IPS_FILE | head -n1`
     stax-connect
     exit 0
 fi
