@@ -404,7 +404,7 @@ stax-generate(){
     RANDOM_NUM=$((RANDOM%99999+10001))
     STAX_NAME="vpc-$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
     # initialize sed command
-    sed="sed -e s/@STAX_NAME@/$STAX_NAME/ -e s/@KEY_NAME@/$STAX_NAME/"
+    sed="sed -e s/@KEY_NAME@/$STAX_NAME/"
     # see if we need to substitute for SSH_FROM
     if grep -q SSH_FROM "$config" > /dev/null 2>&1; then
         SSH_FROM="$(curl -s http://icanhazip.com)\/32"
