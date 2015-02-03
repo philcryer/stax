@@ -153,10 +153,6 @@
       "Type":"Number",
       "Default":"300"
     },
-    "StaxName":{
-      "Description":"An unique name for the stack name, also the name of the S3 bucket containing stax objects",
-      "Type":"String"
-    },
     "DiscoveryURL":{
       "Description":"An unique etcd cluster discovery URL. Grab a new token from https://discovery.etcd.io/new",
       "Type":"String"
@@ -271,7 +267,7 @@
                       "",
                       [
                         "arn:aws:s3:::",
-                        { "Ref" : "StaxName" } ,
+                        { "Ref" : "AWS::StackName" } ,
                         "/*"
                       ]
                     ]
