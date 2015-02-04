@@ -314,41 +314,35 @@ stax-popjumpbox(){
 stax-getdockerips(){
     echo "${yellow}[ ${cyan}----${yellow} ]${reset}   get docker IP(s)"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
-    aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"docker-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$3 } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > /tmp/dockerlists
-    aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"router-docker-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$3 } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > /tmp/routerdockerlists
-    echo "done"
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building dockerlist: "
-    mv /tmp/dockerlists /tmp/docker_hosts
-    mv /tmp/routerdockerlists /tmp/router_docker_hosts
+    docker_hosts="$STAX_DIR/$STAX_NAME.docker_hosts"
+    aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"docker-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$3 } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$docker_hosts"
+    router_hosts="$STAX_DIR/$STAX_NAME.router_hosts"
+    aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"router-docker-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$3 } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$router_hosts"
     echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building docker connect: "
-    sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/dockconnect > /tmp/dockconnect
-    sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/routerdockconnect > /tmp/routerdockconnect
+    docker_connect="$STAX_DIR/$STAX_NAME.dockconnect"
+    sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/dockconnect > "$docker_connect"
+    router_connect="$STAX_DIR/$STAX_NAME.routerdockconnect"
+    sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/routerdockconnect > "$router_connect"
     echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building fleetstats connect: "
-    sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/fleetstats > /tmp/fleetstats
+    fleet_stats="$STAX_DIR/$STAX_NAME.fleetstats"
+    sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/fleetstats > "$fleet_stats"
     echo "done"
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     putting docker files on jumpbox: "
-    scp $SSH_OPTIONS /tmp/docker_hosts ec2-user@$STAX_PUB_IP:~ > /dev/null
-    scp $SSH_OPTIONS /tmp/router_docker_hosts ec2-user@$STAX_PUB_IP:~ > /dev/null
-    scp $SSH_OPTIONS /tmp/dockconnect ec2-user@$STAX_PUB_IP:~ > /dev/null
-    scp $SSH_OPTIONS /tmp/routerdockconnect ec2-user@$STAX_PUB_IP:~ > /dev/null
-    scp $SSH_OPTIONS /tmp/fleetstats ec2-user@$STAX_PUB_IP:~ > /dev/null
+    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     putting connect files on jumpbox: "
+    scp $SSH_OPTIONS "$docker_hosts" ec2-user@$STAX_PUB_IP:docker_hosts > /dev/null
+    scp $SSH_OPTIONS "$router_hosts" ec2-user@$STAX_PUB_IP:router_docker_hosts > /dev/null
+    scp $SSH_OPTIONS "$docker_connect" ec2-user@$STAX_PUB_IP:dockconnect > /dev/null
+    scp $SSH_OPTIONS "$router_connect" ec2-user@$STAX_PUB_IP:routerdockconnect > /dev/null
+    scp $SSH_OPTIONS "$fleet_stats" ec2-user@$STAX_PUB_IP:fleetstats > /dev/null
     ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'chmod 0755 dockconnect' > /dev/null
     ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'chmod 0755 routerdockconnect' > /dev/null
     ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'chmod 0755 fleetstats' > /dev/null
-    echo "done"
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     writing to $STAX_IPS_FILE: "
-    cat /tmp/docker_hosts >> $STAX_IPS_FILE
-    echo "done"
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     cleaning files: "
-    rm /tmp/docker_hosts; rm /tmp/dockconnect; rm /tmp/routerdockconnect; rm /tmp/fleetstats
     echo "done"
 }
 
 stax-connect(){
     ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP
-    #ssh $SSH_OPTIONS ec2-user@`cat $STAX_IPS_FILE | head -n1`
 }
 
 stax-destroy-key(){
@@ -360,8 +354,7 @@ stax-destroy-key(){
 
 stax-destroy-files(){
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     deleting $STAX_NAME files: "
-    rm -f "$STAX_DIR/$STAX_NAME.json" "$STAX_NAME_FILE" > /dev/null
-    rm -f "$STAX_DIR/$STAX_NAME.ips" "$STAX_NAME_FILE" > /dev/null
+    rm -f "$STAX_DIR/$STAX_NAME"* "$STAX_NAME_FILE" > /dev/null
     echo "done"
 }
 
@@ -465,7 +458,7 @@ if [[ "$1" == "fleet" ]]; then
         stax-popjumpbox
         stax-getdockerips
     fi
-    STAX_PUB_IP=`cat $STAX_IPS_FILE | head -n1`
+    STAX_PUB_IP=$(<$STAX_IPS_FILE)
     stax-fleetstats
     exit 0
 fi
@@ -551,7 +544,7 @@ if [[ "$1" == "connect" ]]; then
         stax-popjumpbox
         stax-getdockerips
     fi
-    STAX_PUB_IP=`cat $STAX_IPS_FILE | head -n1`
+    STAX_PUB_IP=$(<$STAX_IPS_FILE)
     stax-connect
     exit 0
 fi
