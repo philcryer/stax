@@ -160,7 +160,7 @@ stax-create(){
         if [ ! -d $STAX_DIR/audit ]; then
             mkdir -p $STAX_DIR/audit
         fi
-    touch $STAX_DIR/audit/`date +'%Y%m%d-%H%M%S'`-created-$STAX_NAME
+        touch $STAX_DIR/audit/`date +'%Y%m%d-%H%M%S'`-created-$STAX_NAME
     else
         echo "${yellow}[ ${red}ERRR${yellow} ]${reset}     creation failed, exiting"
         stax-destroy-bucket
