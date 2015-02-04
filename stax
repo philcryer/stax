@@ -134,9 +134,6 @@ stax-create(){
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     uploading template: "
     $aws s3 cp "$SCRIPT_PATH/templates/cloudformation-template-vpc.json" "s3://$template" > /dev/null
     echo "done"
-    #echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     uploading consul join script: "
-    #$aws s3 cp "$SCRIPT_PATH/assets/vpc/consul_join.sh" "s3://$template" > /dev/null
-    #echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     validating template: "
     stax-validate "$template_url" > /dev/null
     echo "done"
