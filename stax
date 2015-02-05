@@ -32,7 +32,8 @@ stax-colors(){
 
 stax-usage(){
     echo "Usage: stax <command>"
-    echo; echo "Commands:"
+    echo ""
+    echo "Commands:"
     echo "  list              List all completely built and running stax"
     echo "  create            Create a new VPC stax in AWS"
     echo "  describe          Describe the stax created from this host"
@@ -42,11 +43,15 @@ stax-usage(){
     echo "  fleet             Describe currently created fleet stax"
     echo "  destroy           Destroy the existing VPC stax"
     echo "  history           View history of recently created/destroyed stax"
-    echo; echo "For more help, check the docs; https://github.com/philcryer/stax"
-    exit 1
+    echo ""
+    echo "For more help, check the docs: https://github.com/philcryer/stax"
 }
 
-[ $# -gt 0 ] || stax-usage
+# make sure a command was provided
+if [ -z "$1" ]; then
+    stax-usage
+    exit 2
+fi
 
 stax-logo(){
 NUMS=`wc -l < assets/stax/stax-slogans`
@@ -433,126 +438,118 @@ if [ -f "$STAX_NAME_FILE" ]; then
 fi
 
 
-if [[ "$1" == "services" ]]; then
-    if [ "${DEBUG}" == "ON" ]; then echo "----- DEBUG :::: services -----"; fi
-    stax-services
-fi
+if [ "$DEBUG" == "ON" ]; then echo "----- DEBUG :::: $1 -----"; fi
+case "$1" in
+    help)
+        stax-usage
+        exit 0
+        ;;
 
-if [[ "$1" == "history" ]]; then
-    if [ "${DEBUG}" == "ON" ]; then echo "----- DEBUG :::: history -----"; fi
-    stax-history
-fi
+    services)
+        stax-services
+        ;;
 
-if [[ "$1" == "list" ]]; then
-    if [ "${DEBUG}" == "ON" ]; then echo "----- DEBUG :::: list -----"; fi
-    stax-list
-fi
+    history)
+        stax-history
+        ;;
 
-if [[ "$1" == "fleet" ]]; then
-    if [ '${DEBUG}' == "ON" ]; then echo "----- DEBUG :::: fleet -----"; fi
-    stax-existing
-    if [ ! -f "$STAX_IPS_FILE" ]; then
-        stax-getip
-        stax-pushkey
-        stax-motd
-        stax-popjumpbox
-        stax-getdockerips
-    fi
-    STAX_PUB_IP=$(<$STAX_IPS_FILE)
-    stax-fleetstats
-    exit 0
-fi
+    list)
+        stax-list
+        ;;
 
+    fleet)
+        stax-existing
+        if [ ! -f "$STAX_IPS_FILE" ]; then
+            stax-getip
+            stax-pushkey
+            stax-motd
+            stax-popjumpbox
+            stax-getdockerips
+        fi
+        STAX_PUB_IP=$(<$STAX_IPS_FILE)
+        stax-fleetstats
+        ;;
 
-if [[ "$1" == "desc-auto" ]]; then
-    if [ '${DEBUG}' == "ON" ]; then echo "----- DEBUG :::: desc-auto -----"; fi
-    stax-existing
-    stax-descauto
-fi
+    desc-auto)
+        stax-existing
+        stax-descauto
+        ;;
 
-if [[ "$1" == "create" ]]; then
-    if [ '${DEBUG}' == "ON" ]; then echo "----- DEBUG :::: create -----"; fi
-    if [ -f $STAX_NAME_FILE ]; then
-        echo "${yellow}[ ${red}ERRR${yellow} ]${reset} existing stax defined, exiting";
-        exit 1
-    else
+    create)
+        if [ -f $STAX_NAME_FILE ]; then
+            echo "${yellow}[ ${red}ERRR${yellow} ]${reset} existing stax defined, exiting";
+            exit 1
+        fi
         stax-create
         stax-describe
         rm $config_tmp
-        exit 0
-    fi
-fi
+        ;;
 
-if [[ "$1" == "start" ]]; then
-    if [ '${DEBUG}' == "ON" ]; then echo "----- DEBUG :::: start -----"; fi
-    if [[ ! "$2" ]]; then
-        echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no services listed, available ones are "
-        stax-services; exit 2
-    fi
-    stax-existing
-    stax-getip
-    stax-pushkey
-    stax-motd
-    stax-popjumpbox
-    stax-getdockerips
-    sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/servicerunner > /tmp/servicerunner.tmp
-    sed "s|SOME_SERVICE|`echo $2`|g" /tmp/servicerunner.tmp > /tmp/servicerunner
-    stax-start-services
-    exit 0
-fi
-
-if [[ "$1" == "describe" || "desc" ]]; then
-    if [ '${DEBUG}' == "ON" ]; then echo "----- DEBUG :::: describe -----"; fi
-    stax-existing
-    if [ -f $STAX_NAME_FILE ]; then
-        stax-describe
-        #exit 0
-    else
-        echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
-        exit 1
-    fi
-fi
-
-if [[ "$1" == "getip" ]]; then
-    if [ '${DEBUG}' == "ON" ]; then echo "----- DEBUG :::: getip -----"; fi
-    stax-existing
-    stax-getip
-    exit 0
-fi
-
-if [[ "$1" == "test" ]]; then
-    if [ '${DEBUG}' == "ON" ]; then echo "----- DEBUG :::: test -----"; fi
-    stax-getdockerips
-    exit 0
-fi
-
-if [[ "$1" == "pushkey" ]]; then
-    if [ '${DEBUG}' == "ON" ]; then echo "----- DEBUG :::: pushkey -----"; fi
-    stax-existing
-    stax-getip
-    stax-pushkey
-    exit 0
-fi
-
-if [[ "$1" == "connect" ]]; then
-    if [ '${DEBUG}' == "ON" ]; then echo "----- DEBUG :::: connect -----"; fi
-    stax-existing
-    if [ ! -f "$STAX_IPS_FILE" ]; then
+    start)
+        if [[ ! "$2" ]]; then
+            echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no services listed, available ones are "
+            stax-services
+            exit 2
+        fi
+        stax-existing
         stax-getip
         stax-pushkey
         stax-motd
         stax-popjumpbox
         stax-getdockerips
-    fi
-    STAX_PUB_IP=$(<$STAX_IPS_FILE)
-    stax-connect
-    exit 0
-fi
+        sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/servicerunner > /tmp/servicerunner.tmp
+        sed "s|SOME_SERVICE|`echo $2`|g" /tmp/servicerunner.tmp > /tmp/servicerunner
+        stax-start-services
+        ;;
 
-if [[ "$1" == "destroy" ]]; then
-    if [ '${DEBUG}' == "ON" ]; then echo "----- DEBUG :::: destroy -----"; fi
-    stax-existing
-    stax-destroy
-fi
+    desc*)
+        stax-existing
+        if [ ! -f $STAX_NAME_FILE ]; then
+            echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
+            exit 1
+        fi
+        stax-describe
+        ;;
+
+    getip)
+        stax-existing
+        stax-getip
+        ;;
+
+    test)
+        stax-getdockerips
+        ;;
+
+    pushkey)
+        stax-existing
+        stax-getip
+        stax-pushkey
+        ;;
+
+    connect)
+        stax-existing
+        if [ ! -f "$STAX_IPS_FILE" ]; then
+            stax-getip
+            stax-pushkey
+            stax-motd
+            stax-popjumpbox
+            stax-getdockerips
+        fi
+        STAX_PUB_IP=$(<$STAX_IPS_FILE)
+        stax-connect
+        ;;
+
+    destroy)
+        stax-existing
+        stax-destroy
+        ;;
+
+    *)
+        echo "${yellow}[ ${red}ERRR${yellow} ]${reset} unknown stax command: $1"
+        stax-usage
+        exit 2
+        ;;
+
+esac
 
 exit 0
