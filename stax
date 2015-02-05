@@ -31,20 +31,27 @@ stax-colors(){
 }
 
 stax-usage(){
-    echo "Usage: stax <command>"
-    echo ""
-    echo "Commands:"
-    echo "  list              List all completely built and running stax"
-    echo "  create            Create a new VPC stax in AWS"
-    echo "  describe          Describe the stax created from this host"
-    echo "  connect           Connect to the jumpbox in the VPC stax over SSH"
-    echo "  services          List servers that are available to run across a stax"
-    echo "  start <service>   Start a service across the stax cluster"
-    echo "  fleet             Describe currently created fleet stax"
-    echo "  destroy           Destroy the existing VPC stax"
-    echo "  history           View history of recently created/destroyed stax"
-    echo ""
-    echo "For more help, check the docs: https://github.com/philcryer/stax"
+    cat <<EOM
+Usage: stax <command>
+
+Commands:
+  connect           Connect to the jumpbox in the VPC stax over SSH
+  create            Create a new VPC stax in AWS
+  describe          Describe the stax created from this host
+  desc-auto         Describe the autoscaling groups in the stax
+  destroy           Destroy the existing VPC stax
+  fleet             Describe currently created fleet stax
+  getip             Determine and store IP address ot jump box
+  help              Output this message
+  history           View history of recently created/destroyed stax
+  list              List all completely built and running stax
+  pushkey           List all completely built and running stax
+  services          List servers that are available to run across a stax
+  start <service>   Start a service across the stax cluster
+  test              Perform a simple check of the running stax
+
+For more help, check the docs: https://github.com/philcryer/stax
+EOM
 }
 
 # make sure a command was provided
@@ -440,21 +447,46 @@ fi
 
 if [ "$DEBUG" == "ON" ]; then echo "----- DEBUG :::: $1 -----"; fi
 case "$1" in
-    help)
-        stax-usage
-        exit 0
+    connect)
+        stax-existing
+        if [ ! -f "$STAX_IPS_FILE" ]; then
+            stax-getip
+            stax-pushkey
+            stax-motd
+            stax-popjumpbox
+            stax-getdockerips
+        fi
+        STAX_PUB_IP=$(<$STAX_IPS_FILE)
+        stax-connect
         ;;
 
-    services)
-        stax-services
+    create)
+        if [ -f $STAX_NAME_FILE ]; then
+            echo "${yellow}[ ${red}ERRR${yellow} ]${reset} existing stax defined, exiting";
+            exit 1
+        fi
+        stax-create
+        stax-describe
+        rm $config_tmp
         ;;
 
-    history)
-        stax-history
+    desc-auto)
+        stax-existing
+        stax-descauto
         ;;
 
-    list)
-        stax-list
+    desc*)
+        stax-existing
+        if [ ! -f $STAX_NAME_FILE ]; then
+            echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
+            exit 1
+        fi
+        stax-describe
+        ;;
+
+    destroy)
+        stax-existing
+        stax-destroy
         ;;
 
     fleet)
@@ -470,19 +502,32 @@ case "$1" in
         stax-fleetstats
         ;;
 
-    desc-auto)
+    getip)
         stax-existing
-        stax-descauto
+        stax-getip
         ;;
 
-    create)
-        if [ -f $STAX_NAME_FILE ]; then
-            echo "${yellow}[ ${red}ERRR${yellow} ]${reset} existing stax defined, exiting";
-            exit 1
-        fi
-        stax-create
-        stax-describe
-        rm $config_tmp
+    help)
+        stax-usage
+        exit 0
+        ;;
+
+    history)
+        stax-history
+        ;;
+
+    list)
+        stax-list
+        ;;
+
+    pushkey)
+        stax-existing
+        stax-getip
+        stax-pushkey
+        ;;
+
+    services)
+        stax-services
         ;;
 
     start)
@@ -502,46 +547,8 @@ case "$1" in
         stax-start-services
         ;;
 
-    desc*)
-        stax-existing
-        if [ ! -f $STAX_NAME_FILE ]; then
-            echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
-            exit 1
-        fi
-        stax-describe
-        ;;
-
-    getip)
-        stax-existing
-        stax-getip
-        ;;
-
     test)
         stax-getdockerips
-        ;;
-
-    pushkey)
-        stax-existing
-        stax-getip
-        stax-pushkey
-        ;;
-
-    connect)
-        stax-existing
-        if [ ! -f "$STAX_IPS_FILE" ]; then
-            stax-getip
-            stax-pushkey
-            stax-motd
-            stax-popjumpbox
-            stax-getdockerips
-        fi
-        STAX_PUB_IP=$(<$STAX_IPS_FILE)
-        stax-connect
-        ;;
-
-    destroy)
-        stax-existing
-        stax-destroy
         ;;
 
     *)
