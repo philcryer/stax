@@ -48,7 +48,6 @@ Commands:
   pushkey           List all completely built and running stax
   services          List servers that are available to run across a stax
   start <service>   Start a service across the stax cluster
-  test              Perform a simple check of the running stax
 
 For more help, check the docs: https://github.com/philcryer/stax
 EOM
@@ -545,10 +544,6 @@ case "$1" in
         sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/servicerunner > /tmp/servicerunner.tmp
         sed "s|SOME_SERVICE|`echo $2`|g" /tmp/servicerunner.tmp > /tmp/servicerunner
         stax-start-services
-        ;;
-
-    test)
-        stax-getdockerips
         ;;
 
     *)
