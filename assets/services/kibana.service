@@ -4,12 +4,12 @@ Description=Kibana
 # Requirements
 Requires=docker.service
 Requires=fleet.service
-Wants=elasticsearch.service
+#Wants=elasticsearch.service
 
 # Dependency ordering and binding
 After=docker.service
 After=fleet.service
-After=elasticsearch.service
+#After=elasticsearch.service
 
 [Service]
 TimeoutStartSec=0
