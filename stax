@@ -340,15 +340,21 @@ stax-getdockerips(){
     fleet_stats="$STAX_DIR/$STAX_NAME.fleetstats"
     sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/fleetstats > "$fleet_stats"
     echo "done"
+    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building fleetslogs connect: "
+    fleet_logs="$STAX_DIR/$STAX_NAME.fleetlogs"
+    sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/fleetlogs > "$fleet_logs"
+    echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     putting connect files on jumpbox: "
     scp $SSH_OPTIONS "$docker_hosts" ec2-user@$STAX_PUB_IP:docker_hosts > /dev/null
     scp $SSH_OPTIONS "$router_hosts" ec2-user@$STAX_PUB_IP:router_docker_hosts > /dev/null
     scp $SSH_OPTIONS "$docker_connect" ec2-user@$STAX_PUB_IP:dockconnect > /dev/null
     scp $SSH_OPTIONS "$router_connect" ec2-user@$STAX_PUB_IP:routerdockconnect > /dev/null
     scp $SSH_OPTIONS "$fleet_stats" ec2-user@$STAX_PUB_IP:fleetstats > /dev/null
+    scp $SSH_OPTIONS "$fleet_logs" ec2-user@$STAX_PUB_IP:fleetlogs > /dev/null
     ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'chmod 0755 dockconnect' > /dev/null
     ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'chmod 0755 routerdockconnect' > /dev/null
     ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'chmod 0755 fleetstats' > /dev/null
+    ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'chmod 0755 fleetlogs' > /dev/null
     echo "done"
 }
 
@@ -448,6 +454,7 @@ if [ "$DEBUG" == "ON" ]; then echo "----- DEBUG :::: $1 -----"; fi
 case "$1" in
     connect)
         stax-existing
+        stax-describe
         if [ ! -f "$STAX_IPS_FILE" ]; then
             stax-getip
             stax-pushkey
