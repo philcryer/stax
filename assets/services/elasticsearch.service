@@ -7,7 +7,6 @@ Requires=fleet.service
 Requires=consul.service
 
 # Dependency ordering and binding
-Before=logstash.service
 After=docker.service
 After=fleet.service
 After=consul.service
