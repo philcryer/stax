@@ -1,14 +1,17 @@
 [Unit]
-Description=Logstash log forwarder
+Description=Logstash
 
 # Requirements
 Requires=docker.service
-Wants=elasticsearch.service
+Requires=fleet.service
+Requires=elasticsearch.service
+Requires=consul.service
 
 # Dependency ordering and binding
 After=docker.service
+After=fleet.service
 After=elasticsearch.service
-Partof=elasticsearch.service
+After=consul.service
 
 [Service]
 TimeoutStartSec=0
@@ -16,12 +19,17 @@ TimeoutStartSec=0
 # Get CoreOS environmental variables
 EnvironmentFile=/etc/environment
 
-ExecStartPre=-/usr/bin/docker kill %p
-ExecStartPre=-/usr/bin/docker rm %p
-ExecStartPre=/usr/bin/docker pull digitalwonderland/elasticsearch
-ExecStart=/usr/bin/docker run --rm --name %p -P --link elasticsearch:ELASTICSEARCH digitalwonderland/logstash
+ExecStartPre=/usr/bin/docker pull cgswong/logstash:confd
+#ExecStart=/usr/bin/docker run --rm --name %p -e KV_TYPE=consul -e KV_HOST=${COREOS_PUBLIC_IPV4} -p 5000:5000 -p 5010:5010 -p 5020:5020 -p 5025:5025 cgswong/logstash:confd
+ExecStart=/usr/bin/docker run --rm --name %p -e KV_HOST=${COREOS_PUBLIC_IPV4} -p 5000:5000 -p 5010:5010 -p 5020:5020 -p 5025:5025 cgswong/logstash:confd
+ExecStartPost=/usr/bin/etcdctl set /logstash/host/%H ${COREOS_PUBLIC_IPV4}
+#ExecStartPost=/usr/bin/curl -L http://${COREOS_PUBLIC_IPV4}:8500/v1/kv/logstash/host/%H -XPUT -d value=${COREOS_PUBLIC_IPV4}
 ExecStop=/usr/bin/docker stop %p
-ExecStop=-/usr/bin/docker rm %p
+ExecStop=/usr/bin/docker kill %p
+ExecStop=/usr/bin/docker rm %p
+ExecStopPost=/usr/bin/etcdctl rmdir /logstash/host/%H
+#ExecStopPost=/usr/bin/curl -L http://${COREOS_PUBLIC_IPV4}:8500/v1/kv/es/host/%H -XDELETE
 
 [X-Fleet]
-MachineOf=elasticsearch.service
+Conflicts=%p.service
+
