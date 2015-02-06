@@ -4,13 +4,11 @@ Description=Logstash
 # Requirements
 Requires=docker.service
 Requires=fleet.service
-#Requires=elasticsearch.service
 Requires=consul.service
 
 # Dependency ordering and binding
 After=docker.service
 After=fleet.service
-#After=elasticsearch.service
 After=consul.service
 
 [Service]
