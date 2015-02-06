@@ -13,7 +13,6 @@
   { "ParameterKey":     "AdvertisedIPAddress", "ParameterValue":   "private" },
   { "ParameterKey":     "AutoScaleCooldown", "ParameterValue":   "300" },
   { "ParameterKey":     "KeyName", "ParameterValue":   "@KEY_NAME@" },
-  { "ParameterKey":     "StaxName", "ParameterValue":   "@STAX_NAME@" },
   { "ParameterKey":     "AllowSSHFrom", "ParameterValue":   "@SSH_FROM@" },
   { "ParameterKey":     "DiscoveryURL", "ParameterValue":   "@DISCOVERY_URL@" }
 ]
