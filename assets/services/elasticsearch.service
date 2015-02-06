@@ -19,9 +19,9 @@ TimeoutStartSec=0
 EnvironmentFile=/etc/environment
 
 ExecStartPre=/usr/bin/mkdir -p /es/data
-ExecStartPre=/usr/bin/docker pull cgswong/elasticsearch:confd
-ExecStart=/usr/bin/docker run --rm --name %p -v /es/data:/esvol/data -p 9200:9200 -p 9300:9300 -e KV_HOST=${COREOS_PUBLIC_IPV4} -e ES_CLUSTER=elk01 cgswong/elasticsearch:confd
-#ExecStart=/usr/bin/docker run --rm --name %p -v /es/data:/esvol/data -p 9200:9200 -p 9300:9300 -e KV_TYPE=consul -e KV_HOST=${COREOS_PUBLIC_IPV4} -e ES_CLUSTER=elk01 cgswong/elasticsearch:confd
+ExecStartPre=/usr/bin/docker pull monsantoco/elasticsearch
+ExecStart=/usr/bin/docker run --rm --name %p -v /es/data:/esvol/data -p 9200:9200 -p 9300:9300 -e KV_HOST=${COREOS_PUBLIC_IPV4} -e ES_CLUSTER=elk01 monsantoco/elasticsearch
+#ExecStart=/usr/bin/docker run --rm --name %p -v /es/data:/esvol/data -p 9200:9200 -p 9300:9300 -e KV_TYPE=consul -e KV_HOST=${COREOS_PUBLIC_IPV4} -e ES_CLUSTER=elk01 monsantoco/elasticsearch
 #ExecStartPost=/usr/bin/etcdctl set /es/host/%H '{"ipv4":${COREOS_PUBLIC_IPV4},"http_port":9200,"cluster_port":9300,"cluster":"elk01"}'
 ExecStartPost=/usr/bin/etcdctl set /es/host/%H "${COREOS_PUBLIC_IPV4}:9200"
 #ExecStartPost=/usr/bin/curl -L http://${COREOS_PUBLIC_IPV4}:8500/v1/kv/es/host/%H -XPUT -d value='{"ipv4":${COREOS_PUBLIC_IPV4},"http_port":9200,"cluster_port":9300,"cluster":"elk01"}'

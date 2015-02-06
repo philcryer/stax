@@ -17,9 +17,9 @@ TimeoutStartSec=0
 # Get CoreOS environmental variables
 EnvironmentFile=/etc/environment
 
-ExecStartPre=/usr/bin/docker pull cgswong/kibana:confd
-ExecStart=/usr/bin/docker run --rm --name %p -p 5601:5601 -e KV_HOST=${COREOS_PUBLIC_IPV4} cgswong/kibana:confd
-#ExecStart=/usr/bin/docker run --rm --name %p -p 5601:5601 -e KV_HOST=${COREOS_PUBLIC_IPV4} -e KV_TYPE=consul cgswong/kibana:confd
+ExecStartPre=/usr/bin/docker pull monsantoco/kibana
+ExecStart=/usr/bin/docker run --rm --name %p -p 5601:5601 -e KV_HOST=${COREOS_PUBLIC_IPV4} monsantoco/kibana
+#ExecStart=/usr/bin/docker run --rm --name %p -p 5601:5601 -e KV_HOST=${COREOS_PUBLIC_IPV4} -e KV_TYPE=consul monsantoco/kibana
 ExecStartPost=/usr/bin/etcdctl set /kibana/host/%H ${COREOS_PUBLIC_IPV4}
 #ExecStartPost=/usr/bin/curl -L http://${COREOS_PUBLIC_IPV4}:8500/v1/kv/kibana/host/%H -XPUT -d value=${COREOS_PUBLIC_IPV4}
 ExecStop=/usr/bin/docker stop %p
