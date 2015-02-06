@@ -4,7 +4,7 @@
 other_route_table="$1"
 my_route_table="$2"
 aws_region="$3"
-nat_monitor_url="$4"
+nat_monitor_bucket="$4"
 
 ec2_url="https://ec2.${aws_region}.amazonaws.com"
 
@@ -26,7 +26,7 @@ while [ -z "$NAT_ID" ]; do
   NAT_ID=`/opt/aws/bin/ec2-describe-route-tables "$other_route_table" -U "$ec2_url" | awk '/0.0.0.0\/0/ {print $2}'`
 done
 # Download nat_monitor.sh and configure
-wget $nat_monitor_url
+aws s3 cp "s3://$nat_monitor_bucket/nat_monitor.sh" /root/nat_monitor.sh
 nat_monitor="/bin/bash /root/nat_monitor.sh $NAT_ID $other_route_table $my_route_table $ec2_url"
 echo "@reboot $nat_monitor > /tmp/nat_monitor.log" | crontab
 $nat_monitor >> /tmp/nat_monitor.log &
