@@ -1325,12 +1325,14 @@
                 "yum update -y aws*\n",
                 ". /etc/profile.d/aws-apitools-common.sh\n",
                 "cd /root\n",
-                "wget https://s3.amazonaws.com/stax-user-data/user-data-nat.sh\n",
+                "aws s3 cp s3://",
+                { "Ref":"AWS::StackName" },
+                "/user-data-nat.sh user-data-nat.sh\n",
                 "/bin/bash user-data-nat.sh",
                 " ", { "Ref":"PrivateRouteTable2" },
                 " ", { "Ref":"PrivateRouteTable1" },
                 " ", { "Ref":"AWS::Region" },
-                " https://s3.amazonaws.com/stax-user-data/nat_monitor.sh\n",
+                " ", { "Ref":"AWS::StackName" }, "\n",
                 "# EOF\n"
               ]
             ]
@@ -1441,12 +1443,14 @@
                 "yum update -y aws*\n",
                 ". /etc/profile.d/aws-apitools-common.sh\n",
                 "cd /root\n",
-                "wget https://s3.amazonaws.com/stax-user-data/user-data-nat.sh\n",
+                "aws s3 cp s3://",
+                { "Ref":"AWS::StackName" },
+                "/user-data-nat.sh user-data-nat.sh\n",
                 "/bin/bash user-data-nat.sh",
                 " ", { "Ref":"PrivateRouteTable1" },
                 " ", { "Ref":"PrivateRouteTable2" },
                 " ", { "Ref":"AWS::Region" },
-                " https://s3.amazonaws.com/stax-user-data/nat_monitor.sh\n",
+                " ", { "Ref":"AWS::StackName" }, "\n",
                 "# EOF\n"
               ]
             ]
