@@ -19,9 +19,9 @@ TimeoutStartSec=0
 # Get CoreOS environmental variables
 EnvironmentFile=/etc/environment
 
-ExecStartPre=/usr/bin/docker pull cgswong/logstash:confd
-#ExecStart=/usr/bin/docker run --rm --name %p -e KV_TYPE=consul -e KV_HOST=${COREOS_PUBLIC_IPV4} -p 5000:5000 -p 5010:5010 -p 5020:5020 -p 5025:5025 cgswong/logstash:confd
-ExecStart=/usr/bin/docker run --rm --name %p -e KV_HOST=${COREOS_PUBLIC_IPV4} -p 5000:5000 -p 5010:5010 -p 5020:5020 -p 5025:5025 cgswong/logstash:confd
+ExecStartPre=/usr/bin/docker pull monsantoco/logstash
+#ExecStart=/usr/bin/docker run --rm --name %p -e KV_TYPE=consul -e KV_HOST=${COREOS_PUBLIC_IPV4} -p 5000:5000 -p 5010:5010 -p 5020:5020 -p 5025:5025 monsantoco/logstash
+ExecStart=/usr/bin/docker run --rm --name %p -e KV_HOST=${COREOS_PUBLIC_IPV4} -p 5000:5000 -p 5010:5010 -p 5020:5020 -p 5025:5025 monsantoco/logstash
 ExecStartPost=/usr/bin/etcdctl set /logstash/host/%H ${COREOS_PUBLIC_IPV4}
 #ExecStartPost=/usr/bin/curl -L http://${COREOS_PUBLIC_IPV4}:8500/v1/kv/logstash/host/%H -XPUT -d value=${COREOS_PUBLIC_IPV4}
 ExecStop=/usr/bin/docker stop %p
