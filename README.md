@@ -42,13 +42,13 @@ apt-get install curl   # Debian GNU/Linux, Ubuntu
 yum install curl       # Red Hat Enterprise Linux (RHEL), CentOS, Amazon Linux
 ```
 
-### aws-cli
+### awscli
 
 * Install [aws-cli](https://github.com/aws/aws-cli) (Universal Command Line Interface for Amazon Web Services) on your client.
 
 ```bash
 apt-get install awscli  # Debian GNU/Linux, Ubuntu
-brew install aws-cli    # Apple OS X ([via Homebrew](http://brew.sh/))
+brew install awscli    # Apple OS X ([via Homebrew](http://brew.sh/))
 yum install awscli      # Red Hat Enterprise Linux (RHEL), CentOS, Amazon Linux
 ```
 
