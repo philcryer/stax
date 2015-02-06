@@ -436,7 +436,7 @@ stax-generate(){
     fi
 }
 
-clear
+echo "clear!"
 stax-colors
 stax-logo
 stax-preflight
