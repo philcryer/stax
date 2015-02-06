@@ -43,11 +43,9 @@ Commands:
   desc-auto         Describe the autoscaling groups in the stax
   destroy           Destroy the existing VPC stax
   fleet             Describe currently created fleet stax
-  getip             Determine and store IP address ot jump box
   help              Output this message
   history           View history of recently created/destroyed stax
   list              List all completely built and running stax
-  pushkey           List all completely built and running stax
   services          List servers that are available to run across a stax
   start <service>   Start a service across the stax cluster
 
@@ -490,7 +488,7 @@ if [ -f "$STAX_NAME_FILE" ]; then
 fi
 
 # process rest of command line arguments
-if [ "$DEBUG" == "ON" ]; then echo "----- DEBUG :::: $1 -----"; fi
+if [ "$DEBUG" == "ON" ]; then echo "----- DEBUG :::: $command $command_args -----"; fi
 case "$command" in
     connect)
         stax-existing
@@ -548,11 +546,6 @@ case "$command" in
         stax-fleetstats
         ;;
 
-    getip)
-        stax-existing
-        stax-getip
-        ;;
-
     help)
         stax-usage
         exit 0
@@ -564,12 +557,6 @@ case "$command" in
 
     list)
         stax-list
-        ;;
-
-    pushkey)
-        stax-existing
-        stax-getip
-        stax-pushkey
         ;;
 
     services)
