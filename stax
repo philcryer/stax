@@ -8,6 +8,8 @@ set -e
 #   this should work(tm)!                                  2015/01
 #####################################################################
 
+pkg="stax"
+version="0.1"
 STAX_PRE_NAME="stax"
 COREOS_CHANNEL="alpha"
 SCRIPT_PATH=$( cd $(dirname $0) ; pwd -P )
@@ -436,7 +438,45 @@ stax-generate(){
     fi
 }
 
-echo "clear!"
+# process positional parameters
+command=
+command_args=
+prev_arg=
+for arg
+do
+    if test -n "$prev_arg"; then
+        eval "$prev_arg=\$arg"
+        prev_arg=
+        continue
+    fi
+
+    case "$arg" in
+        -d | --debug | --debu | --deb | --de | -d)
+            DEBUG="ON"
+            ;;
+
+        -h | --help | --hel | --he | --h)
+            stax-usage
+            exit 0;;
+
+        -v | --version | --versio | --versi | --vers | --ver | --ve | --v)
+            echo "$pkg $version"
+            exit 0;;
+
+        *)
+            if [ -z "$command" ]; then
+                command="$arg"
+            elif [ -z "$command_args" ]; then
+                command_args="$arg"
+            else
+                command_args="$command_args $arg"
+            fi
+            ;;
+
+    esac
+done
+
+# generic setup
 stax-colors
 stax-logo
 stax-preflight
@@ -449,9 +489,9 @@ if [ -f "$STAX_NAME_FILE" ]; then
     SSH_OPTIONS="$SSH_OPTIONS -i $STAX_KEY_FILE"
 fi
 
-
+# process rest of command line arguments
 if [ "$DEBUG" == "ON" ]; then echo "----- DEBUG :::: $1 -----"; fi
-case "$1" in
+case "$command" in
     connect)
         stax-existing
         stax-describe
