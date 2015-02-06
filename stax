@@ -569,10 +569,12 @@ case "$command" in
         fi
         stax-existing
         stax-getip
-        stax-pushkey
-        stax-motd
-        stax-popjumpbox
-        stax-getdockerips
+        if [ ! -f "$STAX_IPS_FILE" ]; then
+            stax-pushkey
+            stax-motd
+            stax-popjumpbox
+            stax-getdockerips
+        fi
         sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/servicerunner > /tmp/servicerunner.tmp
         sed "s|SOME_SERVICE|`echo $2`|g" /tmp/servicerunner.tmp > /tmp/servicerunner
         stax-start-services
