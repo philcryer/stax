@@ -172,16 +172,16 @@
   "Mappings":{
     "CoreOSAlphaAMI":{
       "us-east-1":{
-        "AMI":"ami-4c651824"
+        "AMI":"ami-3415525c"
       },
       "us-west-1":{
-        "AMI":"ami-5d4f5118"
+        "AMI":"ami-bcbfa6f9"
       },
       "us-west-2":{
-        "AMI":"ami-ff2679cf"
+        "AMI":"ami-6f134b5f"
       },
       "eu-west-1":{
-        "AMI":"ami-5d71f02a"
+        "AMI":"ami-79f27e0e"
       }
     },
     "AmazonLinuxAMI":{
