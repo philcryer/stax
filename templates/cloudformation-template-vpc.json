@@ -134,10 +134,10 @@
     },
     "ClusterSize":{
       "Description":"Number of nodes in cluster (2-12)",
-      "MinValue":"2",
+      "MinValue":"3",
       "MaxValue":"12",
       "Type":"Number",
-      "Default":"2"
+      "Default":"3"
     },
     "RouterClusterSize":{
       "Description":"Number of nodes in cluster (2-12)",
@@ -267,7 +267,7 @@
                       "",
                       [
                         "arn:aws:s3:::",
-                        { "Ref" : "AWS::StackName" } ,
+                        { "Ref":"AWS::StackName" } ,
                         "/*"
                       ]
                     ]
@@ -1467,71 +1467,17 @@
         }
       }
     },
-
-    "CoreOSToAny":{
-      "Type":"AWS::EC2::SecurityGroupEgress",
-      "Properties": {
-        "GroupId": {
-          "Ref": "CoreOSSecurityGroup"
-        },
-        "IpProtocol":"-1",
-        "CidrIp":"0.0.0.0/0",
-        "FromPort":"0",
-        "ToPort":"65535"
-      }
-    },
-
-    "CoreOSFromRouterCoreOS":{
-      "Type":"AWS::EC2::SecurityGroupIngress",
-      "Properties": {
-        "GroupId": {
-          "Ref": "CoreOSSecurityGroup"
-        },
-        "IpProtocol":"tcp",
-        "SourceSecurityGroupId":{
-          "Ref":"RouterCoreOSSecurityGroup"
-        },
-        "FromPort":"0",
-        "ToPort":"65535"
-      }
-    },
-
-    "CoreOSToCoreOS":{
-      "Type":"AWS::EC2::SecurityGroupIngress",
-      "Properties": {
-        "GroupId": {
-          "Ref": "CoreOSSecurityGroup"
-        },
-        "IpProtocol":"tcp",
-        "SourceSecurityGroupId":{
-          "Ref":"CoreOSSecurityGroup"
-        },
-        "FromPort":"0",
-        "ToPort":"65535"
-      }
-    },
-
-    "CoreOSSecurityGroup":{
+    "RouterELBSecurityGroup":{
       "Type":"AWS::EC2::SecurityGroup",
       "Properties":{
-        "GroupDescription":"CoreOS SecurityGroup",
+        "GroupDescription":"Rules for allowing access to/from service router ELB",
         "VpcId":{
           "Ref":"VPC"
         },
         "SecurityGroupIngress":[
           {
             "IpProtocol":"tcp",
-            "SourceSecurityGroupId":{
-              "Ref":"JumpSecurityGroup"
-            },
-            "FromPort":"22",
-            "ToPort":"22"
-          },
-          {
-            "IpProtocol":"tcp",
-            "SourceSecurityGroupId":{
-              "Ref":"JumpSecurityGroup"
-            },
+            "CidrIp":"0.0.0.0/0",
             "FromPort":"80",
             "ToPort":"80"
           }
@@ -1543,7 +1489,7 @@
               "Fn::Join":[
                 "-",
                 [
-                  "dockersg",
+                  "router-elbsg",
                   {
                     "Ref":"AWS::StackName"
                   }
@@ -1590,6 +1536,569 @@
         ]
       }
     },
+    "RouterELBToRouterCoreOSRouter":{
+      "Type":"AWS::EC2::SecurityGroupEgress",
+      "Properties":{
+        "GroupId":{
+          "Ref":"RouterELBSecurityGroup"
+        },
+        "IpProtocol":"tcp",
+        "DestinationSecurityGroupId":{
+          "Ref":"RouterCoreOSSecurityGroup"
+        },
+        "FromPort":"80",
+        "ToPort":"80"
+      }
+    },
+    "RouterELBToRouterCoreOSELB":{
+      "Type":"AWS::EC2::SecurityGroupEgress",
+      "Properties":{
+        "GroupId":{
+          "Ref":"RouterELBSecurityGroup"
+        },
+        "IpProtocol":"tcp",
+        "DestinationSecurityGroupId":{
+          "Ref":"RouterCoreOSSecurityGroup"
+        },
+        "FromPort":"4001",
+        "ToPort":"4001"
+      }
+    },
+    "RouterELB":{
+      "Type":"AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties":{
+        "CrossZone":true,
+        "SecurityGroups":[
+          { "Ref":"RouterELBSecurityGroup" }
+        ],
+        "Subnets":[
+          { "Ref":"PubSubnet1" },
+          { "Ref":"PubSubnet2" }
+        ],
+        "Listeners":[
+          {
+            "LoadBalancerPort":"80",
+            "InstancePort":"80",
+            "Protocol":"HTTP"
+          }
+        ],
+        "HealthCheck":{
+          "Target":"HTTP:4001/version",
+          "HealthyThreshold":"3",
+          "UnhealthyThreshold":"5",
+          "Interval":"30",
+          "Timeout":"5"
+        },
+        "Tags":[
+          {
+            "Key":"Name",
+            "Value":{
+              "Fn::Join":[
+                "-",
+                [
+                  "router-elb",
+                  {
+                    "Ref":"AWS::StackName"
+                  }
+                ]
+              ]
+            }
+          },
+          {
+            "Key":"App",
+            "Value":{
+              "Ref":"App"
+            }
+          },
+          {
+            "Key":"Group",
+            "Value":{
+              "Ref":"Group"
+            }
+          },
+          {
+            "Key":"Owner",
+            "Value":{
+              "Ref":"Owner"
+            }
+          },
+          {
+            "Key":"Environment",
+            "Value":{
+              "Ref":"Environment"
+            }
+          },
+          {
+            "Key":"KeepAlive",
+            "Value":{
+              "Ref":"KeepAlive"
+            }
+          },
+          {
+            "Key":"CostCenter",
+            "Value":{
+              "Ref":"CostCenter"
+            }
+          }
+        ]
+      }
+    },
+    "CoreOSFromJumpSecurityGroup":{
+      "Type":"AWS::EC2::SecurityGroup",
+      "Properties":{
+        "GroupDescription":"Allow general CoreOS/Docker access from the jump box",
+        "VpcId":{
+          "Ref":"VPC"
+        },
+        "SecurityGroupIngress":[
+          {
+            "IpProtocol":"tcp",
+            "SourceSecurityGroupId":{
+              "Ref":"JumpSecurityGroup"
+            },
+            "FromPort":"22",
+            "ToPort":"22"
+          },
+          {
+            "IpProtocol":"tcp",
+            "SourceSecurityGroupId":{
+              "Ref":"JumpSecurityGroup"
+            },
+            "FromPort":"80",
+            "ToPort":"80"
+          },
+          {
+            "IpProtocol":"tcp",
+            "SourceSecurityGroupId":{
+              "Ref":"JumpSecurityGroup"
+            },
+            "FromPort":"4001",
+            "ToPort":"4001"
+          }
+        ],
+        "Tags":[
+          {
+            "Key":"Name",
+            "Value":{
+              "Fn::Join":[
+                "-",
+                [
+                  "coreos-from-jumpsg",
+                  {
+                    "Ref":"AWS::StackName"
+                  }
+                ]
+              ]
+            }
+          },
+          {
+            "Key":"App",
+            "Value":{
+              "Ref":"App"
+            }
+          },
+          {
+            "Key":"Group",
+            "Value":{
+              "Ref":"Group"
+            }
+          },
+          {
+            "Key":"Owner",
+            "Value":{
+              "Ref":"Owner"
+            }
+          },
+          {
+            "Key":"Environment",
+            "Value":{
+              "Ref":"Environment"
+            }
+          },
+          {
+            "Key":"KeepAlive",
+            "Value":{
+              "Ref":"KeepAlive"
+            }
+          },
+          {
+            "Key":"CostCenter",
+            "Value":{
+              "Ref":"CostCenter"
+            }
+          }
+        ]
+      }
+    },
+    "RouterCoreOSSecurityGroup":{
+      "Type":"AWS::EC2::SecurityGroup",
+      "Properties":{
+        "GroupDescription":"Router CoreOS SecurityGroup",
+        "VpcId":{
+          "Ref":"VPC"
+        },
+        "SecurityGroupIngress":[
+          {
+            "IpProtocol":"tcp",
+            "SourceSecurityGroupId":{
+              "Ref":"RouterELBSecurityGroup"
+            },
+            "FromPort":"80",
+            "ToPort":"80"
+          },
+          {
+            "IpProtocol":"tcp",
+            "SourceSecurityGroupId":{
+              "Ref":"RouterELBSecurityGroup"
+            },
+            "FromPort":"4001",
+            "ToPort":"4001"
+          }
+        ],
+        "Tags":[
+          {
+            "Key":"Name",
+            "Value":{
+              "Fn::Join":[
+                "-",
+                [
+                  "routersg",
+                  {
+                    "Ref":"AWS::StackName"
+                  }
+                ]
+              ]
+            }
+          },
+          {
+            "Key":"App",
+            "Value":{
+              "Ref":"App"
+            }
+          },
+          {
+            "Key":"Group",
+            "Value":{
+              "Ref":"Group"
+            }
+          },
+          {
+            "Key":"Owner",
+            "Value":{
+              "Ref":"Owner"
+            }
+          },
+          {
+            "Key":"Environment",
+            "Value":{
+              "Ref":"Environment"
+            }
+          },
+          {
+            "Key":"KeepAlive",
+            "Value":{
+              "Ref":"KeepAlive"
+            }
+          },
+          {
+            "Key":"CostCenter",
+            "Value":{
+              "Ref":"CostCenter"
+            }
+          }
+        ]
+      }
+    },
+    "RouterCoreOSFromRouterCoreOS":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties":{
+        "GroupId":{
+          "Ref":"RouterCoreOSSecurityGroup"
+        },
+        "IpProtocol":"-1",
+        "SourceSecurityGroupId":{
+          "Ref":"RouterCoreOSSecurityGroup"
+        },
+        "FromPort":"0",
+        "ToPort":"65535"
+      }
+    },
+    "RouterCoreOSFromCoreOS":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties":{
+        "GroupId":{
+          "Ref":"RouterCoreOSSecurityGroup"
+        },
+        "IpProtocol":"-1",
+        "SourceSecurityGroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        },
+        "FromPort":"0",
+        "ToPort":"65535"
+      }
+    },
+    "RouterCoreOSServerLaunchConfig":{
+      "Type":"AWS::AutoScaling::LaunchConfiguration",
+      "Properties":{
+        "ImageId":{
+          "Fn::FindInMap":[
+            "CoreOSAlphaAMI",
+            {
+              "Ref":"AWS::Region"
+            },
+            "AMI"
+          ]
+        },
+        "InstanceType":{
+          "Ref":"DockerInstanceType"
+        },
+        "KeyName":{
+          "Ref":"KeyName"
+        },
+        "SecurityGroups":[
+          { "Ref":"RouterCoreOSSecurityGroup" },
+          { "Ref":"CoreOSFromJumpSecurityGroup" }
+        ],
+        "UserData":{
+          "Fn::Base64":{
+            "Fn::Join":[
+              "",
+              [
+                "#cloud-config\n\n",
+                "coreos:\n",
+                "  etcd:\n",
+                "    discovery: ", { "Ref": "DiscoveryURL" }, "\n",
+                "    addr: $", { "Ref": "AdvertisedIPAddress" }, "_ipv4:4001\n",
+                "    peer-addr: $", { "Ref": "AdvertisedIPAddress" }, "_ipv4:7001\n",
+                "  units:\n",
+                "    - name: etcd.service\n",
+                "      command: start\n",
+                "    - name: consul.service\n",
+                "      command: start\n",
+                "      content: |\n",
+                "        [Unit]\n",
+                "        Description=Consul Agent\n",
+                "        After=docker.service\n",
+                "        After=etcd.service\n",
+                "        [Service]\n",
+                "        Restart=on-failure\n",
+                "        RestartSec=240\n",
+                "        ExecStartPre=-/usr/bin/docker kill consul\n",
+                "        ExecStartPre=-/usr/bin/docker rm consul\n",
+                "        ExecStartPre=/usr/bin/docker pull progrium/consul\n",
+                "        ExecStart=/usr/bin/docker run -h %H --name consul -p $private_ipv4:8300:8300 -p $private_ipv4:8301:8301 -p $private_ipv4:8301:8301/udp -p $private_ipv4:8302:8302 -p $private_ipv4:8302:8302/udp -p $private_ipv4:8400:8400 -p $private_ipv4:8500:8500 -p 53:53/udp -e SERVICE_IGNORE=true progrium/consul -advertise $private_ipv4\n",
+                "        ExecStop=/usr/bin/docker stop consul\n",
+                "    - name: consul-announce.service\n",
+                "      command: start\n",
+                "      content: |\n",
+                "        [Unit]\n",
+                "        Description=Consul Server Announcer\n",
+                "        PartOf=consul.service\n",
+                "        After=consul.service\n",
+                "        [Service]\n",
+                "        ExecStart=/bin/sh -c \"while true; do etcdctl set /consul/bootstrap/machines/$(cat /etc/machine-id) $private_ipv4 --ttl 60; /usr/bin/docker exec consul consul join $(etcdctl ls /consul/bootstrap/machines | xargs -n 1 etcdctl get | tr '\\n' ' '); sleep 45; done\"\n",
+                "        ExecStop=/bin/sh -c \"/usr/bin/etcdctl rm /consul/bootstrap/machines/$(cat /etc/machine-id)\"\n",
+                "# Run axon-router\n",
+                "    - name: axon-router.service\n",
+                "      command: start\n",
+                "      content: |\n",
+                "       [Unit]\n",
+                "       Description=Run axon-router\n",
+                "       After=docker.service\n",
+                "       Requires=docker.service\n\n",
+                "       [Service]\n",
+                "         Restart=always\n",
+                "         ExecStartPre=-/usr/bin/docker kill axon-router\n",
+                "         ExecStartPre=-/usr/bin/docker rm axon-router\n",
+                "         ExecStartPre=/usr/bin/docker pull monsantoco/axon-router:latest\n",
+                "         ExecStart=/usr/bin/docker run -t -e \"NS_IP=172.17.42.1\" --name axon-router -p 80:80 monsantoco/axon-router:latest\n",
+                "         ExecStop=/usr/bin/docker stop axon-router\n",
+                "    - name: settimezone.service\n",
+                "      command: start\n",
+                "      content: |\n",
+                "        [Unit]\n",
+                "        Description=Set the timezone\n",
+                "        [Service]\n",
+                "        ExecStart=/usr/bin/timedatectl set-timezone UTC\n",
+                "        RemainAfterExit=yes\n",
+                "        Type=oneshot\n",
+                "write_files:\n",
+                "  - path: /etc/ntp.conf\n",
+                "    content: |\n",
+                "      server 0.pool.ntp.org\n",
+                "      server 1.pool.ntp.org\n",
+                "      server 2.pool.ntp.org\n",
+                "      server 3.pool.ntp.org\n",
+                "      restrict default nomodify nopeer noquery limited kod\n",
+                "      restrict 127.0.0.1\n"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "RouterCoreOSServerAutoScale":{
+      "Type":"AWS::AutoScaling::AutoScalingGroup",
+      "Properties":{
+        "AvailabilityZones":["us-east-1a", "us-east-1b"],
+        "LaunchConfigurationName":{"Ref":"RouterCoreOSServerLaunchConfig"},
+        "LoadBalancerNames":[
+          { "Ref":"RouterELB" }
+        ],
+        "MinSize":"2",
+        "MaxSize":"12",
+        "DesiredCapacity":{"Ref":"RouterClusterSize"},
+        "HealthCheckType":"EC2",
+        "VPCZoneIdentifier":[
+          {"Ref":"PriSubnet1"},
+          {"Ref":"PriSubnet2"}
+        ],
+        "Tags":[
+          {
+            "Key":"Name",
+            "Value":{
+              "Fn::Join":[
+                "-",
+                [
+                  "router",
+                  {
+                    "Ref":"AWS::StackName"
+                  }
+                ]
+              ]
+            },
+            "PropagateAtLaunch":true
+          },
+          {
+            "Key":"App",
+            "Value":{
+              "Ref":"App"
+            },
+            "PropagateAtLaunch":true
+          },
+          {
+            "Key":"Group",
+            "Value":{
+              "Ref":"Group"
+            },
+            "PropagateAtLaunch":true
+          },
+          {
+            "Key":"Owner",
+            "Value":{
+              "Ref":"Owner"
+            },
+            "PropagateAtLaunch":true
+          },
+          {
+            "Key":"Environment",
+            "Value":{
+              "Ref":"Environment"
+            },
+            "PropagateAtLaunch":true
+          },
+          {
+            "Key":"KeepAlive",
+            "Value":{
+              "Ref":"KeepAlive"
+            },
+            "PropagateAtLaunch":true
+          },
+          {
+            "Key":"CostCenter",
+            "Value":{
+              "Ref":"CostCenter"
+            },
+            "PropagateAtLaunch":true
+          }
+        ]
+      }
+    },
+    "CoreOSSecurityGroup":{
+      "Type":"AWS::EC2::SecurityGroup",
+      "Properties":{
+        "GroupDescription":"Security Group for microservices CoreOS Auto Scaling Group",
+        "VpcId":{
+          "Ref":"VPC"
+        },
+        "SecurityGroupIngress":[
+          {
+            "IpProtocol":"-1",
+            "SourceSecurityGroupId":{
+              "Ref":"RouterCoreOSSecurityGroup"
+            },
+            "FromPort":"0",
+            "ToPort":"65535"
+          }
+        ],
+        "Tags":[
+          {
+            "Key":"Name",
+            "Value":{
+              "Fn::Join":[
+                "-",
+                [
+                  "containersg",
+                  {
+                    "Ref":"AWS::StackName"
+                  }
+                ]
+              ]
+            }
+          },
+          {
+            "Key":"App",
+            "Value":{
+              "Ref":"App"
+            }
+          },
+          {
+            "Key":"Group",
+            "Value":{
+              "Ref":"Group"
+            }
+          },
+          {
+            "Key":"Owner",
+            "Value":{
+              "Ref":"Owner"
+            }
+          },
+          {
+            "Key":"Environment",
+            "Value":{
+              "Ref":"Environment"
+            }
+          },
+          {
+            "Key":"KeepAlive",
+            "Value":{
+              "Ref":"KeepAlive"
+            }
+          },
+          {
+            "Key":"CostCenter",
+            "Value":{
+              "Ref":"CostCenter"
+            }
+          }
+        ]
+      }
+    },
+    "CoreOSFromCoreOS":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties":{
+        "GroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        },
+        "IpProtocol":"-1",
+        "SourceSecurityGroupId":{
+          "Ref":"CoreOSSecurityGroup"
+        },
+        "FromPort":"0",
+        "ToPort":"65535"
+      }
+    },
     "CoreOSServerLaunchConfig":{
       "Type":"AWS::AutoScaling::LaunchConfiguration",
       "Properties":{
@@ -1609,9 +2118,8 @@
           "Ref":"KeyName"
         },
         "SecurityGroups":[
-          {
-            "Ref":"CoreOSSecurityGroup"
-          }
+          { "Ref":"CoreOSSecurityGroup" },
+          { "Ref":"CoreOSFromJumpSecurityGroup" }
         ],
         "UserData":{
           "Fn::Base64":{
@@ -1645,7 +2153,7 @@
                 "      command: start\n",
                 "      content: |\n",
                 "        [Unit]\n",
-                "        Description=Consul Server Agent\n",
+                "        Description=Consul Server\n",
                 "        After=docker.service\n",
                 "        After=etcd.service\n",
                 "        After=fleet.service\n",
@@ -1655,7 +2163,7 @@
                 "        ExecStartPre=-/usr/bin/docker kill consul\n",
                 "        ExecStartPre=-/usr/bin/docker rm consul\n",
                 "        ExecStartPre=/usr/bin/docker pull progrium/consul\n",
-                "        ExecStart=/bin/sh -c \"eval $(/usr/bin/docker run --rm progrium/consul cmd:run $private_ipv4 -e SERVICE_IGNORE=true)\"\n",
+                "        ExecStart=/bin/bash -c \"eval $(/usr/bin/docker run --rm progrium/consul cmd:run $private_ipv4 -e SERVICE_IGNORE=true)\"\n",
                 "        ExecStop=/usr/bin/docker stop consul\n",
                 "    - name: consul-announce.service\n",
                 "      command: start\n",
@@ -1741,7 +2249,7 @@
               "Fn::Join":[
                 "-",
                 [
-                  "docker",
+                  "container",
                   {
                     "Ref":"AWS::StackName"
                   }
@@ -1819,510 +2327,6 @@
           "Ref":"AutoScaleCooldown"
         },
         "ScalingAdjustment":"-1"
-      }
-    },
-
-    "RouterELBToRouterCoreOS":{
-      "Type":"AWS::EC2::SecurityGroupEgress",
-      "Properties": {
-        "GroupId": {
-          "Ref": "RouterELBSecurityGroup"
-        },
-        "IpProtocol":"tcp",
-        "DestinationSecurityGroupId": {
-          "Ref":"RouterCoreOSSecurityGroup"
-        },
-        "FromPort":"80",
-        "ToPort":"80"
-      }
-    },
-
-    "RouterELBToRouterCoreOSetcd":{
-      "Type":"AWS::EC2::SecurityGroupEgress",
-      "Properties": {
-        "GroupId": {
-          "Ref": "RouterELBSecurityGroup"
-        },
-        "IpProtocol":"tcp",
-        "DestinationSecurityGroupId": {
-          "Ref":"RouterCoreOSSecurityGroup"
-        },
-        "FromPort":"4001",
-        "ToPort":"4001"
-      }
-    },
-
-    "AnyHTTPToRouterELB":{
-      "Type":"AWS::EC2::SecurityGroupIngress",
-      "Properties": {
-        "GroupId": {
-          "Ref": "RouterELBSecurityGroup"
-        },
-        "IpProtocol":"tcp",
-        "CidrIp":"0.0.0.0/0",
-        "FromPort":"80",
-        "ToPort":"80"
-      }
-    },
-
-    "RouterELBSecurityGroup":{
-      "Type":"AWS::EC2::SecurityGroup",
-      "Properties":{
-        "GroupDescription":"Rules for allowing access to/from service router ELB",
-        "VpcId":{
-          "Ref":"VPC"
-        },
-        "SecurityGroupIngress":[
-          {
-            "IpProtocol":"tcp",
-            "SourceSecurityGroupId":{
-              "Ref":"JumpSecurityGroup"
-            },
-            "FromPort":"22",
-            "ToPort":"22"
-          }
-        ],
-        "Tags":[
-          {
-            "Key":"Name",
-            "Value":{
-              "Fn::Join":[
-                "-",
-                [
-                  "natsg",
-                  {
-                    "Ref":"AWS::StackName"
-                  }
-                ]
-              ]
-            }
-          },
-          {
-            "Key":"App",
-            "Value":{
-              "Ref":"App"
-            }
-          },
-          {
-            "Key":"Group",
-            "Value":{
-              "Ref":"Group"
-            }
-          },
-          {
-            "Key":"Owner",
-            "Value":{
-              "Ref":"Owner"
-            }
-          },
-          {
-            "Key":"Environment",
-            "Value":{
-              "Ref":"Environment"
-            }
-          },
-          {
-            "Key":"KeepAlive",
-            "Value":{
-              "Ref":"KeepAlive"
-            }
-          },
-          {
-            "Key":"CostCenter",
-            "Value":{
-              "Ref":"CostCenter"
-            }
-          }
-        ]
-      }
-    },
-
-    "RouterELB": {
-      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
-      "Properties" : {
-        "CrossZone": true,
-        "SecurityGroups": [ {"Ref" : "RouterELBSecurityGroup"} ],
-        "Subnets" : [ { "Ref" : "PubSubnet1" }, { "Ref" : "PubSubnet2" } ],
-        "Listeners" : [ {
-          "LoadBalancerPort" : "80",
-          "InstancePort" : "80",
-          "Protocol" : "HTTP"
-        } ],
-        "HealthCheck" : {
-          "Target" : "HTTP:4001/version",
-          "HealthyThreshold" : "3",
-          "UnhealthyThreshold" : "5",
-          "Interval" : "30",
-          "Timeout" : "5"
-        }
-      }
-    },
-
-    "RouterCoreOSServerAutoScale":{
-      "Type":"AWS::AutoScaling::AutoScalingGroup",
-      "Properties":{
-        "AvailabilityZones":["us-east-1a", "us-east-1b"],
-        "LaunchConfigurationName":{"Ref":"RouterCoreOSServerLaunchConfig"},
-        "LoadBalancerNames" : [ { "Ref" : "RouterELB" } ],
-        "MinSize":"2",
-        "MaxSize":"12",
-        "DesiredCapacity":{"Ref":"RouterClusterSize"},
-        "HealthCheckType":"EC2",
-        "VPCZoneIdentifier":[
-          {"Ref":"PriSubnet1"},
-          {"Ref":"PriSubnet2"}
-        ],
-        "Tags":[
-          {
-            "Key":"Name",
-            "Value":{
-              "Fn::Join":[
-                "-",
-                [
-                  "router-docker",
-                  {
-                    "Ref":"AWS::StackName"
-                  }
-                ]
-              ]
-            },
-            "PropagateAtLaunch":true
-          },
-          {
-            "Key":"App",
-            "Value":{
-              "Ref":"App"
-            },
-            "PropagateAtLaunch":true
-          },
-          {
-            "Key":"Group",
-            "Value":{
-              "Ref":"Group"
-            },
-            "PropagateAtLaunch":true
-          },
-          {
-            "Key":"Owner",
-            "Value":{
-              "Ref":"Owner"
-            },
-            "PropagateAtLaunch":true
-          },
-          {
-            "Key":"Environment",
-            "Value":{
-              "Ref":"Environment"
-            },
-            "PropagateAtLaunch":true
-          },
-          {
-            "Key":"KeepAlive",
-            "Value":{
-              "Ref":"KeepAlive"
-            },
-            "PropagateAtLaunch":true
-          },
-          {
-            "Key":"CostCenter",
-            "Value":{
-              "Ref":"CostCenter"
-            },
-            "PropagateAtLaunch":true
-          }
-        ]
-      }
-    },
-
-    "RouterELBtoRouterCoreOS": {
-      "Type":"AWS::EC2::SecurityGroupIngress",
-      "Properties": {
-        "GroupId": {
-          "Ref": "RouterCoreOSSecurityGroup"
-        },
-        "IpProtocol":"tcp",
-        "SourceSecurityGroupId": {
-          "Ref": "RouterELBSecurityGroup"
-        },
-        "FromPort":"80",
-        "ToPort":"80"
-      }
-    },
-
-    "RouterELBtoRouterCoreOSetcd": {
-      "Type":"AWS::EC2::SecurityGroupIngress",
-      "Properties": {
-        "GroupId": {
-          "Ref": "RouterCoreOSSecurityGroup"
-        },
-        "IpProtocol":"tcp",
-        "SourceSecurityGroupId": {
-          "Ref": "RouterELBSecurityGroup"
-        },
-        "FromPort":"4001",
-        "ToPort":"4001"
-      }
-    },
-
-    "CoreOSToRouterCoreOS":{
-      "Type":"AWS::EC2::SecurityGroupIngress",
-      "Properties": {
-        "GroupId": {
-          "Ref": "RouterCoreOSSecurityGroup"
-        },
-        "IpProtocol":"-1",
-        "SourceSecurityGroupId": {
-          "Ref": "CoreOSSecurityGroup"
-        },
-        "FromPort":"0",
-        "ToPort":"65535"
-      }
-    },
-
-    "RouterCoreOSToRouterCoreOS":{
-      "Type":"AWS::EC2::SecurityGroupIngress",
-      "Properties": {
-        "GroupId": {
-          "Ref": "RouterCoreOSSecurityGroup"
-        },
-        "IpProtocol":"-1",
-        "SourceSecurityGroupId": {
-          "Ref": "RouterCoreOSSecurityGroup"
-        },
-        "FromPort":"0",
-        "ToPort":"65535"
-      }
-    },
-
-    "RouterCoreOSToCoreOS":{
-      "Type":"AWS::EC2::SecurityGroupEgress",
-      "Properties": {
-        "GroupId": {
-          "Ref": "RouterCoreOSSecurityGroup"
-        },
-        "IpProtocol":"-1",
-        "DestinationSecurityGroupId": {
-          "Ref": "CoreOSSecurityGroup"
-        },
-        "FromPort":"0",
-        "ToPort":"65535"
-      }
-    },
-
-    "RouterCoreOSToAny":{
-      "Type":"AWS::EC2::SecurityGroupEgress",
-      "Properties": {
-        "GroupId": {
-          "Ref": "RouterCoreOSSecurityGroup"
-        },
-        "IpProtocol":"-1",
-        "CidrIp":"0.0.0.0/0",
-        "FromPort":"0",
-        "ToPort":"65535"
-      }
-    },
-
-    "RouterCoreOSFromRouterELB":{
-      "Type":"AWS::EC2::SecurityGroupIngress",
-      "Properties": {
-        "GroupId": {
-          "Ref": "RouterCoreOSSecurityGroup"
-        },
-        "IpProtocol":"tcp",
-        "SourceSecurityGroupId": {
-          "Ref":"RouterELBSecurityGroup"
-        },
-        "FromPort":"80",
-        "ToPort":"80"
-      }
-    },
-
-    "RouterCoreOSSecurityGroup":{
-      "Type":"AWS::EC2::SecurityGroup",
-      "Properties":{
-        "GroupDescription":"Router CoreOS SecurityGroup",
-        "VpcId":{
-          "Ref":"VPC"
-        },
-        "SecurityGroupIngress":[
-          {
-            "IpProtocol":"tcp",
-            "SourceSecurityGroupId":{
-              "Ref":"JumpSecurityGroup"
-            },
-            "FromPort":"22",
-            "ToPort":"22"
-          },
-          {
-            "IpProtocol":"tcp",
-            "SourceSecurityGroupId":{
-              "Ref":"JumpSecurityGroup"
-            },
-            "FromPort":"80",
-            "ToPort":"80"
-          },
-          {
-            "IpProtocol":"tcp",
-            "SourceSecurityGroupId":{
-              "Ref":"JumpSecurityGroup"
-            },
-            "FromPort":"4001",
-            "ToPort":"4001"
-          }
-        ],
-        "Tags":[
-          {
-            "Key":"Name",
-            "Value":{
-              "Fn::Join":[
-                "-",
-                [
-                  "router-dockersg",
-                  {
-                    "Ref":"AWS::StackName"
-                  }
-                ]
-              ]
-            }
-          },
-          {
-            "Key":"App",
-            "Value":{
-              "Ref":"App"
-            }
-          },
-          {
-            "Key":"Group",
-            "Value":{
-              "Ref":"Group"
-            }
-          },
-          {
-            "Key":"Owner",
-            "Value":{
-              "Ref":"Owner"
-            }
-          },
-          {
-            "Key":"Environment",
-            "Value":{
-              "Ref":"Environment"
-            }
-          },
-          {
-            "Key":"KeepAlive",
-            "Value":{
-              "Ref":"KeepAlive"
-            }
-          },
-          {
-            "Key":"CostCenter",
-            "Value":{
-              "Ref":"CostCenter"
-            }
-          }
-        ]
-      }
-    },
-    "RouterCoreOSServerLaunchConfig":{
-      "Type":"AWS::AutoScaling::LaunchConfiguration",
-      "Properties":{
-        "ImageId":{
-          "Fn::FindInMap":[
-            "CoreOSAlphaAMI",
-            {
-              "Ref":"AWS::Region"
-            },
-            "AMI"
-          ]
-        },
-        "InstanceType":{
-          "Ref":"DockerInstanceType"
-        },
-        "KeyName":{
-          "Ref":"KeyName"
-        },
-        "SecurityGroups":[
-          {
-            "Ref":"RouterCoreOSSecurityGroup"
-          }
-        ],
-        "UserData":{
-          "Fn::Base64":{
-            "Fn::Join":[
-              "",
-              [
-                "#cloud-config\n\n",
-                "coreos:\n",
-                "  etcd:\n",
-                "    discovery: ", { "Ref": "DiscoveryURL" }, "\n",
-                "    addr: $", { "Ref": "AdvertisedIPAddress" }, "_ipv4:4001\n",
-                "    peer-addr: $", { "Ref": "AdvertisedIPAddress" }, "_ipv4:7001\n",
-                "  units:\n",
-                "    - name: etcd.service\n",
-                "      command: start\n",
-                "    - name: consul.service\n",
-                "      command: start\n",
-                "      content: |\n",
-                "        [Unit]\n",
-                "        Description=Consul Server Agent\n",
-                "        After=docker.service\n",
-                "        After=etcd.service\n",
-                "        [Service]\n",
-                "        Restart=on-failure\n",
-                "        RestartSec=240\n",
-                "        ExecStartPre=-/usr/bin/docker kill consul\n",
-                "        ExecStartPre=-/usr/bin/docker rm consul\n",
-                "        ExecStartPre=/usr/bin/docker pull progrium/consul\n",
-                "        ExecStart=/usr/bin/docker run -h %H --name consul -p 8300:8300 -p 8301:8301 -p 8301:8301/udp -p 8302:8302 -p 8302:8302/udp -p 8400:8400 -p 8500:8500 -p 53:53/udp progrium/consul $private_ipv4 -e SERVICE_IGNORE=true\n",
-                "        ExecStop=/usr/bin/docker stop consul\n",
-                "    - name: consul-announce.service\n",
-                "      command: start\n",
-                "      content: |\n",
-                "        [Unit]\n",
-                "        Description=Consul Server Announcer\n",
-                "        PartOf=consul.service\n",
-                "        After=consul.service\n",
-                "        [Service]\n",
-                "        ExecStart=/bin/sh -c \"while true; do etcdctl set /consul/bootstrap/machines/$(cat /etc/machine-id) $private_ipv4; /usr/bin/docker exec consul consul join $(etcdctl ls /consul/bootstrap/machines | xargs -n 1 etcdctl get | tr '\\n' ' '); sleep 45; done\"\n",
-                "        ExecStop=/bin/sh -c \"/usr/bin/etcdctl rm /consul/bootstrap/machines/$(cat /etc/machine-id)\"\n",
-                "# Run axon-router\n",
-                "    - name: axon-router.service\n",
-                "      command: start\n",
-                "      content: |\n",
-                "       [Unit]\n",
-                "       Description=Run axon-router\n",
-                "       After=docker.service\n",
-                "       Requires=docker.service\n\n",
-                "       [Service]\n",
-                "         Restart=always\n",
-                "         ExecStartPre=-/usr/bin/docker kill axon-router\n",
-                "         ExecStartPre=-/usr/bin/docker rm axon-router\n",
-                "         ExecStartPre=/usr/bin/docker pull monsantoco/axon-router:latest\n",
-                "         ExecStart=/usr/bin/docker run -t -e \"NS_IP=172.17.42.1\" --name axon-router -p 80:80 monsantoco/axon-router:latest\n",
-                "         ExecStop=/usr/bin/docker stop axon-router\n",
-                "    - name: settimezone.service\n",
-                "      command: start\n",
-                "      content: |\n",
-                "        [Unit]\n",
-                "        Description=Set the timezone\n",
-                "        [Service]\n",
-                "        ExecStart=/usr/bin/timedatectl set-timezone UTC\n",
-                "        RemainAfterExit=yes\n",
-                "        Type=oneshot\n",
-                "write_files:\n",
-                "  - path: /etc/ntp.conf\n",
-                "    content: |\n",
-                "      server 0.pool.ntp.org\n",
-                "      server 1.pool.ntp.org\n",
-                "      server 2.pool.ntp.org\n",
-                "      server 3.pool.ntp.org\n",
-                "      restrict default nomodify nopeer noquery limited kod\n",
-                "      restrict 127.0.0.1\n"
-              ]
-            ]
-          }
-        }
       }
     }
   },
