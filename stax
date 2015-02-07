@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# this needs to go
 set -e
 
 #####################################################################
@@ -144,7 +145,12 @@ stax-create(){
     $aws s3 cp "$SCRIPT_PATH/templates/cloudformation-template-vpc.json" "s3://$template" > /dev/null
     echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     validating template: "
-    stax-validate "$template_url" > /dev/null
+    if ! stax-validate "$template_url" > /dev/null; then
+        echo "${yellow}[ ${red}ERRR${yellow} ]${reset}     validation failed, exiting"
+        stax-destroy-bucket
+        stax-destroy-key
+        exit 2
+    fi
     echo "done"
     # upload vpc assets
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     uploading vpc assets: "
