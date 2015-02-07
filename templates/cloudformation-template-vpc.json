@@ -1886,7 +1886,7 @@
                 "        ExecStartPre=-/usr/bin/docker kill consul\n",
                 "        ExecStartPre=-/usr/bin/docker rm consul\n",
                 "        ExecStartPre=/usr/bin/docker pull progrium/consul\n",
-                "        ExecStart=/usr/bin/docker run -h %H --name consul -p $private_ipv4:8300:8300 -p $private_ipv4:8301:8301 -p $private_ipv4:8301:8301/udp -p $private_ipv4:8302:8302 -p $private_ipv4:8302:8302/udp -p $private_ipv4:8400:8400 -p $private_ipv4:8500:8500 -p 53:53/udp -e SERVICE_IGNORE=true progrium/consul -advertise $private_ipv4\n",
+                "        ExecStart=/usr/bin/docker run -h %H --name consul -p 8300:8300 -p 8301:8301 -p 8301:8301/udp -p 8302:8302 -p 8302:8302/udp -p 8400:8400 -p 8500:8500 -p 53:53/udp -e SERVICE_IGNORE=true progrium/consul -advertise $private_ipv4\n",
                 "        ExecStop=/usr/bin/docker stop consul\n",
                 "    - name: consul-announce.service\n",
                 "      command: start\n",
