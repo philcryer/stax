@@ -232,13 +232,14 @@ stax-start-service(){
     fi
     service="$1"
     echo "${yellow}[ ${cyan}----${yellow} ]${reset}   starting service $service on the stax cluster"
-    servicerunner="$STAX_HOME/$STAX_NAME.$service"
-    sed -e "s|@STAX_KEY@|${STAX_KEY}|g" -e "s|@SOME_SERVICE@|$service|g" assets/stax/servicerunner > "$servicerunner"
+    servicerunner="$STAX_NAME.$service"
+    servicerunner_path="$STAX_DIR/$servicerunner"
+    sed -e "s|@STAX_KEY@|${STAX_KEY}|g" -e "s|@SOME_SERVICE@|$service|g" assets/stax/servicerunner > "$servicerunner_path"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     pushing service file to $STAX_PUB_IP: "
-    scp $SSH_OPTIONS "$servicerunner" "ec2-user@$STAX_PUB_IP:$servicerunner" > /dev/null
+    scp $SSH_OPTIONS "$servicerunner_path" "ec2-user@$STAX_PUB_IP:$servicerunner" > /dev/null
     echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     running service file: "
-    ssh $SSH_OPTIONS "ec2-user@$STAX_PUB_IP" 'bash servicerunner' > /dev/null
+    ssh $SSH_OPTIONS "ec2-user@$STAX_PUB_IP" "bash $servicerunner" > /dev/null
     echo "done"
     sleep 5
 }
@@ -332,9 +333,10 @@ stax-getdockerips(){
     echo "${yellow}[ ${cyan}----${yellow} ]${reset}   get docker IP(s)"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
     docker_hosts="$STAX_DIR/$STAX_NAME.docker_hosts"
-    aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"docker-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$3 } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$docker_hosts"
+    # this will not print the IP address of a host if it is the last host in the list
+    aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"container-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$NF } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$docker_hosts"
     router_hosts="$STAX_DIR/$STAX_NAME.router_hosts"
-    aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"router-docker-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$3 } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$router_hosts"
+    aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"router-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$NF } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$router_hosts"
     echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building docker connect: "
     docker_connect="$STAX_DIR/$STAX_NAME.dockconnect"
