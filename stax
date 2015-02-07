@@ -225,20 +225,22 @@ stax-services(){
     exit 0
 }
 
-stax-start-services(){
-    echo "${yellow}[ ${cyan}----${yellow} ]${reset}   starting service(s) on the stax cluster"
+stax-start-service(){
+    if [ -z "$1" ]; then
+        echo "${yellow}[ ${red}ERRR${yellow} ]${reset}     you must provide a service name, exiting";
+        exit 2
+    fi
+    service="$1"
+    echo "${yellow}[ ${cyan}----${yellow} ]${reset}   starting service $service on the stax cluster"
+    servicerunner="$STAX_HOME/$STAX_NAME.$service"
+    sed -e "s|@STAX_KEY@|${STAX_KEY}|g" -e "s|@SOME_SERVICE@|$service|g" assets/stax/servicerunner > "$servicerunner"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     pushing service file to $STAX_PUB_IP: "
-    scp $SSH_OPTIONS /tmp/servicerunner ec2-user@$STAX_PUB_IP:~ > /dev/null
-    echo "done"
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     setting permissions on service file: "
-    ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'chmod 755 servicerunner' > /dev/null
+    scp $SSH_OPTIONS "$servicerunner" "ec2-user@$STAX_PUB_IP:$servicerunner" > /dev/null
     echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     running service file: "
-    ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'sh servicerunner' > /dev/null
+    ssh $SSH_OPTIONS "ec2-user@$STAX_PUB_IP" 'bash servicerunner' > /dev/null
     echo "done"
-    rm /tmp/servicerunner*
     sleep 5
-    stax-fleetstats
 }
 
 stax-fleetstats(){
@@ -568,7 +570,7 @@ case "$command" in
         ;;
 
     start)
-        if [[ ! "$2" ]]; then
+        if [[ ! "$command_args" ]]; then
             echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no services listed, available ones are "
             stax-services
             exit 2
@@ -581,9 +583,10 @@ case "$command" in
             stax-popjumpbox
             stax-getdockerips
         fi
-        sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/servicerunner > /tmp/servicerunner.tmp
-        sed "s|SOME_SERVICE|`echo $2`|g" /tmp/servicerunner.tmp > /tmp/servicerunner
-        stax-start-services
+        for service in $command_args; do
+            stax-start-service "$service"
+        done
+        stax-fleetstats
         ;;
 
     *)
