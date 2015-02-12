@@ -17,8 +17,6 @@ SYSTEM=`uname`
 aws="aws --color on"
 STAX_DIR="$HOME/.stax"
 STAX_NAME_FILE="$STAX_DIR/stax-name"
-config="config/config.json"
-config_tmp="/tmp/config.json"
 SSH_OPTIONS="-q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 
 stax-colors(){
@@ -33,7 +31,16 @@ stax-colors(){
 
 stax-usage(){
     cat <<EOM
-Usage: stax <command>
+Usage: stax [OPTIONS] <command>
+
+Options:
+  -c,--config=CONFIG   Use file CONFIG rather than config/config.json
+  -d,--debug           Turn on verbose messages
+  -h,--help            Output this message
+  -v,--version         Print name and version information
+
+If an argument is required for a long option, so to the short. Same for
+optional arguments.
 
 Commands:
   connect           Connect to the jumpbox in the VPC stax over SSH
@@ -41,12 +48,13 @@ Commands:
   describe          Describe the stax created from this host
   desc-auto         Describe the autoscaling groups in the stax
   destroy           Destroy the existing VPC stax
-  fleet             Describe currently created fleet stax
+  fleet             Run various fleetctl commands against the fleet cluster
   help              Output this message
   history           View history of recently created/destroyed stax
   list              List all completely built and running stax
   services          List servers that are available to run across a stax
   start <service>   Start a service across the stax cluster
+  test              Automated test to exercise functionality of stax
 
 For more help, check the docs: https://github.com/philcryer/stax
 EOM
@@ -67,15 +75,6 @@ NUMS=`wc -l < assets/stax/stax-slogans`
     echo '\__ \ || (_| |>  < '
     echo "|___/\__\__,_/_/\_\ ${reset}"
     echo
-}
-
-stax-existing(){
-    if [ ! -f $STAX_NAME_FILE ]; then
-        echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
-        exit 1
-    else
-        STAX_EXIST=$(<$STAX_NAME_FILE)
-    fi
 }
 
 stax-preflight(){
@@ -133,9 +132,16 @@ stax-create-bucket(){
 }
 
 stax-create(){
+    if [ -f $STAX_NAME_FILE ]; then
+        existing_name=$(<$STAX_NAME_FILE)
+        echo "${yellow}[ ${red}ERRR${yellow} ]${reset} existing stax defined: $existing_name"
+        echo "${yellow}[ ${red}ERRR${yellow} ]${reset} exiting"
+        exit 1
+    fi
     stax-generate
     echo "${yellow}[ ${cyan}NAME${yellow} ]${reset} $STAX_NAME"
     echo "${yellow}[ ${cyan}----${yellow} ]${reset}   creating stax"
+    stax-config
     stax-create-key
     stax-create-bucket "$STAX_NAME"
     # upload template to s3 to have bigger size limits
@@ -163,7 +169,7 @@ stax-create(){
     if $aws cloudformation create-stack \
         --stack-name $STAX_NAME \
         --template-url "$template_url" \
-        --parameters "$(<$config_tmp)" \
+        --parameters "$(<$STAX_PARAMS)" \
         --capabilities CAPABILITY_IAM > /dev/null
     then
         echo "${yellow}[ ${cyan}----${yellow} ]${reset}   stax creation complete"
@@ -182,29 +188,53 @@ stax-create(){
     fi
 }
 
+# ensure there is a stax
+stax-existing(){
+    if [ ! -f $STAX_NAME_FILE ]; then
+        echo "${yellow}[ ${red}ERRR${yellow} ]${reset} no stax defined, use create first"
+        exit 1
+    fi
+    STAX_EXIST=$(<$STAX_NAME_FILE)
+}
+
+# save the description of the stax to a file
 stax-describe(){
+    if [ -z "$STAX_NAME" ]; then
+        echo "$pkg: cannot call stax-describe with STAX_NAME undefined"
+        exit 5
+    fi
     echo "${yellow}[ ${cyan}NAME${yellow} ]${reset} $STAX_NAME"
     echo "${yellow}[ ${cyan}----${yellow} ]${reset}   describe stax"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
-    if ! aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null 2>&1; then
-        echo
+    stax_desc="$STAX_DIR/$STAX_NAME.json"
+    if aws cloudformation describe-stacks --stack-name "$STAX_NAME" > "$stax_desc"; then
+        echo "done"
+        echo "${yellow}[ ${cyan}----${yellow} ]${reset}     see $STAX_DIR/$STAX_NAME.json for details"
+    else
+        echo "failed"
         echo "${yellow}[ ${cyan}----${yellow} ]${reset} stax $STAX_NAME does not exist in AWS"
         stax-destroy-bucket
         stax-destroy-files
         stax-destroy-key
         exit 1
     fi
-    echo "done"
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     saving output"
-    aws cloudformation describe-stacks --stack-name $STAX_NAME > "$STAX_DIR/$STAX_NAME.json"; echo ": done"
-    echo "${yellow}[ ${cyan}----${yellow} ]${reset}     see $STAX_DIR/$STAX_NAME.json for details"
-    #echo "${yellow}[ ${cyan}----${yellow} ]${reset}     output summary (see ~/.stax/$STAX_NAME.json for full details)"
-    #echo "["
-    #cat ~/.stax/vpc* | grep "StackName" 
-    #cat ~/.stax/vpc* | grep "StackId\"\:"
-    #cat ~/.stax/vpc* | grep "StackStatus\"\:"
-    #cat ~/.stax/vpc* | grep "Description\"\:\ \"Autoscaling"
-    #echo "]"
+}
+
+# ensure stax creation is complete
+stax-complete(){
+    wait="$1"
+    stax_desc="$STAX_DIR/$STAX_NAME.json"
+    if [ ! -f "$stax_desc" ] then
+        stax-describe
+    fi
+    while ! grep -q CREATE_COMPLETE "$stax_desc" > /dev/null 2>&1; do
+        echo "${yellow}[ ${cyan}NULL${yellow} ]${reset}     stax creation not complete"
+        if [ -z "$wait" ]; then
+            exit 1
+        fi
+        sleep 60
+        stax-describe
+    done
 }
 
 stax-list(){
@@ -275,10 +305,6 @@ stax-history(){
 
 stax-getip(){
     echo "${yellow}[ ${cyan}----${yellow} ]${reset}   get public IP (EIP)"
-    if [ `cat "$STAX_DIR/$STAX_NAME.json" | grep CREATE_COMPLETE | wc -l` -eq "0" ]; then
-        echo "${yellow}[ ${cyan}NULL${yellow} ]${reset}     IP is undefined, this means the build is not complete, try again in a few minutes"
-        exit 1
-    fi
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
     STAX_PUB_IP=`cat "$STAX_DIR/$STAX_NAME.json" | grep -B2 -A2 'JumpEIP' | grep -o '[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*'`
     echo "done"
@@ -367,6 +393,10 @@ stax-getdockerips(){
 }
 
 stax-connect(){
+    target="$1"
+    if [ -z "$target" ]; then
+        target=jump
+    fi
     ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP
 }
 
@@ -392,21 +422,27 @@ stax-destroy-bucket(){
 }
 
 stax-destroy(){
+    confirmed="$1"
     echo "${yellow}[ ${cyan}----${yellow} ]${reset}   destroy stax"
-    read -p "${yellow}[ ${cyan}????${yellow} ]${reset}     ok to destroy $STAX_NAME [y/n]? " answer
-    if [[ $answer = y ]] ; then
-        echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     destroying $STAX_NAME stax: "
-        $aws cloudformation describe-stacks --stack-name $STAX_NAME > /dev/null && aws cloudformation delete-stack --stack-name $STAX_NAME 
+    if [ -z "$confirmed" ]; then
+        read -p "${yellow}[ ${cyan}????${yellow} ]${reset}     ok to destroy $STAX_NAME [y/n]? " answer
+        if [[ $answer != y ]] ; then
+            echo "${yellow}[ ${cyan}----${yellow} ]${reset}     will not destroy $STAX_NAME"
+            exit 0
+        fi
+    fi
+    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     destroying $STAX_NAME stax: "
+    if $aws cloudformation delete-stack --stack-name $STAX_NAME; then
+        echo "done"
+        echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     recording $STAX_NAME deletion time for audit: "
+        touch $STAX_DIR/audit/`date +'%Y%m%d-%H%M%S'`-destroyed-$STAX_NAME
         echo "done"
         stax-destroy-bucket
         stax-destroy-files
         stax-destroy-key
-        echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     recording $STAX_NAME deletion time for audit: "
-        touch $STAX_DIR/audit/`date +'%Y%m%d-%H%M%S'`-destroyed-$STAX_NAME
-        echo "done"
-        exit 0
     else
-        echo "${yellow}[ ${cyan}----${yellow} ]${reset}     could not destroy $STAX_NAME, check name"
+        echo "failed"
+        echo "${yellow}[ ${red}ERRR${yellow} ]${reset} you will need to manually clean up the stack, key, bucket, and files"
         exit 1
     fi
 }
@@ -418,10 +454,23 @@ stax-generate(){
     RANDOM_NAM=`head -$((${RANDOM} % ${NUMW} + 1)) $stax_words | tail -1`
     RANDOM_NUM=$((RANDOM%99999+10001))
     STAX_NAME="vpc-$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
+}
+
+# generate parameters file
+stax-config(){
+    echo "${yellow}[ ${cyan}----${yellow} ]${reset}   creating parameter file"
     # initialize sed command
     sed="sed -e s/@KEY_NAME@/$STAX_NAME/"
-    # see if we need to substitute for SSH_FROM
-    if grep -q SSH_FROM "$config" > /dev/null 2>&1; then
+    # check what subsitutions need to be done
+    if grep -q '@USER@' "$config" > /dev/null 2>&1; then
+        euser="$(id -u -n)"
+        if [ -z "$euser" ]; then
+            echo "$pkg: failed to determine user"
+            exit 1
+        fi
+        sed="$sed -e s/@USER@/$euser/"
+    fi
+    if grep -q '@SSH_FROM@' "$config" > /dev/null 2>&1; then
         SSH_FROM="$(curl -s http://icanhazip.com)\/32"
         if [ -z "$SSH_FROM" ]; then
             echo "$pkg: failed to get IP address for local machine"
@@ -429,8 +478,11 @@ stax-generate(){
         fi
         sed="$sed -e s/@SSH_FROM@/$SSH_FROM/"
     fi
-    # see if we need to substitute for DISCOVERY_URL
-    if grep -q DISCOVERY_URL "$config" > /dev/null 2>&1; then
+    if grep -q '@HTTP_FROM@' "$config" > /dev/null 2>&1; then
+        # same as SSH_FROM
+        sed="$sed -e s/@HTTP_FROM@/$SSH_FROM/"
+    fi
+    if grep -q '@DISCOVERY_URL@' "$config" > /dev/null 2>&1; then
         DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"
         if [ -z "$DISCOVERY_URL" ]; then
             echo "$pkg: failed to get discovery URL"
@@ -438,13 +490,50 @@ stax-generate(){
         fi
         sed="$sed -e s|@DISCOVERY_URL@|$DISCOVERY_URL|"
     fi
-    if ! $sed "$config" > "$config_tmp"; then
+    STAX_PARAMS="$STAX_DIR/$STAX_NAME.params"
+    if ! $sed "$config" > "$STAX_PARAMS"; then
         echo "$pkg: sed failed to replace elements in $config: $sed"
         exit 1
     fi
 }
 
+# automated test
+stax-test(){
+    echo "${yellow}[ ${cyan}TEST${yellow} ]${reset}   running stax test"
+    # create dummy parameter config
+    user=$(id -u -n)
+    config="/tmp/test-config-$user-$$.json"
+    cat > "$config" <<EOF
+[
+  { "ParameterKey": "App",           "ParameterValue": "Stax Auto Test" },
+  { "ParameterKey": "Group",         "ParameterValue": "ITSA" },
+  { "ParameterKey": "CostCenter",    "ParameterValue": "5180-9130-SLR74733" },
+  { "ParameterKey": "Owner",         "ParameterValue": "@USER@" },
+  { "ParameterKey": "KeyName",       "ParameterValue": "@KEY_NAME@" },
+  { "ParameterKey": "AllowSSHFrom",  "ParameterValue": "@SSH_FROM@" },
+  { "ParameterKey": "AllowHTTPFrom", "ParameterValue": "@HTTP_FROM@" },
+  { "ParameterKey": "DiscoveryURL",  "ParameterValue": "@DISCOVERY_URL@" }
+]
+EOF
+    stax-create
+    rm -f "$config"
+    # wait while it is building
+    stax-complete 1
+    # stax-connect hostname
+    # stax-connect router
+    # stax-connect engine
+    # fleetctl list-members
+    # docker exec consul consul members
+    # systemctl status consul
+    # journalctl -u consul
+    # curl localhost:8500/v1/catalog/nodes
+    # start httpbin
+    # curl ELB/httpbin/get
+    # fleetctl list-
+}
+
 # process positional parameters
+config="config/config.json"
 command=
 command_args=
 prev_arg=
@@ -457,6 +546,19 @@ do
     fi
 
     case "$arg" in
+        -*=*) optarg=`echo "$arg" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+        *) optarg= ;;
+    esac
+
+    case "$arg" in
+        -c | --config | --confi | --conf | --con | --co | --c)
+            prev_arg=config
+            ;;
+
+        --config=* | --confi=* | --conf=* | --con=* | --co=* | --c=*)
+            config="$optarg"
+            ;;
+
         -d | --debug | --debu | --deb | --de | -d)
             DEBUG="ON"
             ;;
@@ -468,6 +570,12 @@ do
         -v | --version | --versio | --versi | --vers | --ver | --ve | --v)
             echo "$pkg $version"
             exit 0;;
+
+        -*)
+            echo "$pkg: unknown option: $arg"
+            echo "$pkg: Try '$pkg --help' for help."
+            exit 1
+            ;;
 
         *)
             if [ -z "$command" ]; then
@@ -489,6 +597,7 @@ stax-preflight
 
 if [ -f "$STAX_NAME_FILE" ]; then
     STAX_NAME=$(<$STAX_NAME_FILE)
+    STAX_PARAMS="$STAX_DIR/$STAX_NAME.params"
     STAX_KEY="$STAX_NAME"
     STAX_KEY_FILE="$STAX_DIR/$STAX_NAME.pem"
     STAX_IPS_FILE="$STAX_DIR/$STAX_NAME.ips"
@@ -513,13 +622,8 @@ case "$command" in
         ;;
 
     create)
-        if [ -f $STAX_NAME_FILE ]; then
-            echo "${yellow}[ ${red}ERRR${yellow} ]${reset} existing stax defined, exiting";
-            exit 1
-        fi
         stax-create
         stax-describe
-        rm $config_tmp
         ;;
 
     desc-auto)
