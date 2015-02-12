@@ -17,6 +17,13 @@
 * verify ntpd is running on dockerstart
 * ssh keys on CoreOS hosts so CoreOS hosts can all talk and ssh to eachother
 
+* rework some of the sed/awk/cut stuff with jq (json query parser). Example:
+⚡  aws cloudformation describe-stacks --stack-name `cat ~/.stax/stax-name` | jq '.Stacks[].CreationTime, .Stacks[].StackId, .Stacks[].StackStatus'
+"2015-02-12T18:50:25.488Z"
+"arn:aws:cloudformation:us-east-1:499281755213:stack/vpc-stax-30371-perforable/015b1260-b2e8-11e4-b0a5-50e2416294e0"
+"CREATE_COMPLETE"
+more: https://stedolan.github.io/jq/tutorial/
+
 
 
 ## DONE
