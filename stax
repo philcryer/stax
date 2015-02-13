@@ -19,16 +19,15 @@ STAX_DIR="$HOME/.stax"
 STAX_NAME_FILE="$STAX_DIR/stax-name"
 SSH_OPTIONS="-q"
 
-stax-colors(){
-    red=$(tput setaf 1)
-    green=$(tput setaf 2)
-    yellow=$(tput setaf 3)
-    blue=$(tput setaf 4)
-    purple=$(tput setaf 5)
-    cyan=$(tput setaf 6)
-    white=$(tput setaf 7)
-    reset=$(tput sgr0)
-}
+# set colors
+red=$(tput setaf 1)
+green=$(tput setaf 2)
+yellow=$(tput setaf 3)
+blue=$(tput setaf 4)
+purple=$(tput setaf 5)
+cyan=$(tput setaf 6)
+white=$(tput setaf 7)
+reset=$(tput sgr0)
 
 stax-message(){
     msg="$1"
@@ -52,6 +51,12 @@ stax-error-exit(){
     stax-error "$msg"
     exit $status
 }
+
+# make sure we are running under ssh-agent
+if [[ ! $SSH_AUTH_SOCK ]]; then
+    stax-error "not running under ssh-agent, restarting under ssh-agent"
+    exec ssh-agent $0 "$@"
+fi
 
 stax-usage(){
     cat <<EOM
@@ -704,7 +709,6 @@ if [[ -z $sub_cmd ]]; then
 fi
 
 # generic setup
-stax-colors
 stax-logo
 stax-preflight
 
