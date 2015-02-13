@@ -63,13 +63,13 @@
       "ConstraintDescription":"Format for cost center is ####-####-XYZ#####",
       "Default":"0000-0000-ABC00000"
     },
-    "DockerRegUser":{
+    "DockerRegistryUser":{
       "Description":"User name for https://docker-registry.agro.services",
       "Type":"String",
       "MinLength":"1",
       "MaxLength":"60"
     },
-    "DockerRegPass":{
+    "DockerRegistryPass":{
       "Description":"Password for https://docker-registry.agro.services",
       "Type":"String",
       "MinLength":"1",
@@ -1953,7 +1953,7 @@
                 "         Restart=always\n",
                 "         ExecStartPre=-/usr/bin/docker kill nd\n",
                 "         ExecStartPre=-/usr/bin/docker rm nd\n",
-                "         ExecStartPre=/usr/bin/docker login -e docker@monsanto.com -u ", {"Ref":"DockerRegUser"}, " -p ", {"Ref":"DockerRegPass"}, " https://docker-registry.agro.services/\n",
+                "         ExecStartPre=/usr/bin/docker login -e docker@monsanto.com -u ", {"Ref":"DockerRegistryUser"}, " -p ", {"Ref":"DockerRegistryPass"}, " https://docker-registry.agro.services/\n",
                 "         ExecStartPre=/usr/bin/docker pull docker-registry.agro.services/monsanto/soa-nd-72:v1\n",
                 "         ExecStart=/usr/bin/docker run -t -p 9810:9810 -p 9843:9843 --name=nd docker-registry.agro.services/monsanto/soa-nd-72:v1 -Dpm.url=https://pm.agro.services/wsmex\n",
                 "         ExecStop=/usr/bin/docker stop nd\n",
