@@ -325,17 +325,29 @@ stax-start-service(){
         stax-error-exit "you must provide a service name, exiting" 2
     fi
     service="$1"
-    echo "${yellow}[ ${cyan}----${yellow} ]${reset}   starting service $service on the stax cluster"
-    servicerunner="$STAX_NAME.$service"
-    servicerunner_path="$STAX_DIR/$servicerunner"
-    sed -e "s|@STAX_KEY@|${STAX_KEY}|g" -e "s|@SOME_SERVICE@|$service|g" assets/stax/servicerunner > "$servicerunner_path"
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     pushing service file to $STAX_PUB_IP: "
+    service_file="assets/services/$service.service"
+    service_basename=${service_file##*/}
+    if [[ ! -f $service_file ]]; then
+        stax-error-exit "unknown service: $service" 1
+    fi
+    stax-message "starting $service on the stax service cluster"
     stax-ssh-key-add
-    scp $SSH_OPTIONS "$servicerunner_path" "jump:$servicerunner" > /dev/null
-    echo "done"
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     running service file: "
-    ssh $SSH_OPTIONS jump "bash $servicerunner" > /dev/null
-    echo "done"
+    stax-message "  copying $service_file to service docker host"
+    scp_cmd="scp $SSH_OPTIONS $service_file service:$service_basename"
+    if ! $scp_cmd; then
+        stax-error-exit "failed to copy service file to service docker host: $scp_cmd" 1
+    fi
+    stax-message "  submitting service $service to fleet"
+    submit_cmd="ssh $SSH_OPTIONS service fleetctl submit $service_basename"
+    if ! $submit_cmd; then
+        stax-error-exit "failed to submit service to docker host: $submit_cmd" 1
+    fi
+    stax-message "  starting service $service in fleet"
+    start_cmd="ssh $SSH_OPTIONS service fleetctl start $service_basename"
+    if ! $start_cmd; then
+        stax-error-exit "failed to start service to docker host: $start_cmd" 1
+    fi
+    touch "$STAX_DIR/audit/$(date +'%Y%m%d-%H%M%S')-fleetctl-started-service-$service-on-$STAX_NAME"
     stax-ssh-key-remove
     sleep 5
 }
