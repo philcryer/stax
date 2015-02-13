@@ -1,2 +1,5 @@
-scp -q -r -i ~/.ssh/STAX_KEY.pem -o "StrictHostKeyChecking no" services core@`python -c "import random, sys; print random.choice(open(sys.argv[1]).readlines())," docker_hosts`:~
-ssh -i ~/.ssh/STAX_KEY.pem -o "StrictHostKeyChecking no" core@`python -c "import random, sys; print random.choice(open(sys.argv[1]).readlines())," docker_hosts` 'fleetctl start ~/services/SOME_SERVICE.service'
+runner=`cat docker_hosts|tail -n1`
+scp -q -r -i ~/.ssh/@STAX_KEY@.pem -o "StrictHostKeyChecking no" services core@${runner}:~
+ssh -i ~/.ssh/@STAX_KEY@.pem -o "StrictHostKeyChecking no" core@${runner} 'fleetctl submit ~/services/@SOME_SERVICE@.service'
+ssh -i ~/.ssh/@STAX_KEY@.pem -o "StrictHostKeyChecking no" core@${runner} 'fleetctl start ~/services/@SOME_SERVICE@.service'
+echo "`date +'%Y-%m-%d.%H:%M'`-fleetctl-started-@SOME_SERVICE@-on-${runner}" >> audit
