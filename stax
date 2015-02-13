@@ -17,7 +17,7 @@ SYSTEM=`uname`
 aws="aws --color on"
 STAX_DIR="$HOME/.stax"
 STAX_NAME_FILE="$STAX_DIR/stax-name"
-SSH_OPTIONS="-q -x -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+SSH_OPTIONS="-q"
 
 stax-colors(){
     red=$(tput setaf 1)
@@ -38,8 +38,7 @@ stax-message(){
         pref="${1:0:4}"
         shift
     fi
-    echo_args="$@"
-    echo $echo_args "${yellow}[ $cyan$pref$yellow ]$reset  $msg"
+    echo "${yellow}[ $cyan$pref$yellow ]$reset  $msg"
 }
 
 stax-error(){
@@ -138,21 +137,29 @@ stax-validate(){
 }
 
 stax-create-key(){
+    stax-message "creating ssh key pair in aws"
     STAX_KEY="$STAX_NAME"
-    STAX_KEY_FILE="$STAX_DIR/$STAX_NAME.pem"
-    touch "$STAX_KEY_FILE"
-    chmod 600 "$STAX_KEY_FILE"
-    # this would be better if we had a real json parser
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     creating key pair: "
-    $aws ec2 create-key-pair --key-name "$STAX_NAME" --query 'KeyMaterial' --output text > "$STAX_KEY_FILE"
-    echo "done"
+    STAX_PRIV_KEY="$STAX_DIR/$STAX_NAME.pem"
+    STAX_PUB_KEY="$STAX_PRIV_KEY.pub"
+    touch "$STAX_PRIV_KEY"
+    chmod 600 "$STAX_PRIV_KEY"
+    stax-message "  creating key pair"
+    if ! $aws ec2 create-key-pair --key-name "$STAX_NAME" --query 'KeyMaterial' --output text > "$STAX_PRIV_KEY"; then
+        stax-error-exit "failed to create key pair in aws" 1
+    fi
+    stax-message "  key pair created"
+    stax-message "  generating public key"
+    if ! ssh-keygen -y -f "$STAX_PRIV_KEY" > "$STAX_PUB_KEY"; then
+        stax-message-exit "failed to generate public key from private key: $STAX_PRIV_KEY $STAX_PUB_KEY" 1
+    fi
+    stax-message "  public key generated"
 }
 
 stax-create-bucket(){
     bucket="$1"
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     creating bucket: "
+    stax-message "creating bucket"
     $aws s3 mb "s3://$bucket" > /dev/null
-    echo "done"
+    stax-message "bucket created"
 }
 
 stax-create(){
@@ -161,40 +168,40 @@ stax-create(){
         stax-error-exit "existing stax defined: $existing_name" 1
     fi
     stax-generate
-    echo "${yellow}[ ${cyan}NAME${yellow} ]${reset} $STAX_NAME"
-    echo "${yellow}[ ${cyan}----${yellow} ]${reset}   creating stax"
+    stax-message "$STAX_NAME" "NAME"
+    stax-message "creating stax"
     stax-config
     stax-create-key
     stax-create-bucket "$STAX_NAME"
     # upload template to s3 to have bigger size limits
     template="$STAX_NAME/$STAX_NAME.json"
     template_url="https://s3.amazonaws.com/$template"
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     uploading template: "
+    stax-message "  uploading template"
     $aws s3 cp "$SCRIPT_PATH/templates/cloudformation-template-vpc.json" "s3://$template" > /dev/null
-    echo "done"
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     validating template: "
+    stax-message "  template uploaded"
+    stax-message "  validating template"
     if ! stax-validate "$template_url" > /dev/null; then
         stax-error "validation failed, exiting"
         stax-destroy-bucket
         stax-destroy-key
         exit 2
     fi
-    echo "done"
+    stax-message "  validation successful"
     # upload vpc assets
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     uploading vpc assets: "
+    stax-message "  uploading vpc assets"
     for f in assets/vpc/*; do
         $aws s3 cp "$f" "s3://$STAX_NAME/" > /dev/null
     done
-    echo "done"
+    stax-message "  vpc assets uploaded"
     echo $STAX_NAME > $STAX_NAME_FILE
-    echo "${yellow}[ ${cyan}----${yellow} ]${reset}     creating vpc in aws"
+    stax-message "  creating stax in aws"
     if $aws cloudformation create-stack \
         --stack-name $STAX_NAME \
         --template-url "$template_url" \
         --parameters "$(<$STAX_PARAMS)" \
         --capabilities CAPABILITY_IAM > /dev/null
     then
-        echo "${yellow}[ ${cyan}----${yellow} ]${reset}   stax creation complete"
+        stax-message "  stax creation complete"
         # new 'audit' functionality, save names and create date of stax you've created
         # if useful, we could save this to S3: and make it persist
         if [[ ! -d $STAX_DIR/audit ]]; then
@@ -210,6 +217,46 @@ stax-create(){
     fi
 }
 
+stax-ssh-config(){
+    stax-message "creating ssh_config"
+    STAX_SSH_CONFIG="$STAX_DIR/$STAX_NAME.ssh_config"
+    stax-message "  randomizing router and service hosts"
+    rhosts="$STAX_DIR/$STAX_NAME.router_hosts"
+    shosts="$STAX_DIR/$STAX_NAME.service_hosts"
+    if [[ ! -f $rhosts ]]; then
+        stax-error-exit "missing router host file: $rhosts" 5
+    fi
+    if [[ ! -f $shosts ]]; then
+        stax-error-exit "missing service host file: $shosts" 5
+    fi
+    router_ip=$(head -n $(($RANDOM % $(wc -l < $rhosts) + 1)) $rhosts | tail -n 1)
+    service_ip=$(head -n $(($RANDOM % $(wc -l < $shosts) + 1)) $shosts | tail -n 1)
+    stax-message "  writing $STAX_SSH_CONFIG"
+    cat > "$STAX_SSH_CONFIG" <<EOF
+ForwardAgent yes
+ForwardX11 no
+UserKnownHostsFile /dev/null
+StrictHostKeyChecking no
+IdentityFile $STAX_PRIV_KEY
+
+Host jump
+  User ec2-user
+  HostName $STAX_PUB_IP
+
+Host router
+  User core
+  HostName $router_ip
+  ProxyCommand ssh -q -F $STAX_SSH_CONFIG jump nc -w 120 %h %p
+
+Host service
+  User core
+  HostName $service_ip
+  ProxyCommand ssh -q -F $STAX_SSH_CONFIG jump nc -w 120 %h %p
+EOF
+    stax-message "  created $STAX_SSH_CONFIG"
+    SSH_OPTIONS="$SSH_OPTIONS -F $STAX_SSH_CONFIG"
+}
+
 # ensure there is a stax
 stax-existing(){
     if [[ ! -f $STAX_NAME_FILE ]]; then
@@ -220,20 +267,18 @@ stax-existing(){
 
 # save the description of the stax to a file
 stax-describe(){
-    if [ -z "$STAX_NAME" ]; then
-        echo "$pkg: cannot call stax-describe with STAX_NAME undefined"
-        exit 5
+    if [[ -z $STAX_NAME ]]; then
+        stax-error-exit "cannot call stax-describe with STAX_NAME undefined" 5
     fi
-    echo "${yellow}[ ${cyan}NAME${yellow} ]${reset} $STAX_NAME"
-    echo "${yellow}[ ${cyan}----${yellow} ]${reset}   describe stax"
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
+    stax-message "$STAX_NAME" "NAME"
+    stax-message "describe stax"
+    stax-message "  querying aws"
     STAX_DESC="$STAX_DIR/$STAX_NAME.json"
     if aws cloudformation describe-stacks --stack-name "$STAX_NAME" > "$STAX_DESC"; then
-        echo "done"
-        echo "${yellow}[ ${cyan}----${yellow} ]${reset}     see $STAX_DIR/$STAX_NAME.json for details"
+        stax-message "  query complete"
+        stax-message "  see $STAX_DESC for details"
     else
-        echo "failed"
-        echo "${yellow}[ ${cyan}----${yellow} ]${reset} stax $STAX_NAME does not exist in AWS"
+        stax-error-message "failed to get stax information from aws"
         stax-destroy-bucket
         stax-destroy-files
         stax-destroy-key
@@ -244,9 +289,12 @@ stax-describe(){
 # ensure stax creation is complete
 stax-complete(){
     wait="$1"
+    stax-message "checking if stax build is complete"
     until stax-describe && grep -q CREATE_COMPLETE "$STAX_DESC" > /dev/null 2>&1; do
-        echo "${yellow}[ ${cyan}NULL${yellow} ]${reset}     stax creation not complete"
-        if [[ -z $wait ]]; then
+        stax-message "  stax build not complete"
+        if [[ $wait ]]; then
+            stax-message "  waiting..."
+        else
             exit 1
         fi
         sleep 60
@@ -255,14 +303,12 @@ stax-complete(){
 
 stax-list(){
     stax-message "list running stax"
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
-    stacks=$(aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE)
-    echo "done"
-    echo "$stacks"
+    stax-message "  querying aws: "
+    $aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE
 }
 
 stax-services(){
-    echo "${yellow}[ ${cyan}----${yellow} ]${reset}   services that stax can run on the cluster"
+    stax-message "services that stax can run on the cluster"
     echo "{"
     ls -1 assets/services/*service | cut -d"/" -f3 | cut -d"." -f1
     echo "}"
@@ -279,10 +325,10 @@ stax-start-service(){
     sed -e "s|@STAX_KEY@|${STAX_KEY}|g" -e "s|@SOME_SERVICE@|$service|g" assets/stax/servicerunner > "$servicerunner_path"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     pushing service file to $STAX_PUB_IP: "
     stax-ssh-key-add
-    scp $SSH_OPTIONS "$servicerunner_path" "ec2-user@$STAX_PUB_IP:$servicerunner" > /dev/null
+    scp $SSH_OPTIONS "$servicerunner_path" "jump:$servicerunner" > /dev/null
     echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     running service file: "
-    ssh $SSH_OPTIONS "ec2-user@$STAX_PUB_IP" "bash $servicerunner" > /dev/null
+    ssh $SSH_OPTIONS jump "bash $servicerunner" > /dev/null
     echo "done"
     stax-ssh-key-remove
     sleep 5
@@ -291,7 +337,7 @@ stax-start-service(){
 stax-fleetstats(){
     echo "${yellow}[ ${cyan}----${yellow} ]${reset}  status from fleetctl on the cluster: "
     stax-ssh-key-add
-    ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'sh fleetstats'
+    ssh $SSH_OPTIONS jump 'bash fleetstats'
     stax-ssh-key-remove
 }
 
@@ -317,46 +363,52 @@ stax-history(){
     echo "}"
 }
 
-stax-getip(){
-    echo "${yellow}[ ${cyan}----${yellow} ]${reset}   get public IP (EIP)"
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     querying aws: "
-    STAX_PUB_IP=`cat "$STAX_DIR/$STAX_NAME.json" | grep -B2 -A2 'JumpEIP' | grep -o '[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*'`
-    echo "done"
-    echo "${yellow}[ ${cyan}----${yellow} ]${reset}     public IP (EIP): $STAX_PUB_IP"
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     writing to $STAX_IPS_FILE: "
-    echo $STAX_PUB_IP > $STAX_IPS_FILE
-    echo "done"
+stax-jumpip(){
+    stax-message "getting public IP (EIP)"
+    STAX_JUMP_FILE="$STAX_DIR/$STAX_NAME.jump"
+    STAX_PUB_IP=$(grep -B2 -A2 'JumpEIP' "$STAX_DIR/$STAX_NAME.json" | grep -o '[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*')
+    stax-message "  public IP (EIP): $STAX_PUB_IP"
+    stax-message "  writing to $STAX_JUMP_FILE"
+    echo "$STAX_PUB_IP" > "$STAX_JUMP_FILE"
 }
 
 stax-motd(){
-    echo "     _             " > /tmp/motd
-    echo "    | | welcome to the jumpbox" >> /tmp/motd
-    echo " ___| |_ __ ___  __" >> /tmp/motd
-    echo '/ __| __/ _` \ \/ /' >> /tmp/motd
-    echo "\__ \ || (_| |>  <" >> /tmp/motd
-    echo "|___/\__\__,_/_/\_\\" >> /tmp/motd
-    echo >> /tmp/motd
-    echo "IP        `echo $STAX_PUB_IP`" >> /tmp/motd
-    echo "Name      `cat $STAX_NAME_FILE`" >> /tmp/motd
-    echo "Built     `date`" >> /tmp/motd
+    stax-message "creating motd"
+    now=$(date)
+    motd="$STAX_DIR/$STAX_NAME.motd"
+    cat > "$motd" <<'EOF'
+
+    | | welcome to the jumpbox
+ ___| |_ __ ___  __
+/ __| __/ _` \ \/ /
+\__ \ || (_| |>  <
+|___/\__\__,_/_/\_\
+
+EOF
+    cat >> "$motd" <<EOF
+IP        $STAX_PUB_IP
+Name      $STAX_NAME_FILE
+Built     $now
+
+EOF
 }
 
 stax-popjumpbox(){
-    echo "${yellow}[ ${cyan}----${yellow} ]${reset}   setup motd and bashrc on jumpbox"
+    stax-message "setup motd and bashrc on jumpbox"
     stax-ssh-key-add
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     pushing motd to $STAX_PUB_IP: "
-    if [ ! -f '/tmp/motd' ]; then
-        stax-error-exit "motd file not found, exiting" 1
+    motd="$STAX_DIR/$STAX_NAME.motd"
+    if [[ ! -f $motd ]]; then
+        stax-error-exit "motd file not found: $motd" 1
     fi
-    scp $SSH_OPTIONS /tmp/motd ec2-user@$STAX_PUB_IP:~ > /dev/null
+    scp $SSH_OPTIONS "$motd" jump:motd > /dev/null
     echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     pushing bashrc to $STAX_PUB_IP: "
-    scp $SSH_OPTIONS assets/stax/bashrc ec2-user@$STAX_PUB_IP:~/.bashrc > /dev/null
+    scp $SSH_OPTIONS assets/stax/bashrc jump:.bashrc > /dev/null
     echo "done"
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     copying service definitions to $STAX_PUB_IP: "
-    scp $SSH_OPTIONS -r assets/services ec2-user@$STAX_PUB_IP:~ > /dev/null
+    scp $SSH_OPTIONS -r assets/services jump: > /dev/null
     echo "done"
-    rm /tmp/motd
     stax-ssh-key-remove
 }
 
@@ -369,6 +421,9 @@ stax-getdockerips(){
     router_hosts="$STAX_DIR/$STAX_NAME.router_hosts"
     aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"router-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$NF } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$router_hosts"
     echo "done"
+}
+
+stax-remote-commands(){
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building fleetstats connect: "
     fleet_stats="$STAX_DIR/$STAX_NAME.fleetstats"
     sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/fleetstats > "$fleet_stats"
@@ -379,59 +434,52 @@ stax-getdockerips(){
     echo "done"
     stax-ssh-key-add
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     putting connect files on jumpbox: "
-    scp $SSH_OPTIONS "$fleet_stats" ec2-user@$STAX_PUB_IP:fleetstats > /dev/null
-    scp $SSH_OPTIONS "$fleet_logs" ec2-user@$STAX_PUB_IP:fleetlogs > /dev/null
-    ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'chmod 0755 fleetstats' > /dev/null
-    ssh $SSH_OPTIONS ec2-user@$STAX_PUB_IP 'chmod 0755 fleetlogs' > /dev/null
+    scp $SSH_OPTIONS "$fleet_stats" jump:fleetstats > /dev/null
+    scp $SSH_OPTIONS "$fleet_logs" jump:fleetlogs > /dev/null
+    ssh $SSH_OPTIONS jump 'chmod 0755 fleetstats fleetlogs' > /dev/null
     echo "done"
     stax-ssh-key-remove
 }
 
 stax-ssh-key-add(){
-    if ! ssh-add "$STAX_KEY_FILE"; then
-        stax-error-exit "failed to add private key to ssh-agent: $STAX_KEY_FILE" 1
+    stax-message "adding private key to ssh-agent"
+    if [[ ! $STAX_PRIV_KEY ]]; then
+        stax-error-exit "cannot call stax-ssh-key-add when STAX_PRIV_KEY undefined" 5
     fi
+    if ! ssh-add "$STAX_PRIV_KEY" > /dev/null 2>&1; then
+        stax-error-exit "failed to add private key to ssh-agent: $STAX_PRIV_KEY" 1
+    fi
+    stax-message "  private key added"
 }
 
 stax-ssh-key-remove(){
-    if ! ssh-add -d "$STAX_KEY_FILE"; then
-        stax-error "failed to remove private key from ssh-agent"
-        stax-error "please remove yourself"
+    stax-message "removing private key from ssh-agent"
+    if [[ ! $STAX_PUB_KEY ]]; then
+        stax-error-exit "cannot call stax-ssh-key-remove when STAX_PUB_KEY undefined" 5
     fi
+    if ! ssh-add -d "$STAX_PUB_KEY" > /dev/null 2>&1; then
+        stax-error "failed to remove private key from ssh-agent: $STAX_PUB_KEY"
+        stax-error "you will have to remove it yourself, continuing"
+    fi
+    stax-message "  private key removed"
 }
 
 stax-connect(){
-    target="$1"
-    shift
-    if [[ -z $target ]]; then
-        target=jump
+    stax-message "connecting to stax"
+    target="jump"
+    if [[ $1 ]]; then
+        target="$1"
+        shift
+        case "$target" in
+            jump|router|service)
+                :;;
+            *)
+                stax-error-exit "unknown connection target: $target" 1
+                ;;
+        esac
     fi
     stax-ssh-key-add
-    ssh_cmd="ssh $SSH_OPTIONS"
-    jump="ec2-user@$STAX_PUB_IP"
-    proxy_args="-A -o 'ProxyCommand=ssh $SSH_OPTIONS $jump nc -w 120 %h %p'"
-    case "$target" in
-        jump)
-            ssh_cmd="$ssh_cmd $jump"
-            ;;
-        router|service)
-            case "$target" in
-                router) hosts="$STAX_DIR/$STAX_NAME.router_hosts";;
-                service) hosts="$STAX_DIR/$STAX_NAME.service_hosts";;
-            esac
-            if [[ ! -f $hosts ]]; then
-                stax-error-exit "hosts file does not exist: $hosts" 1
-            fi
-            # get random host
-            host=$(head -n $(($RANDOM % $(wc -l < $hosts) + 1)) $hosts | tail -n 1)
-            ssh_cmd="$ssh_cmd $proxy_args core@$host"
-            ;;
-        *)
-            stax-ssh-key-remove
-            stax-error-exit "unknown connection target: $target" 1
-            ;;
-    esac
-    ssh_cmd="$ssh_cmd $@"
+    ssh_cmd="ssh $SSH_OPTIONS $target $@"
     if ! $ssh_cmd; then
         stax-error "ssh command failed: $ssh_cmd"
         stax-ssh-key-remove
@@ -443,7 +491,7 @@ stax-connect(){
 stax-destroy-key(){
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     deleting $STAX_NAME key: "
     $aws ec2 delete-key-pair --key-name "$STAX_NAME" > /dev/null
-    rm -f $STAX_KEY_FILE
+    rm -f $STAX_PUB_KEY $STAX_PRIV_KEY
     echo "done"
 }
 
@@ -520,7 +568,7 @@ stax-config(){
     fi
     if grep -q '@DISCOVERY_URL@' "$config" > /dev/null 2>&1; then
         DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"
-        if [ -z "$DISCOVERY_URL" ]; then
+        if [[ -z $DISCOVERY_URL || $DISCOVERY_URL == 'Unable to generate token' ]]; then
             stax-error-exit "failed to get discovery URL" 1
         fi
         sed="$sed -e s|@DISCOVERY_URL@|$DISCOVERY_URL|"
@@ -533,8 +581,8 @@ stax-config(){
 
 # automated test
 stax-test(){
-    echo "${yellow}[ ${cyan}TEST${yellow} ]${reset}   running stax test"
-    # create dummy parameter config
+    stax-message "running stax test"
+    stax-message "  create dummy parameter config"
     user=$(id -u -n)
     config="/tmp/test-config-$user-$$-$RANDOM.json"
     cat > "$config" <<EOF
@@ -552,12 +600,32 @@ stax-test(){
 EOF
     stax-create
     rm -f "$config"
+    stax-motd
     # wait while it is building
     stax-complete 1
-    stax-getip
+    stax-jumpip
+    stax-getdockerips
+    stax-ssh-config
+    stax-popjumpbox
+    stax-remote-commands
+    stax-message "  getting jump box hostname"
     stax-connect jump hostname
-    #stax-connect router docker exec consul consul members
-    #stax-connect service fleetctl list-members
+    stax-message "  giving docker containers some time to spin up"
+    sleep 300
+    for t in router service; do
+        stax-message "  getting docker images on $t"
+        stax-connect $t docker images
+        stax-message "  getting docker containers on $t"
+        stax-connect $t docker ps
+    done
+    stax-message "  listing machines in fleet cluster"
+    stax-connect service fleetctl list-machines
+    stax-message "  getting consul cluster members"
+    stax-connect router docker exec consul consul members
+    #jump_hostname=$(stax-connect jump hostname)
+    #stax-message "  jump box hostname: $jump_hostname"
+    #consul_members=$(stax-connect router docker exec consul consul members)
+    #stax-message "  consul cluster members: $consul_members"
     # systemctl status consul
     # journalctl -u consul
     # curl localhost:8500/v1/catalog/nodes
@@ -607,9 +675,13 @@ do
             exit 0;;
 
         -*)
-            echo "$pkg: unknown option: $arg"
-            echo "$pkg: Try '$pkg --help' for help."
-            exit 1
+            if [[ "$sub_cmd_args" ]]; then
+                sub_cmd_args="$sub_cmd_args $arg"
+            else
+                echo "$pkg: unknown option: $arg"
+                echo "$pkg: Try '$pkg --help' for help."
+                exit 1
+            fi
             ;;
 
         *)
@@ -641,8 +713,11 @@ if [ -f "$STAX_NAME_FILE" ]; then
     STAX_DESC="$STAX_DIR/$STAX_NAME.json"
     STAX_PARAMS="$STAX_DIR/$STAX_NAME.params"
     STAX_KEY="$STAX_NAME"
-    STAX_KEY_FILE="$STAX_DIR/$STAX_NAME.pem"
-    STAX_IPS_FILE="$STAX_DIR/$STAX_NAME.ips"
+    STAX_PRIV_KEY="$STAX_DIR/$STAX_NAME.pem"
+    STAX_PUB_KEY="$STAX_PRIV_KEY.pub"
+    STAX_JUMP_FILE="$STAX_DIR/$STAX_NAME.jump"
+    STAX_SSH_CONFIG="$STAX_DIR/$STAX_NAME.ssh_config"
+    SSH_OPTIONS="$SSH_OPTIONS -F $STAX_SSH_CONFIG"
 fi
 
 # determine which subcommand to run
@@ -651,19 +726,20 @@ case "$sub_cmd" in
     connect)
         stax-existing
         stax-describe
-        if [ ! -f "$STAX_IPS_FILE" ]; then
-            stax-getip
-            stax-pushkey
-            stax-motd
-            stax-popjumpbox
+        if [[ ! -f $STAX_JUMP_FILE ]]; then
+            stax-jumpip
             stax-getdockerips
+            stax-ssh-config
+            stax-popjumpbox
+            stax-remote-commands
         fi
-        STAX_PUB_IP=$(<$STAX_IPS_FILE)
-        stax-connect
+        STAX_PUB_IP=$(<$STAX_JUMP_FILE)
+        stax-connect $sub_cmd_args
         ;;
 
     create)
         stax-create
+        stax-motd
         stax-describe
         ;;
 
@@ -679,19 +755,19 @@ case "$sub_cmd" in
 
     destroy)
         stax-existing
-        stax-destroy
+        stax-destroy $sub_cmd_args
         ;;
 
     fleet)
         stax-existing
-        if [ ! -f "$STAX_IPS_FILE" ]; then
-            stax-getip
-            stax-pushkey
-            stax-motd
-            stax-popjumpbox
+        if [ ! -f "$STAX_JUMP_FILE" ]; then
+            stax-jumpip
             stax-getdockerips
+            stax-ssh-config
+            stax-popjumpbox
+            stax-remote-commands
         fi
-        STAX_PUB_IP=$(<$STAX_IPS_FILE)
+        STAX_PUB_IP=$(<$STAX_JUMP_FILE)
         stax-fleetstats
         ;;
 
@@ -718,12 +794,12 @@ case "$sub_cmd" in
             exit 2
         fi
         stax-existing
-        stax-getip
-        if [ ! -f "$STAX_IPS_FILE" ]; then
-            stax-pushkey
-            stax-motd
-            stax-popjumpbox
+        if [ ! -f "$STAX_JUMP_FILE" ]; then
+            stax-jumpip
             stax-getdockerips
+            stax-ssh-config
+            stax-popjumpbox
+            stax-remote-commands
         fi
         for service in $sub_cmd_args; do
             stax-start-service "$service"
