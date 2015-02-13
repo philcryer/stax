@@ -2337,12 +2337,6 @@
         "Ref":"VPC"
       }
     },
-    "PublicSubnet1":{
-      "Description":"Public Subnet #1",
-      "Value":{
-        "Ref":"PubSubnet1"
-      }
-    },
     "JumpEIP":{
       "Description":"Jump Box EIP",
       "Value":{
@@ -2355,6 +2349,24 @@
         "Ref":"NAT1EIP"
       }
     },
+    "NAT2EIP":{
+      "Description":"NAT 2 EIP",
+      "Value":{
+        "Ref":"NAT2EIP"
+      }
+    },
+    "RouterDNS":{
+      "Description":"ELB DNS Name",
+      "Value":{
+        "Fn::GetAtt":["RouterELB","DNSName"]
+      }
+    },
+    "PublicSubnet1":{
+      "Description":"Public Subnet #1",
+      "Value":{
+        "Ref":"PubSubnet1"
+      }
+    },
     "PrivateSubnet1":{
       "Description":"Private Subnet #1",
       "Value":{
@@ -2365,12 +2377,6 @@
       "Description":"Public Subnet #2",
       "Value":{
         "Ref":"PubSubnet2"
-      }
-    },
-    "NAT2EIP":{
-      "Description":"NAT 2 EIP",
-      "Value":{
-        "Ref":"NAT2EIP"
       }
     },
     "PrivateSubnet2":{
