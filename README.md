@@ -42,6 +42,16 @@ apt-get install curl   # Debian GNU/Linux, Ubuntu
 yum install curl       # Red Hat Enterprise Linux (RHEL), CentOS, Amazon Linux
 ```
 
+### jq
+
+* Install [jq](https://stedolan.github.io/jq/), a command-line JSON processor, on your client.
+
+```bash
+apt-get install jq  # Debian GNU/Linux, Ubuntu
+brew install jq    # Apple OS X ([via Homebrew](http://brew.sh/))
+yum install jq      # Red Hat Enterprise Linux (RHEL), CentOS, Amazon Linux
+```
+
 ### awscli
 
 * Install [aws-cli](https://github.com/aws/aws-cli) (Universal Command Line Interface for Amazon Web Services) on your client.
@@ -58,7 +68,8 @@ yum install awscli      # Red Hat Enterprise Linux (RHEL), CentOS, Amazon Linux
 aws configure
 ```
 
-You will be prompted to enter your AWS access key and secret access key, and will write and store them in ~/.aws/credentials.
+* You will be prompted to enter your AWS region, it needs this, mine is `us-east-1`, it will write and store that in `~/.aws/credentials`
+* You will be prompted to enter your access key and secret access key, copy this from the AWS Console you opened above, then it will it write and store that in ~/.aws/credentials.
 
 ## Usage
 
@@ -85,18 +96,32 @@ vi config/config.json
 
 ```bash
 $ stax
-Usage: stax <command>
+Usage: stax [OPTIONS] <command>
+
+Options:
+  -c,--config=CONFIG   Use file CONFIG rather than config/config.json
+  -d,--debug           Turn on verbose messages
+  -h,--help            Output this message
+  -v,--version         Print name and version information
+
+If an argument is required for a long option, so to the short. Same for
+optional arguments.
 
 Commands:
-  list              List all completely built and running stax
+  connect           Connect to the jumpbox in the VPC stax over SSH
   create            Create a new VPC stax in AWS
   describe          Describe the stax created from this host
-  connect           Connect to the jumpbox in the VPC stax over SSH
+  desc-auto         Describe the autoscaling groups in the stax
+  destroy           Destroy the existing VPC stax
+  fleet             Run various fleetctl commands against the fleet cluster
+  help              Output this message
+  history           View history of recently created/destroyed stax
+  list              List all completely built and running stax
   services          List servers that are available to run across a stax
   start <service>   Start a service across the stax cluster
-  fleet             Describe currently created fleet stax
-  destroy           Destroy the existing VPC stax
-  history           View history of recently created/destroyed stax
+  test              Automated test to exercise functionality of stax
+
+For more help, check the docs: https://github.com/philcryer/stax
 ```
 
 * Create a stax cluster on AWS
@@ -109,7 +134,7 @@ Watch for any errors.
 
 ## Accessing the cluster
 
-* It will take ~5 minutes to build, you can check the status in the AWS console, or just try to connect with stax.
+* It will take ~5 minutes to build, you can test if it's ready by trying to connect.
 
 ```bash
 stax connect
