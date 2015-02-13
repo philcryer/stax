@@ -52,12 +52,6 @@ stax-error-exit(){
     exit $status
 }
 
-# make sure we are running under ssh-agent
-if [[ ! $SSH_AUTH_SOCK ]]; then
-    stax-error "not running under ssh-agent, restarting under ssh-agent"
-    exec ssh-agent $0 "$@"
-fi
-
 stax-usage(){
     cat <<EOM
 Usage: stax [OPTIONS] <command>
@@ -302,7 +296,7 @@ stax-complete(){
         else
             exit 1
         fi
-        sleep 60
+        sleep 30
     done
 }
 
@@ -706,6 +700,12 @@ done
 if [[ -z $sub_cmd ]]; then
     stax-usage
     exit 2
+fi
+
+# make sure we are running under ssh-agent
+if [[ ! $SSH_AUTH_SOCK ]]; then
+    stax-error "not running under ssh-agent, restarting under ssh-agent"
+    exec ssh-agent $0 "$@"
 fi
 
 # generic setup
