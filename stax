@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# this needs to go
+# this needs to (be converted to) go(lang)
 set -e
 
 #####################################################################
@@ -9,6 +9,7 @@ set -e
 #   this should work(tm)!                                  2015/01
 #####################################################################
 
+# variables
 pkg="stax"
 version="0.1"
 STAX_PRE_NAME="stax"
@@ -72,6 +73,7 @@ Commands:
   desc-auto         Describe the autoscaling groups in the stax
   destroy           Destroy the existing VPC stax
   fleet             Run various fleetctl commands against the fleet cluster
+  validate          Validate JSON - DRY RUN, nothing applied
   help              Output this message
   history           View history of recently created/destroyed stax
   list              List all completely built and running stax
@@ -102,10 +104,12 @@ stax-preflight(){
             exit 1
         fi
     done
+    # check if awscli tools are configured 
     if [ ! -f "$HOME/.aws/config" ]; then
         echo "awscli not configured, run 'aws configure'. Aborting."
         exit 1
     fi
+    # create a dir to store stax stuff
     if [ ! -d "$STAX_DIR" ]; then
         echo "creating directory $STAX_DIR"
         mkdir -p "$STAX_DIR"
@@ -114,6 +118,7 @@ stax-preflight(){
         echo "$pkg: failed to chmod $STAX_DIR"
         exit 1
     fi
+    # verify config is filled out
     if [ ! -f "$config" ]; then
         echo "$pkg: $config does not exist, configuration required"
         echo "$pkg: copy example to config directory, configure it and run again."
@@ -336,10 +341,10 @@ stax-start-service(){
 }
 
 stax-fleetstats(){
-    echo "${yellow}[ ${cyan}----${yellow} ]${reset}  status from fleetctl on the cluster: "
-    stax-ssh-key-add
-    ssh $SSH_OPTIONS jump 'bash fleetstats'
-    stax-ssh-key-remove
+    stax-message "status from fleetctl on the cluster: "
+    stax-connect service fleetctl list-machines
+    stax-connect service fleetctl list-units
+    stax-connect service fleetctl list-unit-files
 }
 
 stax-descauto(){
@@ -433,13 +438,14 @@ stax-remote-commands(){
     fleet_logs="$STAX_DIR/$STAX_NAME.fleetlogs"
     sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/fleetlogs > "$fleet_logs"
     echo "done"
-    stax-ssh-key-add
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     putting connect files on jumpbox: "
-    scp $SSH_OPTIONS "$fleet_stats" jump:fleetstats > /dev/null
-    scp $SSH_OPTIONS "$fleet_logs" jump:fleetlogs > /dev/null
-    ssh $SSH_OPTIONS jump 'chmod 0755 fleetstats fleetlogs' > /dev/null
-    echo "done"
-    stax-ssh-key-remove
+    ## FIXME we're not using files on the vpc-jump anymore, drooling needs to make this stax connnect fleetstats|fleetlogs
+    #stax-ssh-key-add
+    #echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     putting connect files on jumpbox: "
+    #scp $SSH_OPTIONS "$fleet_stats" jump:fleetstats > /dev/null
+    #scp $SSH_OPTIONS "$fleet_logs" jump:fleetlogs > /dev/null
+    #ssh $SSH_OPTIONS jump 'chmod 0755 fleetstats fleetlogs' > /dev/null
+    #echo "done"
+    #stax-ssh-key-remove
 }
 
 stax-ssh-key-add(){
@@ -706,8 +712,7 @@ fi
 
 # make sure we are running under ssh-agent
 if [[ ! $SSH_AUTH_SOCK ]]; then
-    #stax-error "not running under ssh-agent, restarting under ssh-agent"
-    stax-message "not running under ssh-agent, restarting under ssh-agent"
+    stax-message "not running under ssh-agent, restarting with ssh-agent running"
     exec ssh-agent $0 "$@"
 fi
 
@@ -732,7 +737,7 @@ if [ "$DEBUG" == "ON" ]; then echo "----- DEBUG :::: $sub_cmd $sub_cmd_args ----
 case "$sub_cmd" in
     connect)
         stax-existing
-        stax-describe
+        stax-complete
         if [[ ! -f $STAX_JUMP_FILE ]]; then
             stax-jumpip
             stax-getdockerips
@@ -767,6 +772,7 @@ case "$sub_cmd" in
 
     fleet)
         stax-existing
+        stax-complete
         if [ ! -f "$STAX_JUMP_FILE" ]; then
             stax-jumpip
             stax-getdockerips
@@ -801,6 +807,7 @@ case "$sub_cmd" in
             exit 2
         fi
         stax-existing
+        stax-complete
         if [ ! -f "$STAX_JUMP_FILE" ]; then
             stax-jumpip
             stax-getdockerips
@@ -816,6 +823,10 @@ case "$sub_cmd" in
 
     test)
         stax-test
+        ;;
+
+    validate)
+        stax-validate
         ;;
 
     *)
