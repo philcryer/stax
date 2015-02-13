@@ -96,7 +96,7 @@ NUMS=`wc -l < assets/stax/stax-slogans`
 
 stax-preflight(){
     # check for required cli tools
-    for cli in aws ssh; do
+    for cli in jq aws ssh; do
         if ! type "$cli" > /dev/null 2>&1; then
             echo "$pkg: $cli is not in the PATH. Aborting."
             exit 1
@@ -301,9 +301,11 @@ stax-complete(){
 }
 
 stax-list(){
-    stax-message "list running stax"
+    stax-message "list currently running stax"
     stax-message "  querying aws: "
-    $aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE
+    echo "{"
+    $aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE | jq '.StackSummaries[].StackName' | grep "vpc-stax" | cut -d"\"" -f2
+    echo "}"
 }
 
 stax-services(){
@@ -704,7 +706,8 @@ fi
 
 # make sure we are running under ssh-agent
 if [[ ! $SSH_AUTH_SOCK ]]; then
-    stax-error "not running under ssh-agent, restarting under ssh-agent"
+    #stax-error "not running under ssh-agent, restarting under ssh-agent"
+    stax-message "not running under ssh-agent, restarting under ssh-agent"
     exec ssh-agent $0 "$@"
 fi
 
