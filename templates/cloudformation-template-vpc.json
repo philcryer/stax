@@ -163,6 +163,11 @@
       "Type":"String",
       "Default":"private"
     },
+    "AllowHTTPFrom":{
+      "Description":"The net block (CIDR) that can connect to the ELB.",
+      "Type":"String",
+      "Default":"0.0.0.0/0"
+    },
     "AllowSSHFrom":{
       "Description":"The net block (CIDR) that SSH is available to.",
       "Type":"String",
@@ -1477,9 +1482,15 @@
         "SecurityGroupIngress":[
           {
             "IpProtocol":"tcp",
-            "CidrIp":"0.0.0.0/0",
+            "CidrIp":{"Ref":"AllowHTTPFrom"},
             "FromPort":"80",
             "ToPort":"80"
+          },
+          {
+            "IpProtocol":"tcp",
+            "CidrIp":{"Ref":"AllowHTTPFrom"},
+            "FromPort":"443",
+            "ToPort":"443"
           }
         ],
         "Tags":[
