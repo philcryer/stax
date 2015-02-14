@@ -352,7 +352,6 @@ stax-list(){
     stax-message "  querying aws "
     echo "{"
     # list running stax
-    ## FIXME jq, if we use assets we need to have binaries for linux and osx (aka darwin) add later, for now use which
     $aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE | $jq '.StackSummaries[].StackName' | grep "vpc-stax" | cut -d"\"" -f2 > /tmp/run.list
     ls -1 $STAX_DIR/audit > /tmp/hist.list
     # put a * by one if it was launched from here
@@ -488,23 +487,6 @@ stax-getdockerips(){
     router_hosts="$STAX_DIR/$STAX_NAME.router_hosts"
     aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"router-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$NF } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$router_hosts"
     echo "done"
-}
-
-stax-remote-commands(){
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building fleetstats connect: "
-    fleet_stats="$STAX_DIR/$STAX_NAME.fleetstats"
-    sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/fleetstats > "$fleet_stats"
-    echo "done"
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     building fleetslogs connect: "
-    fleet_logs="$STAX_DIR/$STAX_NAME.fleetlogs"
-    sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/fleetlogs > "$fleet_logs"
-    echo "done"
-    ## FIXME we're not using files on the vpc-jump anymore, drooling needs to make this stax connnect fleetstats|fleetlogs
-    #echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     putting connect files on jumpbox: "
-    #scp $SSH_OPTIONS "$fleet_stats" jump:fleetstats > /dev/null
-    #scp $SSH_OPTIONS "$fleet_logs" jump:fleetlogs > /dev/null
-    #ssh $SSH_OPTIONS jump 'chmod 0755 fleetstats fleetlogs' > /dev/null
-    #echo "done"
 }
 
 stax-ssh-key-add(){
@@ -675,7 +657,6 @@ EOF
     stax-getdockerips
     stax-ssh-config
     stax-popjumpbox
-    stax-remote-commands
     stax-message "  getting jump box hostname"
     stax-connect jump hostname
     stax-message "  giving docker containers some time to spin up"
@@ -689,7 +670,6 @@ EOF
     stax-message "  listing machines in fleet cluster"
     stax-connect service fleetctl list-machines
     stax-message "  getting consul cluster members"
-    ## FIXME this next line failed, when that happens we say #fail
     stax-connect router docker exec consul consul members
 
     #jump_hostname=$(stax-connect jump hostname)
@@ -789,7 +769,6 @@ case "$sub_cmd" in
             stax-getdockerips
             stax-ssh-config
             stax-popjumpbox
-            stax-remote-commands
         fi
         STAX_PUB_IP=$(<$STAX_JUMP_FILE)
         stax-connect $sub_cmd_args
@@ -825,7 +804,6 @@ case "$sub_cmd" in
             stax-getdockerips
             stax-ssh-config
             stax-popjumpbox
-            stax-remote-commands
         fi
         STAX_PUB_IP=$(<$STAX_JUMP_FILE)
         stax-fleetstats
@@ -860,7 +838,6 @@ case "$sub_cmd" in
             stax-getdockerips
             stax-ssh-config
             stax-popjumpbox
-            stax-remote-commands
         fi
         for service in $sub_cmd_args; do
             stax-start-service "$service"
