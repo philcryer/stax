@@ -161,8 +161,8 @@ stax-validate(){
     if ! $aws cloudformation validate-template --template-url "$template" > /dev/null; then
         stax-error "template failed to validate, exiting"
         stax-destroy-bucket
-        stax-destroy-files
         stax-destroy-key
+        stax-destroy-files
         exit 2
     fi
 }
@@ -243,8 +243,8 @@ stax-create(){
     else
         stax-error "creation failed, exiting"
         stax-destroy-bucket
-        stax-destroy-files
         stax-destroy-key
+        stax-destroy-files
         exit 2
     fi
 }
@@ -325,8 +325,8 @@ stax-describe(){
     else
         stax-error-message "failed to get stax information from aws"
         stax-destroy-bucket
-        stax-destroy-files
         stax-destroy-key
+        stax-destroy-files
         exit 1
     fi
 }
@@ -588,8 +588,8 @@ stax-destroy(){
         stax-message "recording $STAX_NAME deletion time for audit"
         touch $STAX_DIR/audit/$STAX_NAME/`date +'%Y%m%d-%H%M%S'`-destroyed
         stax-destroy-bucket
-        stax-destroy-files
         stax-destroy-key
+        stax-destroy-files
     else
         echo "failed"
         stax-error-exit "you will need to clean up the stack, key, bucket, and files" 1
