@@ -9,6 +9,12 @@ set -e
 #   this should work(tm)!                                  2015/01
 #####################################################################
 
+# make sure we are running under ssh-agent
+if [[ ! $SSH_AUTH_SOCK ]]; then
+    stax-logger "not running under ssh-agent, restarting with ssh-agent running"
+    exec ssh-agent $0 "$@"
+fi
+
 # variables
 pkg="stax"
 version="0.1"
@@ -754,13 +760,6 @@ done
 if [[ -z $sub_cmd ]]; then
     stax-usage
     exit 2
-fi
-
-# make sure we are running under ssh-agent
-if [[ ! $SSH_AUTH_SOCK ]]; then
-    #stax-message "not running under ssh-agent, restarting with ssh-agent running"
-    stax-logger "not running under ssh-agent, restarting with ssh-agent running"
-    exec ssh-agent $0 "$@"
 fi
 
 # generic setup
