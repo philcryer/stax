@@ -33,23 +33,13 @@ ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/
 
 Visit their site to learn how to install it manually if you don't trust that line.
 
-### Curl
+### curl
 
 * Install [curl](http://curl.haxx.se/) if you don't already have it installed (OS X has it by default, and most Linux distros have it by default) on your client.
 
 ```bash
 apt-get install curl   # Debian GNU/Linux, Ubuntu
 yum install curl       # Red Hat Enterprise Linux (RHEL), CentOS, Amazon Linux
-```
-
-### jq
-
-* Install [jq](https://stedolan.github.io/jq/), a command-line JSON processor, on your client.
-
-```bash
-apt-get install jq  # Debian GNU/Linux, Ubuntu
-brew install jq    # Apple OS X ([via Homebrew](http://brew.sh/))
-yum install jq      # Red Hat Enterprise Linux (RHEL), CentOS, Amazon Linux
 ```
 
 ### awscli
