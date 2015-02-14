@@ -336,7 +336,7 @@ stax-complete(){
     wait="$1"
     stax-message "checking if stax build is complete"
     until stax-describe && grep -q 'StackStatus.*CREATE_COMPLETE' "$STAX_DESC" > /dev/null 2>&1; do
-        status=$(awk -F: '/StackStatus/ { print $2 }' "$STAX_DESC")
+        status=$($jq '.Stacks[].StackStatus' "$STAX_DESC")
         stax-message "  stax build not complete: $status"
         if [[ $wait ]]; then
             stax-message "  waiting..."
@@ -651,15 +651,18 @@ stax-test(){
     config="/tmp/test-config-$user-$$-$RANDOM.json"
     cat > "$config" <<EOF
 [
-  { "ParameterKey": "App",                "ParameterValue": "Stax Auto Test" },
-  { "ParameterKey": "Group",              "ParameterValue": "ITSA" },
-  { "ParameterKey": "CostCenter",         "ParameterValue": "5180-9130-SLR74733" },
-  { "ParameterKey": "DockerInstanceType", "ParameterValue": "t2.micro" },
-  { "ParameterKey": "Owner",              "ParameterValue": "@OWNER@" },
-  { "ParameterKey": "KeyName",            "ParameterValue": "@KEY_NAME@" },
-  { "ParameterKey": "AllowSSHFrom",       "ParameterValue": "@SSH_FROM@" },
-  { "ParameterKey": "AllowHTTPFrom",      "ParameterValue": "@HTTP_FROM@" },
-  { "ParameterKey": "DiscoveryURL",       "ParameterValue": "@DISCOVERY_URL@" }
+  { "ParameterKey": "App",                 "ParameterValue": "Stax Auto Test" },
+  { "ParameterKey": "Group",               "ParameterValue": "ITSA" },
+  { "ParameterKey": "CostCenter",          "ParameterValue": "5180-9130-SLR74733" },
+  { "ParameterKey": "DockerRegistryUser",  "ParameterValue": "nobody" },
+  { "ParameterKey": "DockerRegistryPass",  "ParameterValue": "notapassword" },
+  { "ParameterKey": "DockerRegistryEmail", "ParameterValue": "nobody@dev.null" },
+  { "ParameterKey": "DockerInstanceType",  "ParameterValue": "t2.micro" },
+  { "ParameterKey": "Owner",               "ParameterValue": "@OWNER@" },
+  { "ParameterKey": "KeyName",             "ParameterValue": "@KEY_NAME@" },
+  { "ParameterKey": "AllowSSHFrom",        "ParameterValue": "@SSH_FROM@" },
+  { "ParameterKey": "AllowHTTPFrom",       "ParameterValue": "@HTTP_FROM@" },
+  { "ParameterKey": "DiscoveryURL",        "ParameterValue": "@DISCOVERY_URL@" }
 ]
 EOF
     stax-create
