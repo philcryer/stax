@@ -19,6 +19,7 @@ SYSTEM=`uname`
 STAX_DIR="$HOME/.stax"
 STAX_NAME_FILE="$STAX_DIR/stax-name"
 SSH_OPTIONS="-q"
+host=`hostname`
 logdir=/tmp
 logfile=$logdir/$pkg.log
 jq=assets/jq/$SYSTEM/jq
@@ -60,7 +61,7 @@ stax-error-exit(){
 
 stax-logger(){
     msg="$1"
-    echo `date +'%b %d %T'` `hostname` $pkg: $msg >> $logfile
+    echo `date +'%b %d %T'` $host $pkg: $msg >> $logfile
 }
 
 stax-usage(){
