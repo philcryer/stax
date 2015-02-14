@@ -335,8 +335,9 @@ stax-describe(){
 stax-complete(){
     wait="$1"
     stax-message "checking if stax build is complete"
-    until stax-describe && grep -q CREATE_COMPLETE "$STAX_DESC" > /dev/null 2>&1; do
-        stax-message "  stax build not complete"
+    until stax-describe && grep -q 'StackStatus.*CREATE_COMPLETE' "$STAX_DESC" > /dev/null 2>&1; do
+        status=$(awk -F: '/StackStatus/ { print $2 }' "$STAX_DESC")
+        stax-message "  stax build not complete: $status"
         if [[ $wait ]]; then
             stax-message "  waiting..."
         else
