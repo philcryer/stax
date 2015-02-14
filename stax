@@ -24,6 +24,7 @@ SCRIPT_PATH=$( cd $(dirname $0) ; pwd -P )
 SYSTEM=`uname`
 STAX_DIR="$HOME/.stax"
 STAX_NAME_FILE="$STAX_DIR/stax-name"
+STAX_LOG="$STAX_DIR/stax.log"
 SSH_OPTIONS="-q"
 host=`hostname`
 logdir=/tmp
@@ -67,7 +68,8 @@ stax-error-exit(){
 stax-logger(){
     msg="$1"
     if [[ ! $STAX_LOG ]]; then
-        stax-error-exit "you cannot call stax-logger when STAX_LOG is not defined" 5
+        echo "$pkg: cannot call stax-logger with STAX_LOG undefined"
+        exit 5
     fi
     echo "$(date +'%b %d %T') $host $pkg: $msg" >> "$STAX_LOG"
 }
@@ -297,7 +299,6 @@ stax-existing(){
     fi
     # define all the global variables
     STAX_NAME=$(<$STAX_NAME_FILE)
-    STAX_LOG="$STAX_DIR/$STAX_NAME.log"
     STAX_DESC="$STAX_DIR/$STAX_NAME.json"
     STAX_PARAMS="$STAX_DIR/$STAX_NAME.params"
     STAX_KEY="$STAX_NAME"
