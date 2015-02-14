@@ -258,6 +258,9 @@ ForwardAgent yes
 ForwardX11 no
 UserKnownHostsFile /dev/null
 StrictHostKeyChecking no
+ServerAliveInterval 60
+ServerAliveCountMax 30
+TCPKeepAlive no
 IdentityFile $STAX_PRIV_KEY
 
 Host jump
