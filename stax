@@ -88,9 +88,9 @@ EOM
 #validate          Validate JSON - DRY RUN, nothing applied
 
 stax-logo(){
-NUMS=`wc -l < assets/stax/stax-slogans`
+NUMS=`wc -l < assets/stax/slogans`
     echo "${green}     _             "
-    echo "    | | ${yellow}`head -$((${RANDOM} % ${NUMS} + 1)) assets/stax/stax-slogans | tail -1`${green}"
+    echo "    | | ${yellow}`head -$((${RANDOM} % ${NUMS} + 1)) assets/stax/slogans | tail -1`${green}"
     echo " ___| |_ __ ___  __"
     echo '/ __| __/ _` \ \/ /'
     echo '\__ \ || (_| |>  < '
