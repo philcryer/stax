@@ -27,7 +27,6 @@ STAX_NAME_FILE="$STAX_DIR/stax-name"
 SSH_OPTIONS="-q"
 host=`hostname`
 logdir=/tmp
-logfile=$logdir/$pkg.log
 jq=assets/jq/$SYSTEM/jq
 
 # set colors
@@ -49,13 +48,13 @@ stax-message(){
         shift
     fi
     echo "${yellow}[ $cyan$pref$yellow ]$reset  $msg"
-    stax-logger "$msg"
+    stax-logger "INFO: $msg"
 }
 
 stax-error(){
     msg="$1"
     echo "${yellow}[ ${red}ERRR$yellow ]$reset  $msg"
-    stax-logger "$msg"
+    stax-logger "ERROR: $msg"
 }
 
 stax-error-exit(){
@@ -67,7 +66,10 @@ stax-error-exit(){
 
 stax-logger(){
     msg="$1"
-    echo `date +'%b %d %T'` $host $pkg: $msg >> $logfile
+    if [[ ! $STAX_LOG ]]; then
+        stax-error-exit "you cannot call stax-logger when STAX_LOG is not defined" 5
+    fi
+    echo "$(date +'%b %d %T') $host $pkg: $msg" >> "$STAX_LOG"
 }
 
 stax-usage(){
@@ -190,7 +192,7 @@ stax-create-bucket(){
 }
 
 stax-create(){
-    if [ -f $STAX_NAME_FILE ]; then
+    if [[ -f $STAX_NAME_FILE ]]; then
         existing_name=$(<$STAX_NAME_FILE)
         stax-error-exit "existing stax defined: $existing_name" 1
     fi
@@ -292,7 +294,18 @@ stax-existing(){
     if [[ ! -f $STAX_NAME_FILE ]]; then
         stax-error-exit "no stax defined, use create first" 1
     fi
-    STAX_EXIST=$(<$STAX_NAME_FILE)
+    # define all the global variables
+    STAX_NAME=$(<$STAX_NAME_FILE)
+    STAX_LOG="$STAX_DIR/$STAX_NAME.log"
+    STAX_DESC="$STAX_DIR/$STAX_NAME.json"
+    STAX_PARAMS="$STAX_DIR/$STAX_NAME.params"
+    STAX_KEY="$STAX_NAME"
+    STAX_PRIV_KEY="$STAX_DIR/$STAX_NAME.pem"
+    STAX_PUB_KEY="$STAX_PRIV_KEY.pub"
+    STAX_JUMP_FILE="$STAX_DIR/$STAX_NAME.jump"
+    STAX_SSH_CONFIG="$STAX_DIR/$STAX_NAME.ssh_config"
+    SSH_OPTIONS="$SSH_OPTIONS -F $STAX_SSH_CONFIG"
+    # add the ssh key to the ssh agent
 }
 
 # save the description of the stax to a file
@@ -766,18 +779,6 @@ fi
 stax-logo
 stax-preflight
 
-if [ -f "$STAX_NAME_FILE" ]; then
-    STAX_NAME=$(<$STAX_NAME_FILE)
-    STAX_DESC="$STAX_DIR/$STAX_NAME.json"
-    STAX_PARAMS="$STAX_DIR/$STAX_NAME.params"
-    STAX_KEY="$STAX_NAME"
-    STAX_PRIV_KEY="$STAX_DIR/$STAX_NAME.pem"
-    STAX_PUB_KEY="$STAX_PRIV_KEY.pub"
-    STAX_JUMP_FILE="$STAX_DIR/$STAX_NAME.jump"
-    STAX_SSH_CONFIG="$STAX_DIR/$STAX_NAME.ssh_config"
-    SSH_OPTIONS="$SSH_OPTIONS -F $STAX_SSH_CONFIG"
-fi
-
 # determine which subcommand to run
 if [ "$DEBUG" == "ON" ]; then echo "----- DEBUG :::: $sub_cmd $sub_cmd_args -----"; fi
 case "$sub_cmd" in
@@ -797,6 +798,7 @@ case "$sub_cmd" in
 
     create)
         stax-create
+        stax-existing
         stax-motd
         stax-describe
         ;;
