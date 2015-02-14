@@ -21,6 +21,7 @@ STAX_NAME_FILE="$STAX_DIR/stax-name"
 SSH_OPTIONS="-q"
 logdir=/tmp
 logfile=$logdir/$pkg.log
+jq=assets/jq/$SYSTEM/jq
 
 # set colors
 red=$(tput setaf 1)
@@ -109,7 +110,7 @@ NUMS=`wc -l < assets/stax/slogans`
 
 stax-preflight(){
     # check for required cli tools
-    for cli in jq aws ssh; do
+    for cli in aws ssh; do
         if ! type "$cli" > /dev/null 2>&1; then
             echo "$pkg: $cli is not in the PATH. Aborting."
             exit 1
@@ -326,8 +327,7 @@ stax-list(){
     echo "{"
     # list running stax
     ## FIXME jq, if we use assets we need to have binaries for linux and osx (aka darwin) add later, for now use which
-    #$aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE | assets/jq '.StackSummaries[].StackName' | grep "vpc-stax" | cut -d"\"" -f2 > /tmp/run.list
-    $aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE | jq '.StackSummaries[].StackName' | grep "vpc-stax" | cut -d"\"" -f2 > /tmp/run.list
+    $aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE | $jq '.StackSummaries[].StackName' | grep "vpc-stax" | cut -d"\"" -f2 > /tmp/run.list
     ls -1 $STAX_DIR/audit > /tmp/hist.list
     # put a * by one if it was launched from here
     for f in `cat /tmp/run.list`;
@@ -422,7 +422,7 @@ stax-motd(){
     now=$(date)
     motd="$STAX_DIR/$STAX_NAME.motd"
     cat > "$motd" <<'EOF'
-
+     _
     | | welcome to the jumpbox
  ___| |_ __ ___  __
 / __| __/ _` \ \/ /
