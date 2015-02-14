@@ -182,6 +182,7 @@ stax-create-key(){
         stax-message-exit "failed to generate public key from private key: $STAX_PRIV_KEY $STAX_PUB_KEY" 1
     fi
     stax-message "  public key generated"
+    stax-ssh-key-add
 }
 
 stax-create-bucket(){
@@ -378,7 +379,6 @@ stax-start-service(){
         stax-error-exit "unknown service: $service" 1
     fi
     stax-message "starting $service on the stax service cluster"
-    stax-ssh-key-add
     stax-message "  copying $service_file to service docker host"
     scp_cmd="scp $SSH_OPTIONS $service_file service:$service_basename"
     if ! $scp_cmd; then
@@ -398,7 +398,6 @@ stax-start-service(){
         mkdir -p $STAX_DIR/audit/$STAX_NAME
     fi
     touch "$STAX_DIR/audit/$STAX_NAME/$(date +'%Y%m%d-%H%M%S')-fleetctl-started-service-$service"
-    stax-ssh-key-remove
     sleep 5
 }
 
@@ -463,7 +462,6 @@ EOF
 
 stax-popjumpbox(){
     stax-message "setup motd and bashrc on jumpbox"
-    stax-ssh-key-add
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     pushing motd to $STAX_PUB_IP: "
     motd="$STAX_DIR/$STAX_NAME.motd"
     if [[ ! -f $motd ]]; then
@@ -477,7 +475,6 @@ stax-popjumpbox(){
     echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     copying service definitions to $STAX_PUB_IP: "
     scp $SSH_OPTIONS -r assets/services jump: > /dev/null
     echo "done"
-    stax-ssh-key-remove
 }
 
 stax-getdockerips(){
@@ -501,13 +498,11 @@ stax-remote-commands(){
     sed "s|STAX_KEY|${STAX_KEY}|g" assets/stax/fleetlogs > "$fleet_logs"
     echo "done"
     ## FIXME we're not using files on the vpc-jump anymore, drooling needs to make this stax connnect fleetstats|fleetlogs
-    #stax-ssh-key-add
     #echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     putting connect files on jumpbox: "
     #scp $SSH_OPTIONS "$fleet_stats" jump:fleetstats > /dev/null
     #scp $SSH_OPTIONS "$fleet_logs" jump:fleetlogs > /dev/null
     #ssh $SSH_OPTIONS jump 'chmod 0755 fleetstats fleetlogs' > /dev/null
     #echo "done"
-    #stax-ssh-key-remove
 }
 
 stax-ssh-key-add(){
@@ -547,21 +542,19 @@ stax-connect(){
                 ;;
         esac
     fi
-    stax-ssh-key-add
     ssh_cmd="ssh $SSH_OPTIONS $target $@"
     if ! $ssh_cmd; then
         stax-error "ssh command failed: $ssh_cmd"
-        stax-ssh-key-remove
         exit 1
     fi
-    stax-ssh-key-remove
 }
 
 stax-destroy-key(){
-    echo -n "${yellow}[ ${cyan}----${yellow} ]${reset}     deleting $STAX_NAME key: "
+    stax-message "destroying $STAX_NAME key"
+    stax-ssh-key-remove
+    stax-message "  deleting $STAX_NAME key from aws"
     $aws ec2 delete-key-pair --key-name "$STAX_NAME" > /dev/null
     rm -f $STAX_PUB_KEY $STAX_PRIV_KEY
-    echo "done"
 }
 
 stax-destroy-files(){
