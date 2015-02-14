@@ -669,6 +669,7 @@ stax-test(){
 EOF
     stax-create
     rm -f "$config"
+    stax-existing
     stax-motd
     # wait while it is building
     stax-complete 1
