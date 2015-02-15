@@ -157,7 +157,7 @@ stax-preflight(){
 
 stax-validate(){
     template="$1"
-    echo "$template"
+    stax-message "validating template $template"
     if ! $aws cloudformation validate-template --template-url "$template" > /dev/null; then
         stax-error "template failed to validate, exiting"
         stax-destroy-bucket
@@ -211,14 +211,7 @@ stax-create(){
     stax-message "  uploading template"
     $aws s3 cp "$SCRIPT_PATH/templates/cloudformation-template-vpc.json" "s3://$template" > /dev/null
     stax-message "  template uploaded"
-    stax-message "  validating template"
-    if ! stax-validate "$template_url" > /dev/null; then
-        stax-error "validation failed, exiting"
-        stax-destroy-bucket
-        stax-destroy-key
-        exit 2
-    fi
-    stax-message "  validation successful"
+    stax-validate "$template_url"
     # upload vpc assets
     stax-message "  uploading vpc assets"
     for f in assets/vpc/*; do
