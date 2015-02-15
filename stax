@@ -78,7 +78,7 @@ If an argument is required for a long option, so to the short. Same for
 optional arguments.
 
 Commands:
-  connect           Connect to the jumpbox in the VPC stax over SSH
+  connect [target]  Connect to jump|router|service in the VPC stax over SSH
   create            Create a new VPC stax in AWS
   describe          Describe the stax created from this host
   destroy           Destroy the existing VPC stax
