@@ -14,6 +14,7 @@
   { "ParameterKey": "JumpInstanceType",    "ParameterValue": "t2.micro" },
   { "ParameterKey": "NATInstanceType",     "ParameterValue": "t2.micro" },
   { "ParameterKey": "DockerInstanceType",  "ParameterValue": "m3.medium" },
+  { "ParameterKey": "CoreOSChannelAMI",    "ParameterValue": "CoreOSStableAMI" },
   { "ParameterKey": "AdvertisedIPAddress", "ParameterValue": "private" },
   { "ParameterKey": "AutoScaleCooldown",   "ParameterValue": "300" },
   { "ParameterKey": "Owner",               "ParameterValue": "@OWNER@" },
