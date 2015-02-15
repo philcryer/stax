@@ -663,7 +663,10 @@ EOF
     stax-message "  listing machines in fleet cluster"
     stax-connect service fleetctl list-machines
     stax-message "  getting consul cluster members"
+    stax-message "  giving consul some time to cluster"
+    sleep 200
     stax-connect router docker exec consul consul members
+    stax-connect service curl localhost:8500/v1/catalog/nodes
 
     #jump_hostname=$(stax-connect jump hostname)
     #stax-message "  jump box hostname: $jump_hostname"
@@ -671,7 +674,6 @@ EOF
     #stax-message "  consul cluster members: $consul_members"
     # systemctl status consul
     # journalctl -u consul
-    # curl localhost:8500/v1/catalog/nodes
     # start httpbin
     # curl ELB/httpbin/get
     # fleetctl list-
