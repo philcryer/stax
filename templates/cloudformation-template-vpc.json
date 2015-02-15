@@ -50,7 +50,7 @@
       "Type":"String",
       "MinLength":"4",
       "MaxLength":"5",
-      "AllowedPattern":"true|false",
+      "AllowedValues":["true","false"],
       "ConstraintDescription":"Value should be 'true' or 'false'",
       "Default":"false"
     },
@@ -188,6 +188,13 @@
       "Type":"Number",
       "Default":"300"
     },
+    "CoreOSChannelAMI":{
+      "Description":"MapName for the update channel AMI to use when launching CoreOS instances",
+      "Type":"String",
+      "AllowedValues":["CoreOSStableAMI","CoreOSBetaAMI","CoreOSAlphaAMI"],
+      "ConstraintDescription":"Value should be 'CoreOSStableAMI', 'CoreOSBetaAMI', or 'CoreOSAlphaAMI'",
+      "Default":"CoreOSStableAMI"
+    },
     "DiscoveryURL":{
       "Description":"An unique etcd cluster discovery URL. Grab a new token from https://discovery.etcd.io/new",
       "Type":"String"
@@ -211,46 +218,34 @@
   },
   "Mappings":{
     "CoreOSAlphaAMI":{
-      "us-east-1":{
-        "AMI":"ami-3415525c"
-      },
-      "us-west-1":{
-        "AMI":"ami-bcbfa6f9"
-      },
-      "us-west-2":{
-        "AMI":"ami-6f134b5f"
-      },
-      "eu-west-1":{
-        "AMI":"ami-79f27e0e"
-      }
+      "us-east-1":{ "AMI":"ami-52396c3a" },
+      "us-west-1":{ "AMI":"ami-240f1561" },
+      "us-west-2":{ "AMI":"ami-6d85a15d" },
+      "eu-west-1":{ "AMI":"ami-f56ee482" }
+    },
+    "CoreOSBetaAMI":{
+      "us-east-1":{ "AMI":"ami-509bd838" },
+      "us-west-1":{ "AMI":"ami-4ab7af0f" },
+      "us-west-2":{ "AMI":"ami-07762d37" },
+      "eu-west-1":{ "AMI":"ami-19af216e" }
+    },
+    "CoreOSStableAMI":{
+      "us-east-1":{ "AMI":"ami-8297d4ea" },
+      "us-west-1":{ "AMI":"ami-24b5ad61" },
+      "us-west-2":{ "AMI":"ami-f1702bc1" },
+      "eu-west-1":{ "AMI":"ami-5d911f2a" }
     },
     "AmazonLinuxAMI":{
-      "us-east-1":{
-        "AMI":"ami-b66ed3de"
-      },
-      "us-west-1":{
-        "AMI":"ami-4b6f650e"
-      },
-      "us-west-2":{
-        "AMI":"ami-b5a7ea85"
-      },
-      "eu-west-1":{
-        "AMI":"ami-6e7bd919"
-      }
+      "us-east-1":{ "AMI":"ami-146e2a7c" },
+      "us-west-1":{ "AMI":"ami-42908907" },
+      "us-west-2":{ "AMI":"ami-dfc39aef" },
+      "eu-west-1":{ "AMI":"ami-9d23aeea" }
     },
     "AWSNATAMI":{
-      "us-east-1":{
-        "AMI":"ami-6e9e4b06"
-      },
-      "us-west-1":{
-        "AMI":"ami-1d2b2958"
-      },
-      "us-west-2":{
-        "AMI":"ami-8b6912bb"
-      },
-      "eu-west-1":{
-        "AMI":"ami-5b60b02c"
-      }
+      "us-east-1":{ "AMI":"ami-184dc970" },
+      "us-west-1":{ "AMI":"ami-a98396ec" },
+      "us-west-2":{ "AMI":"ami-290f4119" },
+      "eu-west-1":{ "AMI":"ami-14913f63" }
     }
   },
   "Resources":{
@@ -1888,10 +1883,8 @@
       "Properties":{
         "ImageId":{
           "Fn::FindInMap":[
-            "CoreOSAlphaAMI",
-            {
-              "Ref":"AWS::Region"
-            },
+            { "Ref":"CoreOSChannelAMI" },
+            { "Ref":"AWS::Region" },
             "AMI"
           ]
         },
@@ -2160,10 +2153,8 @@
       "Properties":{
         "ImageId":{
           "Fn::FindInMap":[
-            "CoreOSAlphaAMI",
-            {
-              "Ref":"AWS::Region"
-            },
+            { "Ref":"CoreOSChannelAMI" },
+            { "Ref":"AWS::Region" },
             "AMI"
           ]
         },
