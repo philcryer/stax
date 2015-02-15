@@ -74,19 +74,22 @@
       "Description":"User name for private Docker Registry",
       "Type":"String",
       "MinLength":"1",
-      "MaxLength":"60"
+      "MaxLength":"60",
+      "Default":"nobody"
     },
     "DockerRegistryPass":{
       "Description":"Password for private Docker Registry",
       "Type":"String",
       "MinLength":"1",
-      "MaxLength":"60"
+      "MaxLength":"60",
+      "Default":"null"
     },
     "DockerRegistryEmail":{
       "Description":"Email address for private Docker Registry",
       "Type":"String",
       "MinLength":"1",
-      "MaxLength":"60"
+      "MaxLength":"60",
+      "Default":"nobody@null.com"
     },
     "KeyName":{
       "Description":"Name of an existing EC2 KeyPair to enable SSH access to the instances",
