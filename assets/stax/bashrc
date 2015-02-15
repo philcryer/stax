@@ -6,4 +6,9 @@ if [ -f /etc/bashrc ]; then
 fi
 
 # User specific aliases and functions
-[ -z "$PS1" ] && return; PATH=$PATH:~; cat motd; echo -n "System    "; echo `cat /etc/issue.net | head -n1`; echo "Dockers   `cat docker_hosts | sed '$!N;s/\n/ /'`"; echo "";
+[ -z "$PS1" ] && return
+PATH=$PATH:~
+cat motd
+echo -n "System    "
+echo `cat /etc/issue.net | head -n1`
+echo ""
