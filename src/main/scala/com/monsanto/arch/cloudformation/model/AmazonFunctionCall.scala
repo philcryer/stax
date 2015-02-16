@@ -23,7 +23,8 @@ object AmazonFunctionCall extends DefaultJsonProtocol {
 
       val value = obj match{
         case r:   Ref             => implicitly[JsonWriter[Ref#T]             ].write(r.arguments)
-        case r:   TypedRef[_]     => implicitly[JsonWriter[TypedRef[_]#T]     ].write(r.arguments)
+        case r:   ParameterRef[_] => implicitly[JsonWriter[ParameterRef[_]#T] ].write(r.arguments)
+        case r:   ResourceRef[_]  => implicitly[JsonWriter[ResourceRef[_]#T]  ].write(r.arguments)
         case ga:  `Fn::GetAtt`    => implicitly[JsonWriter[`Fn::GetAtt`#T]    ].write(ga.arguments)
         case j:   `Fn::Join`      => implicitly[JsonWriter[`Fn::Join`#T]      ].write(j.arguments)
         case fim: `Fn::FindInMap` => implicitly[JsonWriter[`Fn::FindInMap`#T] ].write(fim.arguments)
@@ -36,11 +37,16 @@ object AmazonFunctionCall extends DefaultJsonProtocol {
     }
   })
 }
-case class Ref @deprecated("use TypedRef instead", "Feb 16 2015") (variable: String)
+
+@deprecated("use ParameterRef or ResourceRef instead", "Feb 16 2015")
+case class Ref (variable: String)
   extends AmazonFunctionCall[String]("Ref"){type T = String ; val arguments = variable}
 
-case class TypedRef[R](p: Parameter{type Rep = R})
+case class ParameterRef[R](p: Parameter{type Rep = R})
   extends AmazonFunctionCall[R]("Ref"){type T = String ; val arguments = p.name}
+
+case class ResourceRef[R <: Resource](r: R)
+  extends AmazonFunctionCall[R]("Ref"){type T = String ; val arguments = r.name}
 
 case class `Fn::GetAtt`(args: Seq[String])
   extends AmazonFunctionCall[String]("Fn::GetAtt"){type T = Seq[String] ; val arguments = args}

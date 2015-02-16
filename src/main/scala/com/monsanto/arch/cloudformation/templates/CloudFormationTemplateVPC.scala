@@ -43,6 +43,12 @@ object CloudFormationTemplateVPC extends App {
     Description = "The net block (CIDR) that SSH is available to.",
     Default     = CidrIp(0,0,0,0,0)
   )
+  
+  val vpcResource = `AWS::EC2::VPC`(
+    "VPC",
+    CidrBlock = ParameterRef(vpcCidrParam),
+    Tags = standardTags("vpc", "Public")
+  )
 
   val itsaDockerStack = Template(
     AWSTemplateFormatVersion = "2010-09-09",
@@ -353,35 +359,31 @@ object CloudFormationTemplateVPC extends App {
           Path = "/",
           Roles = Seq(Ref("NATRole"))
         ),
-        `AWS::EC2::VPC`(
-          "VPC",
-          CidrBlock = Ref("VpcCidr"),
-          Tags = standardTags("vpc", "Public")
-        ),
+        vpcResource,
         `AWS::EC2::Subnet`(
           "PubSubnet1",
-          VpcId = Ref("VPC"),
+          VpcId = ResourceRef(vpcResource),
           AvailabilityZone = "us-east-1a",
           CidrBlock = Ref("PublicSubnet1"),
           Tags = standardTags("pubsubnet1", "Public")
         ),
         `AWS::EC2::Subnet`(
           "PriSubnet1",
-          VpcId = Ref("VPC"),
+          VpcId = ResourceRef(vpcResource),
           AvailabilityZone = "us-east-1a",
           CidrBlock = Ref("PrivateSubnet1"),
           Tags = standardTags("prisubnet1", "Private")
         ),
         `AWS::EC2::Subnet`(
           "PubSubnet2",
-          VpcId = Ref("VPC"),
+          VpcId = ResourceRef(vpcResource),
           AvailabilityZone = "us-east-1b",
           CidrBlock = Ref("PublicSubnet2"),
           Tags = standardTags("pubsubnet2", "Public")
         ),
         `AWS::EC2::Subnet`(
           "PriSubnet2",
-          VpcId = Ref("VPC"),
+          VpcId = ResourceRef(vpcResource),
           AvailabilityZone = "us-east-1b",
           CidrBlock = Ref("PrivateSubnet2"),
           Tags = standardTags("prisubnet2", "Private")
@@ -392,12 +394,12 @@ object CloudFormationTemplateVPC extends App {
         ),
         `AWS::EC2::VPCGatewayAttachment`(
           "GatewayToInternet",
-          VpcId = Ref("VPC"),
+          VpcId = ResourceRef(vpcResource),
           InternetGatewayId = Ref("InternetGateway")
         ),
         `AWS::EC2::RouteTable`(
           "PublicRouteTable",
-          VpcId = Ref("VPC"),
+          VpcId = ResourceRef(vpcResource),
           Tags = standardTags("pubrt", "Public")
         ),
         `AWS::EC2::Route`(
@@ -408,7 +410,7 @@ object CloudFormationTemplateVPC extends App {
         ),
         `AWS::EC2::RouteTable`(
           "PrivateRouteTable1",
-          VpcId = Ref("VPC"),
+          VpcId = ResourceRef(vpcResource),
           Tags = standardTags("privrt1", "Private")
         ),
         `AWS::EC2::Route`(
@@ -419,7 +421,7 @@ object CloudFormationTemplateVPC extends App {
         ),
         `AWS::EC2::RouteTable`(
           "PrivateRouteTable2",
-          VpcId = Ref("VPC"),
+          VpcId = ResourceRef(vpcResource),
           Tags = standardTags("privrt2", "Private")
         ),
         `AWS::EC2::Route`(
@@ -451,13 +453,13 @@ object CloudFormationTemplateVPC extends App {
         `AWS::EC2::SecurityGroup`(
           "JumpSecurityGroup",
           GroupDescription = "Rules for allowing access to public subnet nodes",
-          VpcId = Ref("VPC"),
+          VpcId = ResourceRef(vpcResource),
           SecurityGroupEgress = None,
           SecurityGroupIngress =
             Some(Seq(
               CidrIngressSpec(
                 IpProtocol = "tcp",
-                CidrIp = TypedRef(allowSSHFromParam),
+                CidrIp = ParameterRef(allowSSHFromParam),
                 FromPort = "22",
                 ToPort = "22"
               )
@@ -481,7 +483,7 @@ object CloudFormationTemplateVPC extends App {
         `AWS::EC2::SecurityGroup`(
           "NATSecurityGroup",
           GroupDescription = "Rules for allowing access to public subnet nodes",
-          VpcId = Ref("VPC"),
+          VpcId = ResourceRef(vpcResource),
           SecurityGroupIngress = Some(Seq(
             SGIngressSpec(
               IpProtocol = "tcp",
@@ -491,7 +493,7 @@ object CloudFormationTemplateVPC extends App {
             ),
             CidrIngressSpec(
               IpProtocol = "-1",
-              CidrIp = TypedRef(vpcCidrParam),
+              CidrIp = ParameterRef(vpcCidrParam),
               FromPort = "0",
               ToPort = "65535"
             )
@@ -594,18 +596,18 @@ object CloudFormationTemplateVPC extends App {
         `AWS::EC2::SecurityGroup`(
           "RouterELBSecurityGroup",
           GroupDescription = "Rules for allowing access to/from service router ELB",
-          VpcId = Ref("VPC"),
+          VpcId = ResourceRef(vpcResource),
           SecurityGroupEgress = None,
           SecurityGroupIngress = Some(Seq(
             CidrIngressSpec(
               IpProtocol = "tcp",
-              CidrIp = TypedRef(allowHTTPFromParam),
+              CidrIp = ParameterRef(allowHTTPFromParam),
               FromPort = "80",
               ToPort = "80"
             ),
             CidrIngressSpec(
               IpProtocol = "tcp",
-              CidrIp = TypedRef(allowHTTPFromParam),
+              CidrIp = ParameterRef(allowHTTPFromParam),
               FromPort = "443",
               ToPort = "443"
             )
@@ -654,7 +656,7 @@ object CloudFormationTemplateVPC extends App {
         `AWS::EC2::SecurityGroup`(
           "CoreOSFromJumpSecurityGroup",
           GroupDescription = "Allow general CoreOS/Docker access from the jump box",
-          VpcId = Ref("VPC"),
+          VpcId = ResourceRef(vpcResource),
           SecurityGroupEgress = None,
           SecurityGroupIngress = Some(Seq(
             SGIngressSpec(
@@ -683,7 +685,7 @@ object CloudFormationTemplateVPC extends App {
         `AWS::EC2::SecurityGroup`(
           "RouterCoreOSSecurityGroup",
           GroupDescription = "Router CoreOS SecurityGroup",
-          VpcId = Ref("VPC"),
+          VpcId = ResourceRef(vpcResource),
           SecurityGroupIngress = Some(Seq(
             SGIngressSpec(
               IpProtocol = "tcp",
@@ -829,7 +831,7 @@ object CloudFormationTemplateVPC extends App {
         `AWS::EC2::SecurityGroup`(
           "CoreOSSecurityGroup",
           GroupDescription = "Security Group for microservices CoreOS Auto Scaling Group",
-          VpcId = Ref("VPC"),
+          VpcId = ResourceRef(vpcResource),
           SecurityGroupIngress = Some(Seq(
             SGIngressSpec(
               IpProtocol = "-1",
@@ -1008,7 +1010,7 @@ object CloudFormationTemplateVPC extends App {
 
     Outputs = Some(
       Seq(
-        Output("VPCID",          "VPC Info",          Ref("VPC")                               ),
+        Output("VPCID",          "VPC Info",          ResourceRef(vpcResource)                               ),
         Output("JumpEIP",        "Jump Box EIP",      Ref("JumpEIP")                           ),
         Output("NAT1EIP",        "NAT 1 EIP",         Ref("NAT1EIP")                           ),
         Output("NAT2EIP",        "NAT 2 EIP",         Ref("NAT2EIP")                           ),
