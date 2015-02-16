@@ -74,6 +74,11 @@ stax-logger(){
     echo "$(date +'%b %d %T') $host $pkg: $msg" >> "$STAX_LOG"
 }
 
+stax-generate-template(){
+    stax-message "Generating the VPC template from the low-level Scala DSL"
+    sbt run
+}
+
 stax-usage(){
     cat <<EOM
 Usage: stax [OPTIONS] <command>
@@ -93,6 +98,7 @@ Commands:
   describe          Describe the stax created from this host
   destroy           Destroy the existing VPC stax
   fleet             Run various fleetctl commands against the fleet cluster
+  generate          Regenerate the VPC template from the Scala definition
   help              Output this message
   history           View history of recently created/destroyed stax
   list              List all completely built and running stax
@@ -803,6 +809,10 @@ case "$sub_cmd" in
 
     help)
         stax-usage
+        ;;
+
+    generate)
+        stax-generate-template
         ;;
 
     history)
