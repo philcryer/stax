@@ -3,6 +3,8 @@ package com.monsanto.arch.cloudformation.model
 import spray.json._
 import DefaultJsonProtocol._
 
+import scala.language.implicitConversions
+
 /**
  * Created by Ryan Richt on 2/15/15
  */
@@ -52,14 +54,14 @@ object Resource extends DefaultJsonProtocol {
 case class `AWS::AutoScaling::AutoScalingGroup`(
                                                  name: String,
                                                  AvailabilityZones: Seq[String],
-                                                 LaunchConfigurationName: Token,
+                                                 LaunchConfigurationName: Token[String],
                                                  MinSize: String,
                                                  MaxSize: String,
-                                                 DesiredCapacity: Token,
+                                                 DesiredCapacity: Token[String],
                                                  HealthCheckType: String,
-                                                 VPCZoneIdentifier: Seq[Token],
+                                                 VPCZoneIdentifier: Seq[Token[String]],
                                                  Tags: Seq[AmazonTag],
-                                                 LoadBalancerNames: Option[Seq[Token]]
+                                                 LoadBalancerNames: Option[Seq[Token[String]]]
                                                  ) extends Resource("AWS::AutoScaling::AutoScalingGroup")
 object `AWS::AutoScaling::AutoScalingGroup` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`AWS::AutoScaling::AutoScalingGroup`] = jsonFormat10(`AWS::AutoScaling::AutoScalingGroup`.apply)
@@ -67,10 +69,10 @@ object `AWS::AutoScaling::AutoScalingGroup` extends DefaultJsonProtocol {
 
 case class `AWS::AutoScaling::LaunchConfiguration`(
                                                     name: String,
-                                                    ImageId: Token,
-                                                    InstanceType: Token,
-                                                    KeyName: Token,
-                                                    SecurityGroups: Seq[Token],
+                                                    ImageId: Token[String],
+                                                    InstanceType: Token[String],
+                                                    KeyName: Token[String],
+                                                    SecurityGroups: Seq[Token[String]],
                                                     UserData: `Fn::Base64`
                                                     ) extends Resource("AWS::AutoScaling::LaunchConfiguration")
 object `AWS::AutoScaling::LaunchConfiguration` extends DefaultJsonProtocol {
@@ -80,29 +82,29 @@ object `AWS::AutoScaling::LaunchConfiguration` extends DefaultJsonProtocol {
 case class `AWS::AutoScaling::ScalingPolicy`(
                                               name: String,
                                               AdjustmentType: String,
-                                              AutoScalingGroupName: Token,
-                                              Cooldown: Token,
+                                              AutoScalingGroupName: Token[String],
+                                              Cooldown: Token[String],
                                               ScalingAdjustment: String
                                               ) extends Resource("AWS::AutoScaling::ScalingPolicy")
 object `AWS::AutoScaling::ScalingPolicy` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`AWS::AutoScaling::ScalingPolicy`] = jsonFormat5(`AWS::AutoScaling::ScalingPolicy`.apply)
 }
 
-case class `AWS::EC2::EIP`(name: String, Domain: String, InstanceId: Token) extends Resource("AWS::EC2::EIP")
+case class `AWS::EC2::EIP`(name: String, Domain: String, InstanceId: Token[String]) extends Resource("AWS::EC2::EIP")
 object `AWS::EC2::EIP` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`AWS::EC2::EIP`] = jsonFormat3(`AWS::EC2::EIP`.apply)
 }
 
 case class `AWS::EC2::Instance`(
                                  name: String,
-                                 InstanceType: Token,
-                                 KeyName: Token,
-                                 SubnetId: Token,
-                                 ImageId: Token,
-                                 SecurityGroupIds: Seq[Token],
+                                 InstanceType: Token[String],
+                                 KeyName: Token[String],
+                                 SubnetId: Token[String],
+                                 ImageId: Token[String],
+                                 SecurityGroupIds: Seq[Token[String]],
                                  Tags: Seq[AmazonTag],
                                  Metadata: Option[Map[String, String]] = None,
-                                 IamInstanceProfile: Option[Token] = None,
+                                 IamInstanceProfile: Option[Token[String]] = None,
                                  SourceDestCheck: Option[String] = None,
                                  UserData: Option[`Fn::Base64`] = None
                                  ) extends Resource("AWS::EC2::Instance")
@@ -122,16 +124,16 @@ object `AWS::EC2::KeyPair::KeyName` extends DefaultJsonProtocol {
 
 case class `AWS::EC2::Route`(
                               name: String,
-                              RouteTableId: Token,
+                              RouteTableId: Token[String],
                               DestinationCidrBlock: String,
-                              GatewayId: Option[Token] = None,
-                              InstanceId: Option[Token] = None
+                              GatewayId: Option[Token[String]] = None,
+                              InstanceId: Option[Token[String]] = None
                               ) extends Resource("AWS::EC2::Route")
 object `AWS::EC2::Route` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`AWS::EC2::Route`] = jsonFormat5(`AWS::EC2::Route`.apply)
 }
 
-case class `AWS::EC2::RouteTable`(name: String, VpcId: Token, Tags: Seq[AmazonTag]) extends Resource("AWS::EC2::RouteTable")
+case class `AWS::EC2::RouteTable`(name: String, VpcId: Token[String], Tags: Seq[AmazonTag]) extends Resource("AWS::EC2::RouteTable")
 object `AWS::EC2::RouteTable` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`AWS::EC2::RouteTable`] = jsonFormat3(`AWS::EC2::RouteTable`.apply)
 }
@@ -139,7 +141,7 @@ object `AWS::EC2::RouteTable` extends DefaultJsonProtocol {
 case class `AWS::EC2::SecurityGroup`(
                                       name: String,
                                       GroupDescription: String,
-                                      VpcId: Token,
+                                      VpcId: Token[String],
                                       SecurityGroupIngress: Option[Seq[IngressSpec]],
                                       SecurityGroupEgress: Option[Seq[EgressSpec]],
                                       Tags: Seq[AmazonTag]
@@ -160,13 +162,36 @@ object IngressSpec extends DefaultJsonProtocol {
     def read(json: JsValue) = ???
   }
 }
-case class CidrIngressSpec(IpProtocol: String, CidrIp: Token, FromPort: String, ToPort: String) extends IngressSpec
+case class CidrIngressSpec(IpProtocol: String, CidrIp: Token[CidrIp], FromPort: String, ToPort: String) extends IngressSpec
 object CidrIngressSpec extends DefaultJsonProtocol {
   implicit val format: JsonFormat[CidrIngressSpec] = jsonFormat4(CidrIngressSpec.apply)
 }
-case class SGIngressSpec(IpProtocol: String, SourceSecurityGroupId: Token, FromPort: String, ToPort: String) extends IngressSpec
+case class SGIngressSpec(IpProtocol: String, SourceSecurityGroupId: Token[String], FromPort: String, ToPort: String) extends IngressSpec
 object SGIngressSpec extends DefaultJsonProtocol {
   implicit val format: JsonFormat[SGIngressSpec] = jsonFormat4(SGIngressSpec.apply)
+}
+
+case class IPAddressSegment(value: Int){ require( value <= 255 && value >= 0 ) }
+object IPAddressSegment {
+  implicit def fromInt(i: Int): IPAddressSegment = IPAddressSegment(i)
+}
+
+case class IPMask(value: Int){ require( value <= 32 && value >= 0 ) }
+object IPMask {
+  implicit def fromInt(i: Int): IPMask = IPMask(i)
+}
+
+case class CidrIp(a: IPAddressSegment, b: IPAddressSegment, c: IPAddressSegment, d: IPAddressSegment, mask: IPMask)
+object CidrIp extends DefaultJsonProtocol {
+  implicit val format: JsonFormat[CidrIp] = new JsonFormat[CidrIp] {
+    def write(obj: CidrIp) = JsString( Seq(obj.a, obj.b, obj.c, obj.d).map(_.value.toString).mkString(".") + "/" + obj.mask.value.toString )
+
+    def read(json: JsValue) = {
+      val parts = json.convertTo[String].split(Array('.','/')).map(_.toInt)
+
+      CidrIp(parts(0), parts(1), parts(2), parts(3), parts(4))
+    }
+  }
 }
 
 sealed trait EgressSpec
@@ -181,11 +206,11 @@ object EgressSpec extends DefaultJsonProtocol {
     def read(json: JsValue) = ???
   }
 }
-case class CidrEgressSpec(IpProtocol: String, CidrIp: Token, FromPort: String, ToPort: String) extends EgressSpec
+case class CidrEgressSpec(IpProtocol: String, CidrIp: Token[CidrIp], FromPort: String, ToPort: String) extends EgressSpec
 object CidrEgressSpec extends DefaultJsonProtocol {
   implicit val format: JsonFormat[CidrEgressSpec] = jsonFormat4(CidrEgressSpec.apply)
 }
-case class SGEgressSpec(IpProtocol: String, DestinationSecurityGroupId: Token, FromPort: String, ToPort: String) extends EgressSpec
+case class SGEgressSpec(IpProtocol: String, DestinationSecurityGroupId: Token[String], FromPort: String, ToPort: String) extends EgressSpec
 object SGEgressSpec extends DefaultJsonProtocol {
   implicit val format: JsonFormat[SGEgressSpec] = jsonFormat4(SGEgressSpec.apply)
 }
@@ -193,10 +218,10 @@ object SGEgressSpec extends DefaultJsonProtocol {
 
 case class `AWS::EC2::SecurityGroupEgress`(
                                             name: String,
-                                            GroupId: Token,
+                                            GroupId: Token[String],
                                             IpProtocol: String,
                                             DestinationSecurityGroupId:
-                                            Token,
+                                            Token[String],
                                             FromPort: String,
                                             ToPort: String
                                             ) extends Resource("AWS::EC2::SecurityGroupEgress")
@@ -206,9 +231,9 @@ object `AWS::EC2::SecurityGroupEgress` extends DefaultJsonProtocol {
 
 case class `AWS::EC2::SecurityGroupIngress`(
                                              name: String,
-                                             GroupId: Token,
+                                             GroupId: Token[String],
                                              IpProtocol: String,
-                                             SourceSecurityGroupId: Token,
+                                             SourceSecurityGroupId: Token[String],
                                              FromPort: String,
                                              ToPort: String
                                              ) extends Resource("AWS::EC2::SecurityGroupIngress")
@@ -218,9 +243,9 @@ object `AWS::EC2::SecurityGroupIngress` extends DefaultJsonProtocol {
 
 case class `AWS::EC2::Subnet`(
                                name: String,
-                               VpcId: Token,
+                               VpcId: Token[String],
                                AvailabilityZone: String,
-                               CidrBlock: Token,
+                               CidrBlock: Token[String],
                                Tags: Seq[AmazonTag]
                                ) extends Resource("AWS::EC2::Subnet")
 object `AWS::EC2::Subnet` extends DefaultJsonProtocol {
@@ -229,24 +254,24 @@ object `AWS::EC2::Subnet` extends DefaultJsonProtocol {
 
 case class `AWS::EC2::SubnetRouteTableAssociation`(
                                                     name: String,
-                                                    SubnetId: Token,
-                                                    RouteTableId: Token
+                                                    SubnetId: Token[String],
+                                                    RouteTableId: Token[String]
                                                     ) extends Resource("AWS::EC2::SubnetRouteTableAssociation")
 object `AWS::EC2::SubnetRouteTableAssociation` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`AWS::EC2::SubnetRouteTableAssociation`] = jsonFormat3(`AWS::EC2::SubnetRouteTableAssociation`.apply)
 }
 
-case class `AWS::EC2::VPC`(name: String, CidrBlock: Token, Tags: Seq[AmazonTag]) extends Resource("AWS::EC2::VPC")
+case class `AWS::EC2::VPC`(name: String, CidrBlock: Token[String], Tags: Seq[AmazonTag]) extends Resource("AWS::EC2::VPC")
 object `AWS::EC2::VPC` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`AWS::EC2::VPC`] = jsonFormat3(`AWS::EC2::VPC`.apply)
 }
 
-case class AmazonTag(Key: String, Value: Token, PropagateAtLaunch: Option[Boolean] = None)
+case class AmazonTag(Key: String, Value: Token[String], PropagateAtLaunch: Option[Boolean] = None)
 object AmazonTag extends DefaultJsonProtocol {
   implicit val format: JsonFormat[AmazonTag] = jsonFormat3(AmazonTag.apply)
 }
 
-case class `AWS::EC2::VPCGatewayAttachment`(name: String, VpcId: Token, InternetGatewayId: Token) extends Resource("AWS::EC2::VPCGatewayAttachment")
+case class `AWS::EC2::VPCGatewayAttachment`(name: String, VpcId: Token[String], InternetGatewayId: Token[String]) extends Resource("AWS::EC2::VPCGatewayAttachment")
 object `AWS::EC2::VPCGatewayAttachment` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`AWS::EC2::VPCGatewayAttachment`] = jsonFormat3(`AWS::EC2::VPCGatewayAttachment`.apply)
 }
@@ -254,8 +279,8 @@ object `AWS::EC2::VPCGatewayAttachment` extends DefaultJsonProtocol {
 case class `AWS::ElasticLoadBalancing::LoadBalancer`(
                                                       name: String,
                                                       CrossZone: Boolean,
-                                                      SecurityGroups: Seq[Token],
-                                                      Subnets: Seq[Token],
+                                                      SecurityGroups: Seq[Token[String]],
+                                                      Subnets: Seq[Token[String]],
                                                       Listeners: Seq[Listener],
                                                       HealthCheck: HealthCheck,
                                                       Tags: Seq[AmazonTag]
@@ -273,7 +298,7 @@ object HealthCheck extends DefaultJsonProtocol {
   implicit val format: JsonFormat[HealthCheck] = jsonFormat5(HealthCheck.apply)
 }
 
-case class `AWS::IAM::InstanceProfile`(name: String, Path: String, Roles: Seq[Token]) extends Resource("AWS::IAM::InstanceProfile")
+case class `AWS::IAM::InstanceProfile`(name: String, Path: String, Roles: Seq[Token[String]]) extends Resource("AWS::IAM::InstanceProfile")
 object `AWS::IAM::InstanceProfile` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`AWS::IAM::InstanceProfile`] = jsonFormat3(`AWS::IAM::InstanceProfile`.apply)
 }
@@ -292,7 +317,7 @@ case class PolicyStatement(
                             Effect: String,
                             Principal: Option[PolicyPrincipal] = None,
                             Action: Seq[String],
-                            Resource: Option[Token] = None
+                            Resource: Option[Token[String]] = None
                             )
 object PolicyStatement extends DefaultJsonProtocol {
   implicit val format: JsonFormat[PolicyStatement] = jsonFormat4(PolicyStatement.apply)

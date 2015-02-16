@@ -26,6 +26,24 @@ object CloudFormationTemplateVPC extends App {
 
   def standardTags(resourceName: String, network: String) = AmazonTag("Network", network) +: standardTagsNoNetwork(resourceName)
 
+  val vpcCidrParam = CidrIpParameter(
+    name        = "VpcCidr",
+    Description = "CIDR address range for the VPC to be created",
+    Default     = CidrIp(10,183,0,0,16)
+  )
+
+  val allowHTTPFromParam = CidrIpParameter(
+    name        = "AllowHTTPFrom",
+    Description = "The net block (CIDR) that can connect to the ELB.",
+    Default     = CidrIp(0,0,0,0,0)
+  )
+
+  val allowSSHFromParam = CidrIpParameter(
+    name        = "AllowSSHFrom",
+    Description = "The net block (CIDR) that SSH is available to.",
+    Default     = CidrIp(0,0,0,0,0)
+  )
+
   val itsaDockerStack = Template(
     AWSTemplateFormatVersion = "2010-09-09",
     Description = "Autoscaling group of Docker engines in dual AZ VPC with two NAT nodes in an active/active configuration. After successfully launching this CloudFormation stack, you will have 4 subnets in 2 AZs (a pair of public/private subnets in each AZ), a jump box, two NAT instances routing outbound traffic for their respective private subnets.  The NAT instances will automatically monitor each other and fix outbound routing problems if the other instance is unavailable.  The Docker engine autoscaling group will deploy to the private subnets.",
@@ -125,11 +143,7 @@ object CloudFormationTemplateVPC extends App {
           Description           = "Name of an existing EC2 KeyPair to enable SSH access to the instances",
           ConstraintDescription = Some("Value must be a valid AWS key pair name in your account.")
         ),
-        StringParameter(
-          name        = "VpcCidr",
-          Description = "CIDR address range for the VPC to be created",
-          Default     = "10.183.0.0/16"
-        ),
+        vpcCidrParam,
         StringParameter(
           name        = "PublicSubnet1",
           Description = "CIDR address range for the public subnet to be created in the first AZ",
@@ -234,16 +248,8 @@ object CloudFormationTemplateVPC extends App {
           AllowedValues = Seq("private","public"),
           Default       = "private"
         ),
-        StringParameter(
-          name        = "AllowHTTPFrom",
-          Description = "The net block (CIDR) that can connect to the ELB.",
-          Default     = "0.0.0.0/0"
-        ),
-        StringParameter(
-          name        = "AllowSSHFrom",
-          Description = "The net block (CIDR) that SSH is available to.",
-          Default     = "0.0.0.0/0"
-        )
+        allowHTTPFromParam,
+        allowSSHFromParam
       )
     ),
 
@@ -451,7 +457,7 @@ object CloudFormationTemplateVPC extends App {
             Some(Seq(
               CidrIngressSpec(
                 IpProtocol = "tcp",
-                CidrIp = Ref("AllowSSHFrom"),
+                CidrIp = TypedRef(allowSSHFromParam),
                 FromPort = "22",
                 ToPort = "22"
               )
@@ -485,7 +491,7 @@ object CloudFormationTemplateVPC extends App {
             ),
             CidrIngressSpec(
               IpProtocol = "-1",
-              CidrIp = Ref("VpcCidr"),
+              CidrIp = TypedRef(vpcCidrParam),
               FromPort = "0",
               ToPort = "65535"
             )
@@ -493,7 +499,7 @@ object CloudFormationTemplateVPC extends App {
           SecurityGroupEgress = Some(Seq(
             CidrEgressSpec(
               IpProtocol = "-1",
-              CidrIp = "0.0.0.0/0",
+              CidrIp = CidrIp(0,0,0,0,0),
               FromPort = "0",
               ToPort = "65535"
             )
@@ -593,13 +599,13 @@ object CloudFormationTemplateVPC extends App {
           SecurityGroupIngress = Some(Seq(
             CidrIngressSpec(
               IpProtocol = "tcp",
-              CidrIp = Ref("AllowHTTPFrom"),
+              CidrIp = TypedRef(allowHTTPFromParam),
               FromPort = "80",
               ToPort = "80"
             ),
             CidrIngressSpec(
               IpProtocol = "tcp",
-              CidrIp = Ref("AllowHTTPFrom"),
+              CidrIp = TypedRef(allowHTTPFromParam),
               FromPort = "443",
               ToPort = "443"
             )
