@@ -298,7 +298,7 @@ object HealthCheck extends DefaultJsonProtocol {
   implicit val format: JsonFormat[HealthCheck] = jsonFormat5(HealthCheck.apply)
 }
 
-case class `AWS::IAM::InstanceProfile`(name: String, Path: String, Roles: Seq[Token[String]]) extends Resource("AWS::IAM::InstanceProfile")
+case class `AWS::IAM::InstanceProfile`(name: String, Path: String, Roles: Seq[Token[`AWS::IAM::Role`]]) extends Resource("AWS::IAM::InstanceProfile")
 object `AWS::IAM::InstanceProfile` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`AWS::IAM::InstanceProfile`] = jsonFormat3(`AWS::IAM::InstanceProfile`.apply)
 }
