@@ -1,8 +1,4 @@
 #!/bin/bash
-
-# this needs to (be converted to) go(lang)
-set -e
-
 #####################################################################
 #   stax - builds a VPC in AWS - https://github.com/philcryer/stax
 #   https://github.com/philcryer/stax/blob/master/LICENSE
@@ -14,13 +10,13 @@ pkg="stax"
 version="0.1"
 aws="aws --color on"
 STAX_PRE_NAME="stax"
-SCRIPT_PATH=$(cd $(dirname $0) ; pwd -P)
+SCRIPT_PATH=$(cd $(dirname $0); pwd -P)
 SYSTEM=$(uname)
-STAX_DIR="$HOME/.stax"
+STAX_DIR="$SCRIPT_PATH/run"
 STAX_NAME_FILE="$STAX_DIR/stax-name"
 STAX_LOG="$STAX_DIR/stax.log"
 SSH_OPTIONS="-q"
-host=`hostname`
+host=$(hostname)
 jq="assets/jq/$SYSTEM/jq"
 
 # set colors
@@ -32,6 +28,9 @@ purple=$(tput setaf 5)
 cyan=$(tput setaf 6)
 white=$(tput setaf 7)
 reset=$(tput sgr0)
+
+# above tput commands may fail on simple terminals
+set -e
 
 stax-message(){
     msg="$1"
