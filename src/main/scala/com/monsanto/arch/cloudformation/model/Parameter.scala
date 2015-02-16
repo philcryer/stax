@@ -7,6 +7,7 @@ import spray.json._
  */
 
 sealed abstract class Parameter(val Type: String) {
+  type Rep // what logical type does this represent in real life? irrespective of CF file format
   def name:        String
   def Description: String
 }
@@ -19,6 +20,7 @@ object Parameter extends DefaultJsonProtocol {
         val raw = obj match {
           case s: StringParameter => s.toJson
           case n: NumberParameter => n.toJson
+          case c: CidrIpParameter => c.toJson
           case k: `AWS::EC2::KeyPair::KeyName_Parameter` => k.toJson
         }
 
@@ -47,7 +49,7 @@ case class StringParameter private (
                             ConstraintDescription: Option[String],
                             Default:               Option[String],
                             AllowedValues:         Option[Seq[String]]
-                            ) extends Parameter("String")
+                            ) extends Parameter("String"){type Rep = String}
 object StringParameter extends DefaultJsonProtocol {
 
   // all these types to pick out the correct "apply" from the two choices
@@ -125,7 +127,7 @@ case class NumberParameter private (
                             ConstraintDescription: Option[String],
                             Default:               Option[StringBackedInt],
                             AllowedValues:         Option[Seq[StringBackedInt]]
-                            ) extends Parameter("Number")
+                            ) extends Parameter("Number"){type Rep = Int}
 object NumberParameter extends DefaultJsonProtocol {
 
   implicit val format: JsonFormat[NumberParameter] = jsonFormat7(NumberParameter.apply)
@@ -152,7 +154,16 @@ case class `AWS::EC2::KeyPair::KeyName_Parameter`(
                                                   name:                  String,
                                                   Description:           String,
                                                   ConstraintDescription: Option[String] = None
-                                                  ) extends Parameter("AWS::EC2::KeyPair::KeyName")
+                                                  ) extends Parameter("AWS::EC2::KeyPair::KeyName"){type Rep = String}
 object `AWS::EC2::KeyPair::KeyName_Parameter` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`AWS::EC2::KeyPair::KeyName_Parameter`] = jsonFormat3(`AWS::EC2::KeyPair::KeyName_Parameter`.apply)
+}
+
+case class CidrIpParameter(
+                            name:        String,
+                            Description: String,
+                            Default:     CidrIp
+                          ) extends Parameter("String"){type Rep = CidrIp}
+object CidrIpParameter extends DefaultJsonProtocol {
+  implicit val format: JsonFormat[CidrIpParameter] = jsonFormat3(CidrIpParameter.apply)
 }
