@@ -30,48 +30,101 @@ object Parameter extends DefaultJsonProtocol {
   }
 }
 
-case class StringParameter(
+case class StringBackedInt(value: Int)
+object StringBackedInt extends DefaultJsonProtocol {
+  implicit val format: JsonFormat[StringBackedInt] = new JsonFormat[StringBackedInt]{
+    def write(obj: StringBackedInt) = JsString(obj.value.toString)
+    def read(json: JsValue) = StringBackedInt( json.convertTo[String].toInt )
+  }
+}
+
+case class StringParameter private (
                             name:                  String,
                             Description:           String,
-                            MinLength:             Option[String]         = None, // TODO Int reformatted to string
-                            MaxLength:             Option[String]         = None, // TODO Int reformatted to string
-                            AllowedPattern:        Option[String]      = None,
-                            ConstraintDescription: Option[String]      = None,
-                            Default:               Option[String]      = None,
-                            AllowedValues:         Option[Seq[String]] = None
+                            MinLength:             Option[StringBackedInt],
+                            MaxLength:             Option[StringBackedInt],
+                            AllowedPattern:        Option[String],
+                            ConstraintDescription: Option[String],
+                            Default:               Option[String],
+                            AllowedValues:         Option[Seq[String]]
                             ) extends Parameter("String")
 object StringParameter extends DefaultJsonProtocol {
 
-  implicit val format: JsonFormat[StringParameter] = jsonFormat8(StringParameter.apply)
+  // all these types to pick out the correct "apply" from the two choices
+  implicit val format: JsonFormat[StringParameter] =
+    jsonFormat8[String, String, Option[StringBackedInt], Option[StringBackedInt], Option[String],
+      Option[String], Option[String], Option[Seq[String]], StringParameter](StringParameter.apply)
 
   def apply(
              name:                  String,
              Description:           String,
-             MinLength:             String, // TODO Int reformatted to string
-             MaxLength:             String, // TODO Int reformatted to string
-             AllowedPattern:        String,
-             ConstraintDescription: String,
-             Default:               String
+             MinLength:             Int,
+             MaxLength:             Int,
+             Default:               String,
+             ConstraintDescription: Option[String]      = None,
+             AllowedPattern:        Option[String]      = None,
+             AllowedValues:         Option[Seq[String]] = None
              ): StringParameter = StringParameter(
                                                    name,
                                                    Description,
-                                                   Some(MinLength),
-                                                   Some(MaxLength),
-                                                   Some(AllowedPattern),
+                                                   Some(StringBackedInt(MinLength)),
+                                                   Some(StringBackedInt(MaxLength)),
+                                                   AllowedPattern,
+                                                   ConstraintDescription,
+                                                   Some(Default),
+                                                   AllowedValues
+                                                 )
+
+    def apply(
+             name:                  String,
+             Description:           String,
+             MinLength:             Option[Int]         ,
+             MaxLength:             Option[Int]         ,
+             Default:               String,
+             ConstraintDescription: Option[String],
+             AllowedPattern:        Option[String],
+             AllowedValues:         Option[Seq[String]]
+             ): StringParameter = StringParameter(
+                                                   name,
+                                                   Description,
+                                                   MinLength.map(StringBackedInt.apply),
+                                                   MaxLength.map(StringBackedInt.apply),
+                                                   AllowedPattern,
+                                                   ConstraintDescription,
+                                                   Some(Default),
+                                                   AllowedValues
+                                                 )
+
+    def apply(
+             name:                  String,
+             Description:           String,
+             Default:               String,
+             ConstraintDescription: String,
+             AllowedValues:         Seq[String]
+             ): StringParameter = StringParameter(
+                                                   name,
+                                                   Description,
+                                                   None,
+                                                   None,
+                                                   None,
                                                    Some(ConstraintDescription),
                                                    Some(Default),
-                                                   None
+                                                   Some(AllowedValues)
                                                  )
+
+    def apply(name: String, Description: String): StringParameter = StringParameter(name, Description, None, None, None, None, None, None)
+    def apply(name: String, Description: String, Default: String): StringParameter = StringParameter(name, Description, None, None, None, None, Some(Default), None)
+    def apply(name: String, Description: String, AllowedValues: Seq[String], Default: String): StringParameter = StringParameter(name, Description, None, None, None, None, Some(Default), Some(AllowedValues))
 }
 
-case class NumberParameter(
+case class NumberParameter private (
                             name:                  String,
                             Description:           String,
-                            MinValue:              Option[String]         = None, // TODO Int reformatted to string
-                            MaxValue:              Option[String]         = None, // TODO Int reformatted to string
-                            ConstraintDescription: Option[String]      = None,
-                            Default:               Option[String]      = None, // TODO Int reformatted to string
-                            AllowedValues:         Option[Seq[String]] = None
+                            MinValue:              Option[StringBackedInt],
+                            MaxValue:              Option[StringBackedInt],
+                            ConstraintDescription: Option[String],
+                            Default:               Option[StringBackedInt],
+                            AllowedValues:         Option[Seq[StringBackedInt]]
                             ) extends Parameter("Number")
 object NumberParameter extends DefaultJsonProtocol {
 
@@ -80,17 +133,17 @@ object NumberParameter extends DefaultJsonProtocol {
   def apply(
              name:                  String,
              Description:           String,
-             MinValue:              String, // TODO Int reformatted to string
-             MaxValue:              String, // TODO Int reformatted to string
-             ConstraintDescription: String,
-             Default:               String // TODO Int reformatted to string
-             ): NumberParameter = NumberParameter(
+             MinValue:              Int,
+             MaxValue:              Int,
+             Default:               Int,
+             ConstraintDescription: Option[String] = None
+    ): NumberParameter = NumberParameter(
                                                    name,
                                                    Description,
-                                                   Some(MinValue),
-                                                   Some(MaxValue),
-                                                   Some(ConstraintDescription),
-                                                   Some(Default),
+                                                   Some(StringBackedInt(MinValue)),
+                                                   Some(StringBackedInt(MaxValue)),
+                                                   ConstraintDescription,
+                                                   Some(StringBackedInt(Default)),
                                                    None
                                                  )
 }

@@ -34,91 +34,91 @@ object CloudFormationTemplateVPC extends App {
         StringParameter(
           name                  = "App",
           Description           = "Name for this ecosystem of services",
-          MinLength             = "1",
-          MaxLength             = "64",
-          AllowedPattern        = "[-_ a-zA-Z0-9]*",
-          ConstraintDescription = "Can contain only alphanumeric characters, spaces, dashes and underscores.",
+          MinLength             = 1,
+          MaxLength             = 64,
+          AllowedPattern        = Some("[-_ a-zA-Z0-9]*"),
+          ConstraintDescription = Some("Can contain only alphanumeric characters, spaces, dashes and underscores."),
           Default               = "REPLACE APP"
         ),
         StringParameter(
           name                  = "Group",
           Description           = "Group responsible for this ecosystem of services",
-          MinLength             = "1",
-          MaxLength             = "64",
-          AllowedPattern        = "[-_ a-zA-Z0-9]*",
-          ConstraintDescription = "Can contain only alphanumeric characters, spaces, dashes and underscores.",
+          MinLength             = 1,
+          MaxLength             = 64,
+          AllowedPattern        = Some("[-_ a-zA-Z0-9]*"),
+          ConstraintDescription = Some("Can contain only alphanumeric characters, spaces, dashes and underscores."),
           Default               = "REPLACE GROUP"
         ),
         StringParameter(
           name        = "ServiceDomain",
           Description = "Domain to register for services",
-          MinLength   = Some("1"),
-          MaxLength   = Some("64"),
-          Default     = Some("REPLACE DOMAIN")
+          MinLength   = 1,
+          MaxLength   = 64,
+          Default     = "REPLACE DOMAIN"
         ),
         StringParameter(
           name                  = "Owner",
           Description           = "Individual responsible for this ecosystem of services",
-          MinLength             = "1",
-          MaxLength             = "64",
-          AllowedPattern        = "[-_ a-zA-Z0-9]*",
-          ConstraintDescription = "Can contain only alphanumeric characters, spaces, dashes and underscores.",
+          MinLength             = 1,
+          MaxLength             = 64,
+          AllowedPattern        = Some("[-_ a-zA-Z0-9]*"),
+          ConstraintDescription = Some("Can contain only alphanumeric characters, spaces, dashes and underscores."),
           Default               = "REPLACE OWNER"
         ),
         StringParameter(
           name                  = "Environment",
           Description           = "Description of deployment environment, e. g., test or production",
-          MinLength             = "1",
-          MaxLength             = "64",
-          AllowedPattern        = "[-_ a-zA-Z0-9]*",
-          ConstraintDescription = "Can contain only alphanumeric characters, spaces, dashes and underscores.",
+          MinLength             = 1,
+          MaxLength             = 64,
+          AllowedPattern        = Some("[-_ a-zA-Z0-9]*"),
+          ConstraintDescription = Some("Can contain only alphanumeric characters, spaces, dashes and underscores."),
           Default               = "test"
         ),
         StringParameter(
           name                  = "KeepAlive",
           Description           = "Boolean to indicate whether to allow resource to be kept alive during nightly reaping",
-          MinLength             = Some("4"),
-          MaxLength             = Some("5"),
+          MinLength             = 4,
+          MaxLength             = 5,
           AllowedValues         = Some(Seq("true", "false")),
           ConstraintDescription = Some("Value should be 'true' or 'false'"),
-          Default               = Some("false")
+          Default               = "false"
         ),
         StringParameter(
           name                  = "CostCenter",
           Description           = "Cost center to be charged for this ecosystem of services",
-          MinLength             = "18",
-          MaxLength             = "18",
-          AllowedPattern        = "\\d{4}-\\d{4}-[A-Z]{3}\\d{5}",
-          ConstraintDescription = "Format for cost center is ####-####-XYZ#####",
+          MinLength             = 18,
+          MaxLength             = 18,
+          AllowedPattern        = Some("\\d{4}-\\d{4}-[A-Z]{3}\\d{5}"),
+          ConstraintDescription = Some("Format for cost center is ####-####-XYZ#####"),
           Default               = "0000-0000-ABC00000"
         ),
         StringParameter(
           name        = "DockerRegistryUrl",
           Description = "URL for private Docker Registry",
-          MinLength   = Some("8"),
-          MaxLength   = Some("200"),
-          Default     = Some("https://index.docker.io/v1/")
+          MinLength   = 8,
+          MaxLength   = 200,
+          Default     = "https://index.docker.io/v1/"
         ),
         StringParameter(
           name        = "DockerRegistryUser",
           Description = "User name for private Docker Registry",
-          MinLength   = Some("1"),
-          MaxLength   = Some("60"),
-          Default     = Some("nobody")
+          MinLength   = 1,
+          MaxLength   = 60,
+          Default     = "nobody"
         ),
         StringParameter(
           name        = "DockerRegistryPass",
           Description = "Password for private Docker Registry",
-          MinLength   = Some("1"),
-          MaxLength   = Some("60"),
-          Default     = Some("null")
+          MinLength   = 1,
+          MaxLength   = 60,
+          Default     = "null"
         ),
         StringParameter(
           name        = "DockerRegistryEmail",
           Description = "Email address for private Docker Registry",
-          MinLength   = Some("1"),
-          MaxLength   = Some("60"),
-          Default     = Some("nobody@null.com")
+          MinLength   = 1,
+          MaxLength   = 60,
+          Default     = "nobody@null.com"
         ),
         `AWS::EC2::KeyPair::KeyName_Parameter`(
           name                  = "KeyName",
@@ -128,101 +128,101 @@ object CloudFormationTemplateVPC extends App {
         StringParameter(
           name        = "VpcCidr",
           Description = "CIDR address range for the VPC to be created",
-          Default     = Some("10.183.0.0/16")
+          Default     = "10.183.0.0/16"
         ),
         StringParameter(
           name        = "PublicSubnet1",
           Description = "CIDR address range for the public subnet to be created in the first AZ",
-          Default     = Some("10.183.1.0/24")
+          Default     = "10.183.1.0/24"
         ),
         StringParameter(
           name        = "PrivateSubnet1",
           Description = "CIDR address range for the private subnet to be created in the first AZ",
-          Default     = Some("10.183.0.0/24")
+          Default     = "10.183.0.0/24"
         ),
         StringParameter(
           name        = "PublicSubnet2",
           Description = "CIDR address range for the public subnet to be created in the second AZ",
-          Default     = Some("10.183.3.0/24")
+          Default     = "10.183.3.0/24"
         ),
         StringParameter(
           name        = "PrivateSubnet2",
           Description = "CIDR address range for the private subnet to be created in the second AZ",
-          Default     = Some("10.183.2.0/24")
+          Default     = "10.183.2.0/24"
         ),
         StringParameter(
           name                  = "JumpInstanceType",
           Description           = "Instance type for public subnet jump nodes",
-          AllowedValues         = Some(Seq("m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "c3.large","c3.xlarge", "c3.2xlarge", "c3.4xlarge","c3.8xlarge", "cc2.8xlarge","cr1.8xlarge","hi1.4xlarge", "hs1.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge","r3.4xlarge", "r3.8xlarge", "t2.micro", "t2.small", "t2.medium")),
-          ConstraintDescription = Some("Must be a valid EC2 instance type."),
-          Default               = Some("t2.micro")
+          AllowedValues         = Seq("m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "c3.large","c3.xlarge", "c3.2xlarge", "c3.4xlarge","c3.8xlarge", "cc2.8xlarge","cr1.8xlarge","hi1.4xlarge", "hs1.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge","r3.4xlarge", "r3.8xlarge", "t2.micro", "t2.small", "t2.medium"),
+          ConstraintDescription = "Must be a valid EC2 instance type.",
+          Default               = "t2.micro"
         ),
         StringParameter(
           name                  = "NATInstanceType",
           Description           = "Instance type for public subnet NAT nodes",
-          AllowedValues         = Some(Seq("m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "c3.large","c3.xlarge", "c3.2xlarge", "c3.4xlarge","c3.8xlarge", "cc2.8xlarge","cr1.8xlarge","hi1.4xlarge", "hs1.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge","r3.4xlarge", "r3.8xlarge", "t2.micro", "t2.small", "t2.medium")),
-          ConstraintDescription = Some("Must be a valid EC2 instance type."),
-          Default               = Some("t2.micro")
+          AllowedValues         = Seq("m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "c3.large","c3.xlarge", "c3.2xlarge", "c3.4xlarge","c3.8xlarge", "cc2.8xlarge","cr1.8xlarge","hi1.4xlarge", "hs1.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge","r3.4xlarge", "r3.8xlarge", "t2.micro", "t2.small", "t2.medium"),
+          ConstraintDescription = "Must be a valid EC2 instance type.",
+          Default               = "t2.micro"
         ),
         StringParameter(
           name        = "NumberOfPings",
           Description = "The number of times the health check will ping the alternate NAT node",
-          Default     = Some("3")
+          Default     = "3"
         ),
         StringParameter(
           name        = "PingTimeout",
           Description = "The number of seconds to wait for each ping response before determining that the ping has failed",
-          Default     = Some("10")
+          Default     = "10"
         ),
         StringParameter(
           name        = "WaitBetweenPings",
           Description = "The number of seconds to wait between health checks",
-          Default     = Some("2")
+          Default     = "2"
         ),
         StringParameter(
           name        = "WaitForInstanceStop",
           Description = "The number of seconds to wait for alternate NAT Node to stop before attempting to stop it again",
-          Default     = Some("60")
+          Default     = "60"
         ),
         StringParameter(
           name        = "WaitForInstanceStart",
           Description = "The number of seconds to wait for alternate NAT node to restart before resuming health checks again",
-          Default     = Some("300")
+          Default     = "300"
         ),
         StringParameter(
           name                  = "DockerInstanceType",
           Description           = "EC2 instance type for the Docker autoscaling group",
-          AllowedValues         = Some(Seq("m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "c3.large","c3.xlarge", "c3.2xlarge", "c3.4xlarge","c3.8xlarge", "cc2.8xlarge","cr1.8xlarge","hi1.4xlarge", "hs1.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge","r3.4xlarge", "r3.8xlarge", "t2.micro", "t2.small", "t2.medium")),
-          ConstraintDescription = Some("Must be a valid EC2 HVM instance type."),
-          Default               = Some("m3.medium")
+          AllowedValues         = Seq("m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "c3.large","c3.xlarge", "c3.2xlarge", "c3.4xlarge","c3.8xlarge", "cc2.8xlarge","cr1.8xlarge","hi1.4xlarge", "hs1.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge","r3.4xlarge", "r3.8xlarge", "t2.micro", "t2.small", "t2.medium"),
+          ConstraintDescription = "Must be a valid EC2 HVM instance type.",
+          Default               = "m3.medium"
         ),
         NumberParameter(
           name        = "ClusterSize",
           Description = "Number of nodes in cluster (2-12)",
-          MinValue    = Some("3"),
-          MaxValue    = Some("12"),
-          Default     = Some("3")
+          MinValue    = 3,
+          MaxValue    = 12,
+          Default     = 3
         ),
         NumberParameter(
           name        = "RouterClusterSize",
           Description = "Number of nodes in cluster (2-12)",
-          MinValue    = Some("2"),
-          MaxValue    = Some("12"),
-          Default     = Some("2")
+          MinValue    = 2,
+          MaxValue    = 12,
+          Default     = 2
         ),
         NumberParameter(
           name        = "AutoScaleCooldown",
           Description = "Time in seconds between autoscaling events",
-          MinValue    = Some("60"),
-          MaxValue    = Some("3600"),
-          Default     = Some("300")
+          MinValue    = 60,
+          MaxValue    = 3600,
+          Default     = 300
         ),
         StringParameter(
-          name = "CoreOSChannelAMI",
-          Description = "MapName for the update channel AMI to use when launching CoreOS instances",
-          AllowedValues = Some(Seq("CoreOSStableAMI","CoreOSBetaAMI","CoreOSAlphaAMI")),
-          ConstraintDescription = Some("Value should be 'CoreOSStableAMI', 'CoreOSBetaAMI', or 'CoreOSAlphaAMI'"),
-          Default = Some("CoreOSStableAMI")
+          name                  = "CoreOSChannelAMI",
+          Description           = "MapName for the update channel AMI to use when launching CoreOS instances",
+          AllowedValues         = Seq("CoreOSStableAMI","CoreOSBetaAMI","CoreOSAlphaAMI"),
+          ConstraintDescription = "Value should be 'CoreOSStableAMI', 'CoreOSBetaAMI', or 'CoreOSAlphaAMI'",
+          Default               = "CoreOSStableAMI"
         ),
         StringParameter(
           name        = "DiscoveryURL",
@@ -231,18 +231,18 @@ object CloudFormationTemplateVPC extends App {
         StringParameter(
           name          = "AdvertisedIPAddress",
           Description   = "Use 'private' if your etcd cluster is within one region or 'public' if it spans regions or cloud providers.",
-          AllowedValues = Some(Seq("private","public")),
-          Default       = Some("private")
+          AllowedValues = Seq("private","public"),
+          Default       = "private"
         ),
         StringParameter(
           name        = "AllowHTTPFrom",
           Description = "The net block (CIDR) that can connect to the ELB.",
-          Default     = Some("0.0.0.0/0")
+          Default     = "0.0.0.0/0"
         ),
         StringParameter(
           name        = "AllowSSHFrom",
           Description = "The net block (CIDR) that SSH is available to.",
-          Default     = Some("0.0.0.0/0")
+          Default     = "0.0.0.0/0"
         )
       )
     ),
