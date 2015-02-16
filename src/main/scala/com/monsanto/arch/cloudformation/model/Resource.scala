@@ -245,7 +245,7 @@ case class `AWS::EC2::Subnet`(
                                name: String,
                                VpcId: Token[`AWS::EC2::VPC`],
                                AvailabilityZone: String,
-                               CidrBlock: Token[String],
+                               CidrBlock: Token[CidrIp],
                                Tags: Seq[AmazonTag]
                                ) extends Resource("AWS::EC2::Subnet")
 object `AWS::EC2::Subnet` extends DefaultJsonProtocol {
