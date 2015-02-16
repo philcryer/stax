@@ -129,6 +129,28 @@ object StaxTemplate {
     )
   )
 
+  val publicSubnet1Param = CidrIpParameter(
+    name        = "PublicSubnet1",
+    Description = "CIDR address range for the public subnet to be created in the first AZ",
+    Default     = CidrIp(10,183,1,0,24)
+  )
+  val privateSubnet1Param = CidrIpParameter(
+    name        = "PrivateSubnet1",
+    Description = "CIDR address range for the private subnet to be created in the first AZ",
+    Default     = CidrIp(10,183,0,0,24)
+  )
+
+  val publicSubnet2Param = CidrIpParameter(
+    name        = "PublicSubnet2",
+    Description = "CIDR address range for the public subnet to be created in the second AZ",
+    Default     = CidrIp(10,183,3,0,24)
+  )
+  val privateSubnet2Param = CidrIpParameter(
+    name        = "PrivateSubnet2",
+    Description = "CIDR address range for the private subnet to be created in the second AZ",
+    Default     = CidrIp(10,183,2,0,24)
+  )
+
   val itsaDockerStack = Template(
     AWSTemplateFormatVersion = "2010-09-09",
     Description = "Autoscaling group of Docker engines in dual AZ VPC with two NAT nodes in an active/active configuration. After successfully launching this CloudFormation stack, you will have 4 subnets in 2 AZs (a pair of public/private subnets in each AZ), a jump box, two NAT instances routing outbound traffic for their respective private subnets.  The NAT instances will automatically monitor each other and fix outbound routing problems if the other instance is unavailable.  The Docker engine autoscaling group will deploy to the private subnets.",
@@ -229,26 +251,10 @@ object StaxTemplate {
           ConstraintDescription = Some("Value must be a valid AWS key pair name in your account.")
         ),
         vpcCidrParam,
-        StringParameter(
-          name        = "PublicSubnet1",
-          Description = "CIDR address range for the public subnet to be created in the first AZ",
-          Default     = "10.183.1.0/24"
-        ),
-        StringParameter(
-          name        = "PrivateSubnet1",
-          Description = "CIDR address range for the private subnet to be created in the first AZ",
-          Default     = "10.183.0.0/24"
-        ),
-        StringParameter(
-          name        = "PublicSubnet2",
-          Description = "CIDR address range for the public subnet to be created in the second AZ",
-          Default     = "10.183.3.0/24"
-        ),
-        StringParameter(
-          name        = "PrivateSubnet2",
-          Description = "CIDR address range for the private subnet to be created in the second AZ",
-          Default     = "10.183.2.0/24"
-        ),
+        publicSubnet1Param,
+        privateSubnet1Param,
+        publicSubnet2Param,
+        privateSubnet2Param,
         StringParameter(
           name                  = "JumpInstanceType",
           Description           = "Instance type for public subnet jump nodes",
@@ -401,28 +407,28 @@ object StaxTemplate {
                           "PubSubnet1",
                           VpcId = ResourceRef(vpcResource),
                           AvailabilityZone = "us-east-1a",
-                          CidrBlock = Ref("PublicSubnet1"),
+                          CidrBlock = ParameterRef(publicSubnet1Param),
                           Tags = standardTags("pubsubnet1", "Public")
                         ),
       `AWS::EC2::Subnet`(
                           "PriSubnet1",
                           VpcId = ResourceRef(vpcResource),
                           AvailabilityZone = "us-east-1a",
-                          CidrBlock = Ref("PrivateSubnet1"),
+                          CidrBlock = ParameterRef(privateSubnet1Param),
                           Tags = standardTags("prisubnet1", "Private")
                         ),
       `AWS::EC2::Subnet`(
                           "PubSubnet2",
                           VpcId = ResourceRef(vpcResource),
                           AvailabilityZone = "us-east-1b",
-                          CidrBlock = Ref("PublicSubnet2"),
+                          CidrBlock = ParameterRef(publicSubnet2Param),
                           Tags = standardTags("pubsubnet2", "Public")
                         ),
       `AWS::EC2::Subnet`(
                           "PriSubnet2",
                           VpcId = ResourceRef(vpcResource),
                           AvailabilityZone = "us-east-1b",
-                          CidrBlock = Ref("PrivateSubnet2"),
+                          CidrBlock = ParameterRef(privateSubnet2Param),
                           Tags = standardTags("prisubnet2", "Private")
                         ),
       `AWS::EC2::InternetGateway`(
