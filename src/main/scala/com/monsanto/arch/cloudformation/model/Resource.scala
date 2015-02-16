@@ -133,7 +133,7 @@ object `AWS::EC2::Route` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`AWS::EC2::Route`] = jsonFormat5(`AWS::EC2::Route`.apply)
 }
 
-case class `AWS::EC2::RouteTable`(name: String, VpcId: Token[String], Tags: Seq[AmazonTag]) extends Resource("AWS::EC2::RouteTable")
+case class `AWS::EC2::RouteTable`(name: String, VpcId: Token[`AWS::EC2::VPC`], Tags: Seq[AmazonTag]) extends Resource("AWS::EC2::RouteTable")
 object `AWS::EC2::RouteTable` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`AWS::EC2::RouteTable`] = jsonFormat3(`AWS::EC2::RouteTable`.apply)
 }
@@ -141,7 +141,7 @@ object `AWS::EC2::RouteTable` extends DefaultJsonProtocol {
 case class `AWS::EC2::SecurityGroup`(
                                       name: String,
                                       GroupDescription: String,
-                                      VpcId: Token[String],
+                                      VpcId: Token[`AWS::EC2::VPC`],
                                       SecurityGroupIngress: Option[Seq[IngressSpec]],
                                       SecurityGroupEgress: Option[Seq[EgressSpec]],
                                       Tags: Seq[AmazonTag]
@@ -243,7 +243,7 @@ object `AWS::EC2::SecurityGroupIngress` extends DefaultJsonProtocol {
 
 case class `AWS::EC2::Subnet`(
                                name: String,
-                               VpcId: Token[String],
+                               VpcId: Token[`AWS::EC2::VPC`],
                                AvailabilityZone: String,
                                CidrBlock: Token[String],
                                Tags: Seq[AmazonTag]
@@ -261,7 +261,7 @@ object `AWS::EC2::SubnetRouteTableAssociation` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`AWS::EC2::SubnetRouteTableAssociation`] = jsonFormat3(`AWS::EC2::SubnetRouteTableAssociation`.apply)
 }
 
-case class `AWS::EC2::VPC`(name: String, CidrBlock: Token[String], Tags: Seq[AmazonTag]) extends Resource("AWS::EC2::VPC")
+case class `AWS::EC2::VPC`(name: String, CidrBlock: Token[CidrIp], Tags: Seq[AmazonTag]) extends Resource("AWS::EC2::VPC")
 object `AWS::EC2::VPC` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`AWS::EC2::VPC`] = jsonFormat3(`AWS::EC2::VPC`.apply)
 }
@@ -271,7 +271,7 @@ object AmazonTag extends DefaultJsonProtocol {
   implicit val format: JsonFormat[AmazonTag] = jsonFormat3(AmazonTag.apply)
 }
 
-case class `AWS::EC2::VPCGatewayAttachment`(name: String, VpcId: Token[String], InternetGatewayId: Token[String]) extends Resource("AWS::EC2::VPCGatewayAttachment")
+case class `AWS::EC2::VPCGatewayAttachment`(name: String, VpcId: Token[`AWS::EC2::VPC`], InternetGatewayId: Token[String]) extends Resource("AWS::EC2::VPCGatewayAttachment")
 object `AWS::EC2::VPCGatewayAttachment` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`AWS::EC2::VPCGatewayAttachment`] = jsonFormat3(`AWS::EC2::VPCGatewayAttachment`.apply)
 }
