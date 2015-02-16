@@ -1,0 +1,49 @@
+package com.monsanto.arch.cloudformation.model
+
+import spray.json._
+
+/**
+ * Created by Ryan Richt on 1/18/15
+ */
+case class CFOutput[T](name: String, description: String, value: Scalar[T])
+object CFOutput extends DefaultJsonProtocol{
+  implicit def format[T : JsonFormat] = new JsonFormat[CFOutput[T]]{
+
+    def read(json: JsValue) = {
+      val outer = json.asJsObject.fields.head
+      val inner = outer._2.asJsObject.fields
+
+      CFOutput(
+        outer._1,
+        inner("Description").convertTo[String],
+        inner("Value"      ).convertTo[Scalar[T]]
+      )
+    }
+
+    def write(obj: CFOutput[T]) = JsObject(
+      obj.name -> JsObject(
+        "Description" -> JsString(obj.description),
+        "Value"       -> implicitly[JsonFormat[Scalar[T]]].write(obj.value)
+      )
+    )
+  }
+}
+
+sealed trait Scalar[T]{ def value: T }
+object Scalar extends DefaultJsonProtocol{
+  implicit def format[T : JsonFormat]: JsonFormat[Scalar[T]] = new JsonFormat[Scalar[T]]{
+    def read(json: JsValue) = json match {
+      case o: JsObject if o.fields.contains("Ref") => Ref(o.fields("Ref").convertTo[String])
+      case _ => LiteralScalar( implicitly[JsonFormat[T]].read(json) )
+    }
+
+    def write(obj: Scalar[T]) = obj match {
+      case LiteralScalar(t) => implicitly[JsonFormat[T]].write(t)
+      case Ref(name)        => JsObject("Ref" -> JsString(name))
+    }
+  }
+}
+case class LiteralScalar[T](value: T) extends Scalar[T]
+case class Ref[T](resourceName: String) extends Scalar[T]{
+  def value = ???
+}
