@@ -1,0 +1,129 @@
+//package com.monsanto.arch.cloudformation.model
+//
+///**
+// * Created by Ryan Richt on 1/18/15
+// */
+//
+//import spray.json._
+//
+//import scala.reflect.ClassTag
+//
+///**
+// * Created by Ryan Richt on 1/18/15
+// */
+//
+//
+//case class CFParameter[
+//Type               <: CFParameter2,
+//MinValueType       <: Option[Type#V],
+//MaxValueType       <: Option[Type#V],
+//AllowedValuesType  <: Option[Seq[Type]],
+//AllowedPatternType <: Option[String]
+//](
+//   name:                  String,
+//   Default:               Option[Type]       = None,
+//   Description:           Option[String]     = None,
+//   ConstraintDescription: Option[String]     = None,
+//   NoEcho:                Option[Boolean]    = None, //serialized as a string
+//   AllowedValues:         AllowedValuesType  = None,
+//   AllowedPattern:        AllowedPatternType = None,
+//   MaxLength:             Option[Int]        = None,
+//   MinLenth:              Option[Int]        = None,
+//   MaxValue:              MaxValueType       = None,
+//   MinValue:              MinValueType       = None
+//   )(implicit ev: ValidCombo[Type, MinValueType, MaxValueType, AllowedValuesType, AllowedPatternType]){
+//
+//  def optionalFieldsHList = ("Default"               -> Default              ) ::
+//    ("Description"           -> Description          ) ::
+//    ("ConstraintDescription" -> ConstraintDescription) ::
+//    ("NoEcho"                -> NoEcho               ) ::
+//    ("AllowedValues"         -> AllowedValues        ) ::
+//    ("AllowedPattern"        -> AllowedPattern       ) ::
+//    ("MaxLength"             -> MaxLength            ) ::
+//    ("MinLenth"              -> MinLenth             ) ::
+//    ("MaxValue"              -> MaxValue             ) ::
+//    ("MinValue"              -> MinValue             ) ::
+//    HNil
+//}
+//object CFParameter extends DefaultJsonProtocol{
+//
+//  private def name[T : ClassTag] = reflect.NameTransformer.decode(classOf[T].getSimpleName)
+//
+//  //  private val (string, number, listNumber, commaList,
+//  //  keyName, secGroupId, subnetId, vpcId,
+//  //  listVPCId, listSecGroupId, listSubnetId) =
+//  //
+//  //    (name[CFString], name[CFNumber], name[CFListNumber], name[CFCommaDelimitedList],
+//  //      name[`AWS::EC2::KeyPair::KeyName`], name[`AWS::EC2::SecurityGroup::Id`], name[`AWS::EC2::Subnet::Id`], name[`AWS::EC2::VPC::Id`],
+//  //      name[`List<AWS::EC2::VPC::Id>`], name[`List<AWS::EC2::SecurityGroup::Id>`], name[`List<AWS::EC2::Subnet::Id>`] )
+//
+//  implicit def format[Type               <: CFParameter2,
+//  MinValueType       <: Option[Type#V],
+//  MaxValueType       <: Option[Type#V],
+//  AllowedValuesType  <: Option[Seq[Type]],
+//  AllowedPatternType <: Option[String]
+//  ]: JsonFormat[ CFParameter[Type, MinValueType, MaxValueType, AllowedValuesType, AllowedPatternType] ] =
+//
+//    new JsonFormat[ CFParameter[Type, MinValueType, MaxValueType, AllowedValuesType, AllowedPatternType] ] {
+//
+//      type IN = CFParameter[Type, MinValueType, MaxValueType, AllowedValuesType, AllowedPatternType]
+//
+//      def read(json: JsValue): IN = {
+//        //        val outer = json.asJsObject
+//        //        val name = outer.fields.keySet.head
+//        //        val inner = outer.fields(name).asJsObject.fields
+//        //
+//        //        (inner("Type").convertTo[String] match {
+//        //          case `string`         => CFString()
+//        //  //        case `number`         => CFNumber()
+//        //  //        case `listNumber`     => CFListNumber()
+//        //  //        case `commaList`      => CFCommaDelimitedList()
+//        //  //        case `keyName`        => `AWS::EC2::KeyPair::KeyName`()
+//        //  //        case `secGroupId`     => `AWS::EC2::SecurityGroup::Id`()
+//        //  //        case `subnetId`       => `AWS::EC2::Subnet::Id`()
+//        //  //        case `vpcId`          => `AWS::EC2::VPC::Id`()
+//        //  //        case `listVPCId`      => `List<AWS::EC2::VPC::Id>`()
+//        //  //        case `listSecGroupId` => `List<AWS::EC2::SecurityGroup::Id>`()
+//        //  //        case `listSubnetId`   => `List<AWS::EC2::Subnet::Id>`()
+//        //        }).asInstanceOf[IN]
+//        ???
+//      }
+//
+//      def write(obj: IN) = JsObject(
+//        obj.name -> JsObject(
+//          ("Type" -> JsString(name[Type])) ::
+//            obj.optionalFieldsHList.flatMap(collectOption).toList:_*
+//        )
+//      )
+//    }
+//}
+//
+////object CFParameterType extends DefaultJsonProtocol{
+////  implicit def writer[T <: CFParameter2[T]] = new JsonWriter[T] {
+////    def write(obj: T) = JsString( name[T] )
+////  }
+////}
+//
+//sealed abstract class CFParameter2(
+//                                      name:                  String,
+//                                      Description:           Option[String]     = None,
+//                                      ConstraintDescription: Option[String]     = None,
+//                                      NoEcho:                Option[Boolean]    = None //serialized as a string
+//                                      ){
+//  type V
+//  val Default: Option[V]
+//}
+//case class CFString(value: String)                                 extends CFParameter2{type V = String}
+//case class CFNumber[N](value: N)
+//                      (implicit ev1: N <:< Int with Float)         extends CFParameter2{type V = N}
+//case class CFListNumber[N](value: Seq[CFNumber[N]])
+//                          (implicit ev1: N <:< Int with Float)     extends CFParameter2{type V = Seq[CFNumber[N]]}
+//case class CFCommaDelimitedList(value: Seq[String])                extends CFParameter2{type V = Seq[String]}
+//case class `AWS::EC2::KeyPair::KeyName`(value: String)             extends CFParameter2{type V = String}
+//case class `AWS::EC2::SecurityGroup::Id`(value: String)            extends CFParameter2{type V = String}
+//case class `AWS::EC2::Subnet::Id`(value: String)                   extends CFParameter2{type V = String}
+//case class `AWS::EC2::VPC::Id`(value: String)                      extends CFParameter2{type V = String}
+//case class `List<AWS::EC2::VPC::Id>`(value: Seq[String])           extends CFParameter2{type V = Seq[String]}
+//case class `List<AWS::EC2::SecurityGroup::Id>`(value: Seq[String]) extends CFParameter2{type V = Seq[String]}
+//case class `List<AWS::EC2::Subnet::Id>`(value: Seq[String])        extends CFParameter2{type V = Seq[String]}
+//
