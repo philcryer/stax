@@ -151,6 +151,29 @@ object StaxTemplate {
     Default     = CidrIp(10,183,2,0,24)
   )
 
+  val internetGatewayResource = `AWS::EC2::InternetGateway`(
+    "InternetGateway",
+    Tags = standardTags("igw", "Public")
+  )
+
+  val publicRouteTableResource = `AWS::EC2::RouteTable`(
+    "PublicRouteTable",
+    VpcId = ResourceRef(vpcResource),
+    Tags = standardTags("pubrt", "Public")
+  )
+
+  val privateRouteTable1Resource = `AWS::EC2::RouteTable`(
+    "PrivateRouteTable1",
+    VpcId = ResourceRef(vpcResource),
+    Tags = standardTags("privrt1", "Private")
+  )
+
+  val privateRouteTable2Resource = `AWS::EC2::RouteTable`(
+    "PrivateRouteTable2",
+    VpcId = ResourceRef(vpcResource),
+    Tags = standardTags("privrt2", "Private")
+  )
+
   val itsaDockerStack = Template(
     AWSTemplateFormatVersion = "2010-09-09",
     Description = "Autoscaling group of Docker engines in dual AZ VPC with two NAT nodes in an active/active configuration. After successfully launching this CloudFormation stack, you will have 4 subnets in 2 AZs (a pair of public/private subnets in each AZ), a jump box, two NAT instances routing outbound traffic for their respective private subnets.  The NAT instances will automatically monitor each other and fix outbound routing problems if the other instance is unavailable.  The Docker engine autoscaling group will deploy to the private subnets.",
@@ -431,46 +454,31 @@ object StaxTemplate {
                           CidrBlock = ParameterRef(privateSubnet2Param),
                           Tags = standardTags("prisubnet2", "Private")
                         ),
-      `AWS::EC2::InternetGateway`(
-                                   "InternetGateway",
-                                   Tags = standardTags("igw", "Public")
-                                 ),
+      internetGatewayResource,
       `AWS::EC2::VPCGatewayAttachment`(
                                         "GatewayToInternet",
                                         VpcId = ResourceRef(vpcResource),
-                                        InternetGatewayId = Ref("InternetGateway")
+                                        InternetGatewayId = ResourceRef(internetGatewayResource)
                                         ),
-      `AWS::EC2::RouteTable`(
-                              "PublicRouteTable",
-                              VpcId = ResourceRef(vpcResource),
-                              Tags = standardTags("pubrt", "Public")
-                            ),
+      publicRouteTableResource,
       `AWS::EC2::Route`(
                          "PublicRouteTableRoute1",
-                         RouteTableId = Ref("PublicRouteTable"),
-                         DestinationCidrBlock = "0.0.0.0/0",
-                         GatewayId = Some(Ref("InternetGateway"))
+                         RouteTableId = ResourceRef(publicRouteTableResource),
+                         DestinationCidrBlock = CidrIp(0,0,0,0,0),
+                         GatewayId = Some(ResourceRef(internetGatewayResource))
                         ),
-      `AWS::EC2::RouteTable`(
-                              "PrivateRouteTable1",
-                              VpcId = ResourceRef(vpcResource),
-                              Tags = standardTags("privrt1", "Private")
-                            ),
+      privateRouteTable1Resource,
       `AWS::EC2::Route`(
                          "PrivateRouteTable1Route1",
-                          RouteTableId = Ref("PrivateRouteTable1"),
-                          DestinationCidrBlock = "0.0.0.0/0",
+                          RouteTableId = ResourceRef(privateRouteTable1Resource),
+                          DestinationCidrBlock = CidrIp(0,0,0,0,0),
                           InstanceId = Some(Ref("NAT1Instance"))
                        ),
-      `AWS::EC2::RouteTable`(
-                              "PrivateRouteTable2",
-                              VpcId = ResourceRef(vpcResource),
-                              Tags = standardTags("privrt2", "Private")
-                            ),
+      privateRouteTable2Resource,
       `AWS::EC2::Route`(
                          "PrivateRouteTable2Route1",
-                          RouteTableId = Ref("PrivateRouteTable2"),
-                          DestinationCidrBlock = "0.0.0.0/0",
+                          RouteTableId = ResourceRef(privateRouteTable2Resource),
+                          DestinationCidrBlock = CidrIp(0,0,0,0,0),
                           InstanceId = Some(Ref("NAT2Instance"))
                         ),
       `AWS::EC2::SubnetRouteTableAssociation`(
