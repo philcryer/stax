@@ -60,6 +60,10 @@ case class `Fn::FindInMap`(mapName: Token[String], outerKey: Token[String], inne
 case class `Fn::Base64`(toEncode: Token[String])
   extends AmazonFunctionCall[String]("Fn::Base64"){type T = Token[String] ; val arguments = toEncode}
 
+//TODO: NOT TESTED YET
+case class `Fn::Equals`[R](a: Token[R], b: Token[R])
+  extends AmazonFunctionCall[Boolean]("Fn::Equals"){type T = (Token[R], Token[R]) ; val arguments = (a, b)}
+
 
 object `Fn::Base64` extends DefaultJsonProtocol {
   implicit val format: JsonFormat[`Fn::Base64`] = new JsonFormat[`Fn::Base64`] {

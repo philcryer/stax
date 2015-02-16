@@ -50,6 +50,50 @@ object CloudFormationTemplateVPC extends App {
     Tags = standardTags("vpc", "Public")
   )
 
+  val natRoleResource = `AWS::IAM::Role`("NATRole",
+          AssumeRolePolicyDocument =
+            PolicyDocument(
+              Statement = Seq(
+                PolicyStatement(
+                  Effect = "Allow",
+                  Principal = Some(DefinedPrincipal(Map("Service" -> Seq("ec2.amazonaws.com")))),
+                  Action = Seq("sts:AssumeRole")
+                )
+              )
+            ),
+          Path = "/",
+          Policies = Seq(
+            Policy(
+              PolicyName = "NAT_Takeover",
+              PolicyDocument =
+                PolicyDocument(
+                  Statement = Seq(
+                    PolicyStatement(
+                      Effect = "Allow",
+                      Principal = None, // Did this ever work?
+                      Action = Seq("ec2:DescribeInstances", "ec2:DescribeRouteTables", "ec2:CreateRoute", "ec2:ReplaceRoute", "ec2:StartInstances", "ec2:StopInstances"),
+                      Resource = Some("*")
+                    )
+                  )
+                )
+            ),
+            Policy(
+              PolicyName = "StaxS3Access",
+              PolicyDocument =
+                PolicyDocument(
+                  Statement = Seq(
+                    PolicyStatement(
+                      Effect = "Allow",
+                      Action = Seq("s3:GetObject"),
+                      Resource = Some(`Fn::Join`("", Seq("arn:aws:s3:::", Ref("AWS::StackName"), "/*"))),
+                      Principal = None // Did this ever work?
+                    )
+                  )
+                )
+            )
+          )
+        )
+
   val itsaDockerStack = Template(
     AWSTemplateFormatVersion = "2010-09-09",
     Description = "Autoscaling group of Docker engines in dual AZ VPC with two NAT nodes in an active/active configuration. After successfully launching this CloudFormation stack, you will have 4 subnets in 2 AZs (a pair of public/private subnets in each AZ), a jump box, two NAT instances routing outbound traffic for their respective private subnets.  The NAT instances will automatically monitor each other and fix outbound routing problems if the other instance is unavailable.  The Docker engine autoscaling group will deploy to the private subnets.",
@@ -311,53 +355,11 @@ object CloudFormationTemplateVPC extends App {
 
     Resources = Some(
       Seq(
-        `AWS::IAM::Role`("NATRole",
-          AssumeRolePolicyDocument =
-            PolicyDocument(
-              Statement = Seq(
-                PolicyStatement(
-                  Effect = "Allow",
-                  Principal = Some(DefinedPrincipal(Map("Service" -> Seq("ec2.amazonaws.com")))),
-                  Action = Seq("sts:AssumeRole")
-                )
-              )
-            ),
-          Path = "/",
-          Policies = Seq(
-            Policy(
-              PolicyName = "NAT_Takeover",
-              PolicyDocument =
-                PolicyDocument(
-                  Statement = Seq(
-                    PolicyStatement(
-                      Effect = "Allow",
-                      Principal = None, // Did this ever work?
-                      Action = Seq("ec2:DescribeInstances", "ec2:DescribeRouteTables", "ec2:CreateRoute", "ec2:ReplaceRoute", "ec2:StartInstances", "ec2:StopInstances"),
-                      Resource = Some("*")
-                    )
-                  )
-                )
-            ),
-            Policy(
-              PolicyName = "StaxS3Access",
-              PolicyDocument =
-                PolicyDocument(
-                  Statement = Seq(
-                    PolicyStatement(
-                      Effect = "Allow",
-                      Action = Seq("s3:GetObject"),
-                      Resource = Some(`Fn::Join`("", Seq("arn:aws:s3:::", Ref("AWS::StackName"), "/*"))),
-                      Principal = None // Did this ever work?
-                    )
-                  )
-                )
-            )
-          )
-        ),
+        natRoleResource,
         `AWS::IAM::InstanceProfile`(
           "NATRoleProfile",
           Path = "/",
-          Roles = Seq(Ref("NATRole"))
+          Roles = Seq(ResourceRef(natRoleResource))
         ),
         vpcResource,
         `AWS::EC2::Subnet`(
