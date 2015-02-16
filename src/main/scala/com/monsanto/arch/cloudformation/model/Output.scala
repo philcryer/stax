@@ -7,19 +7,19 @@ import DefaultJsonProtocol._
  * Created by Ryan Richt on 2/15/15
  */
 
-case class Output[T](name: String, Description: String, Value: AmazonFunctionCall[T])
+case class Output(name: String, Description: String, Value: AmazonFunctionCall)
 object Output extends DefaultJsonProtocol {
 
-  implicit val seqFormat: JsonWriter[Seq[Output[_]]] = new JsonWriter[Seq[Output[_]]] {
+  implicit val seqFormat: JsonWriter[Seq[Output]] = new JsonWriter[Seq[Output]] {
 
-    implicit val format: JsonWriter[Output[_]] = new JsonWriter[Output[_]] {
-      def write(obj: Output[_]) =
+    implicit val format: JsonWriter[Output] = new JsonWriter[Output] {
+      def write(obj: Output) =
         JsObject(
           "Description" -> JsString(obj.Description),
-          "Value" -> implicitly[JsonWriter[AmazonFunctionCall[_]]].write(obj.Value)
+          "Value"       -> implicitly[JsonWriter[AmazonFunctionCall]].write(obj.Value)
         )
     }
 
-    def write(objs: Seq[Output[_]]) = JsObject(objs.map(o => o.name -> format.write(o)).toMap)
+    def write(objs: Seq[Output]) = JsObject(objs.map(o => o.name -> format.write(o)).toMap)
   }
 }
