@@ -17,6 +17,7 @@ STAX_LOG="$STAX_DIR/stax.log"
 STAX_TEMPLATE_PATH="templates/cloudformation-template-vpc.json"
 SSH_OPTIONS="-q"
 host=$(hostname)
+YES=
 
 # make sure we are running under ssh-agent
 if [[ ! $SSH_AUTH_SOCK ]]; then
@@ -77,6 +78,7 @@ Options:
   -d,--debug           Turn on verbose messages
   -h,--help            Output this message
   -v,--version         Print name and version information
+  -y,--yes             Do not prompt for confirmation
 
 If an argument is required for a long option, so to the short. Same for
 optional arguments.
@@ -94,6 +96,7 @@ Commands:
   services          List servers that are available to run across a stax
   start <service>   Start a service across the stax cluster
   test              Automated test to exercise functionality of stax
+  validate          Validate CloudFormation template
 
 For more help, check the docs: https://github.com/philcryer/stax
 EOM
@@ -101,7 +104,6 @@ EOM
 
 ## FIXME broken or unused commands, fix or remove?
 #desc-auto         Describe the autoscaling groups in the stax
-#validate          Validate JSON - DRY RUN, nothing applied
 
 stax-logo(){
 NUMS=`wc -l < assets/stax/slogans`
@@ -702,9 +704,8 @@ stax-destroy-bucket(){
 }
 
 stax-destroy(){
-    confirmed="$1"
     stax-message "destroy stax"
-    if [[ -z $confirmed ]]; then
+    if [[ $YES != "y" ]]; then
         read -p "${yellow}[ ${cyan}????${yellow} ]${reset}     ok to destroy $STAX_NAME [y/n]? " answer
         if [[ $answer != y ]] ; then
             stax-message "  will not destroy $STAX_NAME"
@@ -856,6 +857,7 @@ EOF
     # curl ELB/httpbin/get
     # fleetctl list-
 
+    YES="y"
     stax-destroy 1
 }
 
@@ -897,6 +899,10 @@ do
         -v | --version | --versio | --versi | --vers | --ver | --ve | --v)
             echo "$pkg $version"
             exit 0;;
+
+        -y | --yes | --ye | --y)
+            YES="y"
+            ;;
 
         -*)
             if [[ "$sub_cmd_args" ]]; then
