@@ -290,19 +290,30 @@ case class `AWS::ElasticLoadBalancing::LoadBalancer`(
                                                       Subnets: Seq[Token[String]],
                                                       Listeners: Seq[Listener],
                                                       HealthCheck: HealthCheck,
+                                                      Policies: Option[Seq[LoadBalancerPolicy]],
                                                       Tags: Seq[AmazonTag]
                                                       ) extends Resource("AWS::ElasticLoadBalancing::LoadBalancer")
 object `AWS::ElasticLoadBalancing::LoadBalancer` extends DefaultJsonProtocol {
-  implicit val format: JsonFormat[`AWS::ElasticLoadBalancing::LoadBalancer`] = jsonFormat7(`AWS::ElasticLoadBalancing::LoadBalancer`.apply)
+  implicit val format: JsonFormat[`AWS::ElasticLoadBalancing::LoadBalancer`] = jsonFormat8(`AWS::ElasticLoadBalancing::LoadBalancer`.apply)
 }
 
-case class Listener(LoadBalancerPort: String, InstancePort: String, Protocol: String)
+case class Listener(LoadBalancerPort: String, Protocol: String, InstancePort: String, InstanceProtocol: String, PolicyNames: Option[Seq[String]], SSLCertificateId: Option[Token[String]])
 object Listener extends DefaultJsonProtocol {
-  implicit val format: JsonFormat[Listener] = jsonFormat3(Listener.apply)
+  implicit val format: JsonFormat[Listener] = jsonFormat6(Listener.apply)
 }
 case class HealthCheck(Target: String, HealthyThreshold: String, UnhealthyThreshold: String, Interval: String, Timeout: String)
 object HealthCheck extends DefaultJsonProtocol {
   implicit val format: JsonFormat[HealthCheck] = jsonFormat5(HealthCheck.apply)
+}
+
+case class LoadBalancerPolicy(PolicyName: String, PolicyType: String, Attributes: Seq[NameValuePair], InstancePorts: Option[Seq[String]], LoadBalancerPorts: Option[Seq[String]])
+object LoadBalancerPolicy extends DefaultJsonProtocol {
+  implicit val format: JsonFormat[LoadBalancerPolicy] = jsonFormat5(LoadBalancerPolicy.apply)
+}
+
+case class NameValuePair(Name: String, Value: String)
+object NameValuePair extends DefaultJsonProtocol {
+  implicit  val format: JsonFormat[NameValuePair] = jsonFormat2(NameValuePair.apply)
 }
 
 case class `AWS::IAM::InstanceProfile`(name: String, Path: String, Roles: Seq[Token[`AWS::IAM::Role`]]) extends Resource("AWS::IAM::InstanceProfile")
