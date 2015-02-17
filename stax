@@ -433,7 +433,7 @@ stax-describe(){
     stax-message "$STAX_NAME" "NAME"
     stax-message "  querying aws"
     STAX_DESC="$STAX_DIR/$STAX_NAME.json"
-    if ! aws cloudformation describe-stacks --stack-name "$STAX_NAME" > "$STAX_DESC"; then
+    if ! aws --output json cloudformation describe-stacks --stack-name "$STAX_NAME" > "$STAX_DESC"; then
         stax-error-message "failed to get stax information for $STAX_NAME from aws"
         return 1
     fi
@@ -470,7 +470,7 @@ stax-list(){
     stax-message "  querying aws "
     echo "{"
     # list running stax
-    if ! aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE | $jq '.StackSummaries[].StackName' | grep "vpc-stax" | cut -d"\"" -f2 > /tmp/run.list; then
+    if ! aws --output json cloudformation list-stacks --stack-status-filter CREATE_COMPLETE | $jq '.StackSummaries[].StackName' | grep "vpc-stax" | cut -d"\"" -f2 > /tmp/run.list; then
         stax-error "  aws query failed"
         return 1
     fi
@@ -537,11 +537,11 @@ stax-fleetstats(){
 stax-descauto(){
     stax-message "describe autoscaling groups"
     stax-message "  querying aws for autoscaling policies"
-    if ! aws autoscaling describe-auto-scaling-groups | grep "arn:aws:autoscaling" | grep `cat $STAX_NAME_FILE` | cut -d"/" -f2 | cut -d"\"" -f1 > /tmp/asg; then
+    if ! aws --output json autoscaling describe-auto-scaling-groups | grep "arn:aws:autoscaling" | grep `cat $STAX_NAME_FILE` | cut -d"/" -f2 | cut -d"\"" -f1 > /tmp/asg; then
         rm -f /tmp/asg
         stax-error-exit "failed to get autoscaling policies" 1
     fi
-    if ! aws autoscaling describe-policies --auto-scaling-group-name `cat /tmp/asg`; then
+    if ! aws --output json autoscaling describe-policies --auto-scaling-group-name `cat /tmp/asg`; then
         rm -f /tmp/asg
         stax-error-exit "failed to get information about autoscaling policies" 1
     fi
@@ -617,12 +617,12 @@ stax-getdockerips(){
     stax-message "  querying aws"
     service_hosts="$STAX_DIR/$STAX_NAME.service_hosts"
     # this will not print the IP address of a host if it is the last host in the list
-    if ! aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"container-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$NF } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$service_hosts"; then
+    if ! aws --output json ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"container-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$NF } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$service_hosts"; then
         stax-error "failed to query aws for service instances"
         return 1
     fi
     router_hosts="$STAX_DIR/$STAX_NAME.router_hosts"
-    if ! aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"router-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$NF } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$router_hosts"; then
+    if ! aws --output json ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"router-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$NF } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$router_hosts"; then
         stax-error "failed to query aws for router instances"
         return 1
     fi
@@ -713,7 +713,7 @@ stax-destroy-bucket(){
         return 10
     fi
     stax-message "  making sure bucket $STAX_NAME exists in aws"
-    if ! aws s3api list-buckets | $jq '.Buckets[].Name' | grep -q "^\"$STAX_NAME\"$" > /dev/null 2>&1; then
+    if ! aws --output json s3api list-buckets | $jq --raw-output '.Buckets[].Name' | grep -q "^$STAX_NAME$" > /dev/null 2>&1; then
         stax-error "bucket $STAX_NAME does not exist"
         return 1
     fi
