@@ -7,7 +7,7 @@
 
 # variables
 pkg="stax"
-version="0.1"
+version="0.2"
 STAX_PRE_NAME="stax"
 SCRIPT_PATH=$(cd $(dirname $0); pwd -P)
 SYSTEM=$(uname)
@@ -539,8 +539,16 @@ stax-history(){
 
 stax-jumpip(){
     stax-message "getting public IP (EIP)"
+    if [[ ! $STAX_DESC ]]; then
+        stax-error "cannot call stax-jumpip without STAX_DESC defined"
+        return 10
+    fi
+    if [[ ! -f $STAX_DESC ]]; then
+        stax-error "stax description file not found: $STAX_DESC"
+        return 1
+    fi
     STAX_JUMP_FILE="$STAX_DIR/$STAX_NAME.jump"
-    STAX_PUB_IP=$(grep -B2 -A2 'JumpEIP' "$STAX_DIR/$STAX_NAME.json" | grep -o '[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*')
+    STAX_PUB_IP=$($jq --raw-output '.Stacks[].Outputs[] | select(.OutputKey=="JumpEIP").OutputValue' "$STAX_DESC")
     stax-message "  public IP (EIP): $STAX_PUB_IP"
     stax-message "  writing to $STAX_JUMP_FILE"
     echo "$STAX_PUB_IP" > "$STAX_JUMP_FILE"
@@ -568,7 +576,7 @@ EOF
 
 stax-popjumpbox(){
     stax-message "setup motd and bashrc on jumpbox"
-    stax-message "  pushing motd to jump box: $STAX_PUB_IP"
+    stax-message "  pushing motd to jump box"
     motd="$STAX_DIR/$STAX_NAME.motd"
     if [[ ! -f $motd ]]; then
         stax-error "motd file not found: $motd"
@@ -578,7 +586,7 @@ stax-popjumpbox(){
         stax-error "failed to copy motd file to jump box"
         return 1
     fi
-    stax-message "  pushing bashrc to jump box: $STAX_PUB_IP"
+    stax-message "  pushing bashrc to jump box"
     if ! scp $SSH_OPTIONS assets/stax/bashrc jump:.bashrc > /dev/null; then
         stax-error "failed to copy bashrc file to jump box"
         return 1
