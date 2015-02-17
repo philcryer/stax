@@ -25,6 +25,16 @@ if [[ ! $SSH_AUTH_SOCK ]]; then
     exec ssh-agent $0 "$@"
 fi
 
+# create a dir to store stax stuff
+if [[ ! -d $STAX_DIR ]]; then
+    if ! mkdir -p "$STAX_DIR"; then
+        stax-error-exit "failed to make run directory: $STAX_DIR" 1
+    fi
+    if ! chmod 700 "$STAX_DIR"; then
+        stax-error-exit "failed to chmod $STAX_DIR" 1
+    fi
+fi
+
 # set colors
 red=$(tput setaf 1)
 green=$(tput setaf 2)
@@ -135,16 +145,6 @@ stax-preflight(){
         if [[ ! -f $jq ]]; then
             stax-error-exit "no viable jq binary found, Aborting." 1
         fi
-    fi
-    # create a dir to store stax stuff
-    if [[ ! -d $STAX_DIR ]]; then
-        stax-message "creating directory $STAX_DIR"
-        if ! mkdir -p "$STAX_DIR"; then
-            stax-error-exit "faild to make run directory: $STAX_DIR" 1
-        fi
-    fi
-    if ! chmod 700 "$STAX_DIR"; then
-        stax-error-exit "failed to chmod $STAX_DIR" 1
     fi
     # verify config is filled out
     if [[ ! -f $config ]]; then
