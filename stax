@@ -19,12 +19,6 @@ SSH_OPTIONS="-q"
 host=$(hostname)
 YES=
 
-# make sure we are running under ssh-agent
-if [[ ! $SSH_AUTH_SOCK ]]; then
-    echo "$pkg: not running under ssh-agent, restarting with ssh-agent running"
-    exec ssh-agent $0 "$@"
-fi
-
 # create a dir to store stax stuff
 if [[ ! -d $STAX_DIR ]]; then
     if ! mkdir -p "$STAX_DIR"; then
@@ -87,6 +81,12 @@ stax-logger(){
     fi
     echo "$(date +'%b %d %T') $host $pkg: $msg" >> "$STAX_LOG"
 }
+
+# make sure we are running under ssh-agent
+if [[ ! $SSH_AUTH_SOCK ]]; then
+    stax-logger "$pkg: not running under ssh-agent, restarting with ssh-agent running"
+    exec ssh-agent $0 "$@"
+fi
 
 stax-usage(){
     cat <<EOM
