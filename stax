@@ -117,6 +117,17 @@ NUMS=`wc -l < assets/stax/slogans`
 }
 
 stax-preflight(){
+    # create a dir to store stax stuff
+    if [[ ! -d $STAX_DIR ]]; then
+        if ! mkdir -p "$STAX_DIR"; then
+            stax-error-exit "faild to make run directory: $STAX_DIR" 1
+        else
+            stax-message "creating directory $STAX_DIR"
+        fi
+    fi
+    if ! chmod 700 "$STAX_DIR"; then
+        stax-error-exit "failed to chmod $STAX_DIR" 1
+    fi
     # check for required cli tools
     for cli in aws ssh; do
         if ! type "$cli" > /dev/null 2>&1; then
@@ -127,7 +138,7 @@ stax-preflight(){
     if [[ ! -f $HOME/.aws/config ]]; then
         stax-error-exit "awscli not configured, run 'aws configure'. Aborting." 1
     fi
-    # check for jq
+    # check for jq, use system installed version if found, otherwise use bundled
     if which jq > /dev/null; then
         jq=$(which jq)
     else
@@ -135,16 +146,6 @@ stax-preflight(){
         if [[ ! -f $jq ]]; then
             stax-error-exit "no viable jq binary found, Aborting." 1
         fi
-    fi
-    # create a dir to store stax stuff
-    if [[ ! -d $STAX_DIR ]]; then
-        stax-message "creating directory $STAX_DIR"
-        if ! mkdir -p "$STAX_DIR"; then
-            stax-error-exit "faild to make run directory: $STAX_DIR" 1
-        fi
-    fi
-    if ! chmod 700 "$STAX_DIR"; then
-        stax-error-exit "failed to chmod $STAX_DIR" 1
     fi
     # verify config is filled out
     if [[ ! -f $config ]]; then
