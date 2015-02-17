@@ -93,11 +93,12 @@ stax-usage(){
 Usage: stax [OPTIONS] <command>
 
 Options:
-  -c,--config=CONFIG   Use file CONFIG rather than config/config.json
-  -d,--debug           Turn on verbose messages
-  -h,--help            Output this message
-  -v,--version         Print name and version information
-  -y,--yes             Do not prompt for confirmation
+  -c,--config=CONFIG        Use file CONFIG rather than config/config.json
+  -d,--debug                Turn on verbose messages
+  -h,--help                 Output this message
+  -t,--template=TEMPLATE    Use file TEMPLATE rather than templates/default.json
+  -v,--version              Print name and version information
+  -y,--yes                  Do not prompt for confirmation
 
 If an argument is required for a long option, so to the short. Same for
 optional arguments.
@@ -898,6 +899,14 @@ do
         -h | --help | --hel | --he | --h)
             stax-usage
             exit 0;;
+
+        -t | --template | --templat | --templa | --templ | --temp | --tem | --te | --t)
+            prev_arg=template
+            ;;
+
+        --template=* | --templat=* | --templa=* | --templ=* | --temp=* | --tem=* | --te=* | --t=*)
+            template="$optarg"
+            ;;
 
         -v | --version | --versio | --versi | --vers | --ver | --ve | --v)
             echo "$pkg $version"
