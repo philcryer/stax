@@ -37,6 +37,9 @@ object Resource extends DefaultJsonProtocol {
           case r: `AWS::ElasticLoadBalancing::LoadBalancer` => r.toJson
           case r: `AWS::IAM::InstanceProfile`               => r.toJson
           case r: `AWS::IAM::Role`                          => r.toJson
+          case r: `AWS::Route53::RecordSet::AliasRecord`                 => r.toJson
+          case r: `AWS::Route53::RecordSet::GeneralRecord`                 => r.toJson
+
         }
 
         val mainFields = JsObject(raw.asJsObject.fields - "name")
@@ -351,4 +354,97 @@ object Policy extends DefaultJsonProtocol {
 case class PolicyDocument(Statement: Seq[PolicyStatement])
 object PolicyDocument extends DefaultJsonProtocol {
   implicit val format: JsonFormat[PolicyDocument] = jsonFormat1(PolicyDocument.apply)
+}
+
+// We're mapping "RecordName" to "Name," not to be confused with the name we give the resource in the template, which is called "name" at the Scala level.
+// Similarly, "RecordType" becomes "Type," which is different from the "type" of the resource.
+// Note that if you add, remove, or re-order fields, you must update the JSON mapping.  ORDER COUNTS!
+// Not yet supporting advanced DNS parameters: Failover, GeoLocation, HealthCheckId, Region, SetIdentifier, Weight
+// Also, didn't include HostedZoneId.  Seemed like it'd always be easier to go with HostedZoneName,
+// and it makes the object model cleaner not to support both.
+
+sealed abstract class `AWS::Route53::RecordSet` extends Resource("AWS::Route53::RecordSet")
+
+case class `AWS::Route53::RecordSet::GeneralRecord`(
+                                                     name: String,
+                                                     RecordName: Token[String], // The subdomain, with a . after it.
+                                                     RecordType: Route53RecordType,
+                                                     HostedZoneName: Token[String], // The parent domain, with a . after it.  Must be route 53 managed already.
+                                                     ResourceRecords: Seq[Token[String]],
+                                                     TTL: Token[String]
+                                                     ) extends `AWS::Route53::RecordSet`
+
+object `AWS::Route53::RecordSet::GeneralRecord` extends DefaultJsonProtocol {
+  implicit val format: JsonFormat[`AWS::Route53::RecordSet::GeneralRecord`] = jsonFormat(`AWS::Route53::RecordSet::GeneralRecord`.apply, "name", "Name", "Type", "HostedZoneName", "ResourceRecords", "TTL")
+}
+
+case class `AWS::Route53::RecordSet::AliasRecord`(
+                                                   name: String,
+                                                   RecordName: Token[String], // The subdomain, with a . after it.
+                                                   HostedZoneName: Token[String], // The parent domain, with a . after it.  Must be route 53 managed already.
+                                                   AliasTarget: Route53AliasTarget
+                                                   ) extends `AWS::Route53::RecordSet` {
+  val RecordType = Route53RecordType.A
+}
+
+object `AWS::Route53::RecordSet::AliasRecord` extends DefaultJsonProtocol {
+  implicit val format: RootJsonFormat[`AWS::Route53::RecordSet::AliasRecord`] = new RootJsonFormat[`AWS::Route53::RecordSet::AliasRecord`] {
+    def write(r: `AWS::Route53::RecordSet::AliasRecord`) = JsObject(
+      Map("name" -> r.name.toJson,
+        "Name" -> r.RecordName.toJson,
+        "Type" -> r.RecordType.toString.toJson,
+        "HostedZoneName" -> r.HostedZoneName.toJson,
+        "AliasTarget" -> r.AliasTarget.toJson)
+    )
+
+    // todo
+    def read(value: JsValue) = ???
+
+  }
+}
+
+sealed trait Route53RecordType
+
+object Route53RecordType extends DefaultJsonProtocol {
+
+  case object A extends Route53RecordType
+  case object CNAME extends Route53RecordType
+  case object AAAA extends Route53RecordType
+  case object MX extends Route53RecordType
+  case object NS extends Route53RecordType
+  case object PTR extends Route53RecordType
+  case object SOA extends Route53RecordType
+  case object SPF extends Route53RecordType
+  case object SRV extends Route53RecordType
+  case object TXT extends Route53RecordType
+
+  implicit val format: JsonFormat[Route53RecordType] = new JsonFormat[Route53RecordType] {
+    def write(f: Route53RecordType) = JsString(f.toString)
+
+    def read(value: JsValue) = {
+      value.toString() match {
+        case "A" => Route53RecordType.A
+        case "CNAME" => Route53RecordType.CNAME
+        case "AAAA" => Route53RecordType.AAAA
+        case "MX" => Route53RecordType.MX
+        case "NS" => Route53RecordType.NS
+        case "PTR" => Route53RecordType.PTR
+        case "SOA" => Route53RecordType.SOA
+        case "SPF" => Route53RecordType.SPF
+        case "SRV" => Route53RecordType.SRV
+        case "TXT" => Route53RecordType.TXT
+      }
+    }
+  }
+}
+
+
+case class Route53AliasTarget(
+                               DNSName: Token[String],
+                               HostedZoneId: Token[String],
+                               EvaluateTargetHealth: Boolean
+                               )
+
+object Route53AliasTarget extends DefaultJsonProtocol {
+  implicit val format: JsonFormat[Route53AliasTarget] = jsonFormat3(Route53AliasTarget.apply)
 }
