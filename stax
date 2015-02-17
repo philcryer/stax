@@ -65,6 +65,9 @@ stax-logger(){
         echo "$pkg: cannot call stax-logger with STAX_LOG undefined"
         exit 5
     fi
+    if [[ ! -d $STAX_DIR ]]; then
+        mkdir -p $STAX_DIR
+    fi
     echo "$(date +'%b %d %T') $host $pkg: $msg" >> "$STAX_LOG"
 }
 
