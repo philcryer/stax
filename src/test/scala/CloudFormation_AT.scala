@@ -366,7 +366,7 @@ object StaxTemplate {
         allowSSHFromParam
       )
     ),
-
+  Conditions = None,
     Mappings = Some(
       Seq(
         StringMapping(
@@ -579,7 +579,7 @@ object StaxTemplate {
                             SecurityGroupIds = Seq( Ref("NATSecurityGroup") ),
                             Tags = standardTagsNoNetwork("nat1"),
                             UserData = Some(`Fn::Base64`(
-                              `Fn::Join`("", 
+                              `Fn::Join`("",
                                          Seq(
                                            "#!/bin/bash -v\n",
                                            "yum update -y aws*\n",
@@ -598,13 +598,13 @@ object StaxTemplate {
                                         )
                             ))
                           ),
-    
+
       `AWS::EC2::EIP`(
                        "NAT1EIP",
                        Domain = "vpc",
                        InstanceId = Ref("NAT1Instance")
       ),
-    
+
       `AWS::EC2::Instance`(
                             "NAT2Instance",
                             Metadata = Some(Map("Comment1" -> "Create NAT #2")),
@@ -637,13 +637,13 @@ object StaxTemplate {
                                         )
                             ))
       ),
-    
+
       `AWS::EC2::EIP`(
                        "NAT2EIP",
                         Domain = "vpc",
                         InstanceId = Ref("NAT2Instance")
                      ),
-    
+
       `AWS::EC2::SecurityGroup`(
                                  "RouterELBSecurityGroup",
                                   GroupDescription = "Rules for allowing access to/from service router ELB",
@@ -691,7 +691,10 @@ object StaxTemplate {
                                                     Listener(
                                                               LoadBalancerPort = "80",
                                                               InstancePort = "80",
-                                                              Protocol = "HTTP"
+                                                              Protocol = "HTTP",
+                                                      InstanceProtocol = "HTTP",
+                                                    PolicyNames = None,
+                                                    SSLCertificateId = None
                                                             )
                                                   ),
                                                   HealthCheck = HealthCheck(
@@ -701,7 +704,8 @@ object StaxTemplate {
                                                                             Interval = "30",
                                                                             Timeout = "5"
                                                                            ),
-                                                 Tags = standardTagsNoNetwork("router-elb")
+                                                  Policies = None,
+                                                  Tags = standardTagsNoNetwork("router-elb")
       ),
 
       `AWS::EC2::SecurityGroup`(
@@ -755,7 +759,7 @@ object StaxTemplate {
                                  SecurityGroupEgress = None,
                                  Tags = standardTagsNoNetwork("routersg")
                                ),
-    
+
       `AWS::EC2::SecurityGroupIngress`(
                                         "RouterCoreOSFromRouterCoreOS",
                                         GroupId = Ref("RouterCoreOSSecurityGroup"),
@@ -764,7 +768,7 @@ object StaxTemplate {
                                         FromPort = "0",
                                         ToPort = "65535"
                                       ),
-    
+
       `AWS::EC2::SecurityGroupIngress`(
                                         "RouterCoreOSFromCoreOS",
                                         GroupId = Ref("RouterCoreOSSecurityGroup"),

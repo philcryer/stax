@@ -10,6 +10,7 @@ case class Template(
                     AWSTemplateFormatVersion: String,
                     Description: String,
                     Parameters:  Option[Seq[Parameter]],
+                    Conditions:  Option[Seq[Condition]],
                     Mappings:    Option[Seq[Mapping]],
                     Resources:   Option[Seq[Resource]],
                     Outputs:     Option[Seq[Output[_]]]
@@ -30,9 +31,10 @@ object Template extends DefaultJsonProtocol {
       fields ++= productElement2Field[String]("AWSTemplateFormatVersion", p, 0)
       fields ++= productElement2Field[String]("Description", p, 1)
       fields ++= productElement2Field[Option[Seq[Parameter]]]("Parameters", p, 2)
-      fields ++= productElement2Field[Option[Seq[Mapping]]]("Mappings", p, 3)
-      fields ++= productElement2Field[Option[Seq[Resource]]]("Resources", p, 4)
-      fields ++= productElement2Field[Option[Seq[Output[_]]]]("Outputs", p, 5)
+      fields ++= productElement2Field[Option[Seq[Condition]]]("Conditions", p, 3)
+      fields ++= productElement2Field[Option[Seq[Mapping]]]("Mappings", p, 4)
+      fields ++= productElement2Field[Option[Seq[Resource]]]("Resources", p, 5)
+      fields ++= productElement2Field[Option[Seq[Output[_]]]]("Outputs", p, 6)
       JsObject(fields: _*)
     }
   }

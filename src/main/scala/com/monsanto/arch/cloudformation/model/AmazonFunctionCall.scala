@@ -29,6 +29,7 @@ object AmazonFunctionCall extends DefaultJsonProtocol {
         case j:   `Fn::Join`      => implicitly[JsonWriter[`Fn::Join`#T]      ].write(j.arguments)
         case fim: `Fn::FindInMap` => implicitly[JsonWriter[`Fn::FindInMap`#T] ].write(fim.arguments)
         case b64: `Fn::Base64`    => implicitly[JsonWriter[`Fn::Base64`#T]    ].write(b64.arguments)
+        case eq: `Fn::Equals`    => implicitly[JsonWriter[`Fn::Equals`#T]    ].write(eq.arguments)
       }
 
       JsObject(
@@ -61,8 +62,8 @@ case class `Fn::Base64`(toEncode: Token[String])
   extends AmazonFunctionCall[String]("Fn::Base64"){type T = Token[String] ; val arguments = toEncode}
 
 //TODO: NOT TESTED YET
-case class `Fn::Equals`[R](a: Token[R], b: Token[R])
-  extends AmazonFunctionCall[Boolean]("Fn::Equals"){type T = (Token[R], Token[R]) ; val arguments = (a, b)}
+case class `Fn::Equals`(a: Token[String], b: Token[String])
+  extends AmazonFunctionCall[String]("Fn::Equals"){type T = (Token[String], Token[String]) ; val arguments = (a, b)}
 
 
 object `Fn::Base64` extends DefaultJsonProtocol {
