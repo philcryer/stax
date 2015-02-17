@@ -28,10 +28,19 @@ fi
 # create a dir to store stax stuff
 if [[ ! -d $STAX_DIR ]]; then
     if ! mkdir -p "$STAX_DIR"; then
-        stax-error-exit "failed to make run directory: $STAX_DIR" 1
+        echo "$pkg: failed to make run directory: $STAX_DIR"
+        exit 1
     fi
     if ! chmod 700 "$STAX_DIR"; then
-        stax-error-exit "failed to chmod $STAX_DIR" 1
+        echo "$pkg: failed to chmod $STAX_DIR"
+        exit 1
+    fi
+fi
+# create audit dir for stax    
+if [[ ! -d $STAX_DIR/audit ]]; then
+    if ! mkdir -p "$STAX_DIR/audit"; then
+        echo "$pkg: failed to make audit directory: $STAX_DIR/audit"
+        exit 1
     fi
 fi
 
@@ -144,19 +153,6 @@ stax-preflight(){
         jq="assets/jq/$SYSTEM/jq"
         if [[ ! -f $jq ]]; then
             stax-error-exit "no viable jq binary found, Aborting." 1
-        fi
-    fi
-    # verify config is filled out
-    if [[ ! -f $config ]]; then
-        stax-error "$config does not exist, configuration required"
-        stax-error "copy example to config directory, configure it and run again."
-        stax-error "    $ cp $config.example $config"
-        stax-error-exit "$pkg: Aborting." 1
-    fi
-    # create audit dir for stax    
-    if [[ ! -d $STAX_DIR/audit ]]; then
-        if ! mkdir -p "$STAX_DIR/audit"; then
-            stax-error-exit "failed to make audit directory: $STAX_DIR/audit" 1
         fi
     fi
 }
@@ -743,6 +739,13 @@ stax-generate(){
 
 # generate parameters file
 stax-config(){
+    # verify config is filled out
+    if [[ ! -f $config ]]; then
+        stax-error "$config does not exist, configuration required"
+        stax-error "copy example to config directory, configure it and run again."
+        stax-error "    $ cp $config.example $config"
+        stax-error-exit "Aborting." 1
+    fi
     stax-message "creating parameter file"
     # initialize sed command
     sed="sed -e s/@KEY_NAME@/$STAX_NAME/"
