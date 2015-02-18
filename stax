@@ -771,7 +771,7 @@ stax-config(){
     fi
     external_cidr="$(curl -s http://icanhazip.com)/32"
     if [[ -z $external_cidr ]]; then
-        stax-error "failed to get IP address for local machine"
+        stax-error "failed to get external IP address for local machine"
     fi
     if grep -q '@HTTP_FROM@' "$config" > /dev/null 2>&1; then
         if [[ ! $external_cidr ]]; then
