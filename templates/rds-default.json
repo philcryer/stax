@@ -1,0 +1,20 @@
+"DBInstance" : {
+  "Type": "AWS::RDS::DBInstance",
+  "Properties": {
+     "DBName"            : { "Ref" : "DBName" },
+     "Engine"            : "MySQL",
+     "MasterUsername"    : { "Ref" : "DBUsername" },
+     "DBInstanceClass"   : { "Ref" : "DBClass" },
+     "DBSecurityGroups"  : [ { "Ref" : "DBSecurityGroup" } ],
+     "AllocatedStorage"  : { "Ref" : "DBAllocatedStorage" },
+     "MasterUserPassword": { "Ref" : "DBPassword" }
+  }
+}
+
+"DBSecurityGroup": {
+  "Type": "AWS::RDS::DBSecurityGroup",
+  "Properties": {
+     "DBSecurityGroupIngress": { "EC2SecurityGroupName": { "Ref": "WebServerSecurityGroup" } },
+     "GroupDescription"      : "Frontend Access"
+  }
+}
