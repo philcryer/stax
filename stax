@@ -898,16 +898,18 @@ EOF
         return 1
     fi
     stax-message "  giving consul some time to cluster"
-    sleep 200
+    sleep 150
     stax-message "  getting consul cluster members"
     if ! stax-connect router docker exec consul consul members; then
         stax-error "failed to run consul members on router"
         return 1
     fi
-    if ! stax-connect service docker exec consul curl --silent localhost:8500/v1/catalog/nodes | $jq .; then
+    if ! stax-connect service docker exec consul curl --silent localhost:8500/v1/catalog/nodes; then
+        echo ""
         stax-error "failed to curl consul members on service"
         return 1
     fi
+    echo ""
 
     #jump_hostname=$(stax-connect jump hostname)
     #stax-message "  jump box hostname: $jump_hostname"
