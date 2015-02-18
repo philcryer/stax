@@ -303,6 +303,7 @@ stax-add(){
         stax-error-exit "failed to validate template" 1
     fi
 
+    echo "smileyface";exit 0
     ## TODO
     ## - verify there is a template called out
     # validate template
@@ -1146,7 +1147,7 @@ case "$sub_cmd" in
         if ! stax-complete; then
             stax-error-exit "stax build not complete" 1
         fi
-        stax-add
+        stax-add "$template"
         ;;
 
     test)
