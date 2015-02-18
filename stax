@@ -133,7 +133,7 @@ NUMS=`wc -l < assets/stax/slogans`
     echo " ___| |_ __ ___  __"
     echo '/ __| __/ _` \ \/ /'
     echo '\__ \ || (_| |>  < '
-    echo "|___/\__\__,_/_/\_\ ${reset}"
+    echo "|___/\__\__,_/_/\_\ ${reset} `echo $version`"
     echo
 }
 
