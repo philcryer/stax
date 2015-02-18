@@ -271,45 +271,39 @@ stax-validate(){
 }
 
 stax-add(){
-    stax-message "Adding functionality to existing stax."
-    stax-message "getting existing VPC name"
+    stax-message "Adding RDS to existing vpc"
+    # build RDS params file"
+    stax-message "  building params file"
+    stax-rds-config
+    stax-message "  getting existing VPC name"
     vpc_id=$(jq --raw-output '.Stacks[].Outputs[] | select(.OutputKey=="VPCID").OutputValue' "$STAX_DIR/$STAX_NAME.json")
     echo "$vpc_id" > $STAX_DIR/$STAX_NAME.vpc
     stax-message "  adding to $vpc_id"
 
-    stax-message "Validating template"
+    # validate template
     if [[ ! $1 ]]; then
         stax-error-exit "stax-add takes the template path as an argument" 10
     fi
     template_path="$1"
-
-    # Validate template
-    if ! stax-create-bucket; then
-        stax-destroy-key
-        stax-destroy-files
-        stax-error-exit "failed to create bucket" 1
-    fi
-    # upload template to s3 to have bigger size limits
     if ! stax-upload-template "$template_path"; then
-        stax-destroy-bucket
-        stax-destroy-key
-        stax-destroy-files
         stax-error-exit "failed to upload template to s3" 1
     fi
     if ! stax-validate-template; then
-        stax-destroy-bucket
-        stax-destroy-key
-        stax-destroy-files
         stax-error-exit "failed to validate template" 1
     fi
 
-    echo "smileyface";exit 0
-    ## TODO
-    ## - verify there is a template called out
-    # validate template
-    ## ...
-    ## - aws update template against existing vpc
-
+    stax-message "Creating RDS stax in $vpc_id"
+    # create/add RDS to existing VPC
+    if ! aws cloudformation create-stack \
+        --stack-name "$STAX_NAME-RDS" \
+        --template-url "$STAX_TEMPLATE_URL" \
+        --parameters "$(<$STAX_RDS_PARAMS)" \
+        --capabilities CAPABILITY_IAM > /dev/null
+    then
+        stax-error-exit "creation failed, exiting" 1
+    fi
+    stax-message "  stax creation complete"
+    stax-describe
     exit 0
 }
 
@@ -852,6 +846,26 @@ stax-config(){
     fi
 }
 
+# generate RDS parameters file
+stax-rds-config(){
+    # verify config is filled out
+    if [[ ! -f $config_rds ]]; then
+        stax-error "config file does not exist: $config_rds"
+        stax-error "configuration required"
+        stax-error "copy example to config directory, configure it and run again."
+        stax-error "    $ cp $config_rds.example $config_rds"
+        return 1
+    fi
+    stax-message "creating parameter file"
+    # initialize sed command
+    sed="sed -e s/@VPC_ID@/$vpc_id/"
+    STAX_RDS_PARAMS="$STAX_DIR/$STAX_NAME.rdsparams"
+    if ! $sed "$config_rds" > "$STAX_RDS_PARAMS"; then
+        stax-error "sed failed to replace elements in $config: $sed"
+        return 1
+    fi
+}
+
 # automated test
 stax-test(){
     stax-message "running stax test"
@@ -945,6 +959,7 @@ EOF
 
 # process positional parameters
 config="config/config.json"
+config_rds="config/rds.json"
 template="templates/cloudformation-template-vpc.json"
 sub_cmd=
 sub_cmd_args=
