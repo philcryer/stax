@@ -774,12 +774,20 @@ stax-config(){
         stax-error "failed to get IP address for local machine"
     fi
     if grep -q '@HTTP_FROM@' "$config" > /dev/null 2>&1; then
+        if [[ ! $external_cidr ]]; then
+            stax-error "config requests replacement for @HTTP_FROM@ but unable to determine external IP"
+            return 1
+        fi
         sed="$sed -e s|@HTTP_FROM@|$external_cidr|"
     fi
     if grep -q '@SSH_FROM@' "$config" > /dev/null 2>&1; then
         if [[ $jump ]]; then
             ssh_from="$jump"
         else
+            if [[ ! $external_cidr ]]; then
+                stax-error "config requests replacement for @SSH_FROM@ but unable to determine external IP"
+                return 1
+            fi
             ssh_from="$external_cidr"
         fi
         sed="$sed -e s|@SSH_FROM@|$ssh_from|"
