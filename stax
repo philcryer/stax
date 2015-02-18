@@ -272,8 +272,9 @@ stax-validate(){
 
 stax-add(){
     stax-message "getting existing VPC name"
-    aws --output json cloudformation describe-stacks --stack-name `cat $STAX_NAME_FILE` | jq '.Stacks[].Outputs[].OutputValue' | grep "\"vpc\-[0-9][a-z]*" | cut -d"\"" -f2 > $STAX_DIR/$STAX_NAME.vpc
-    stax-message "  adding to `cat $STAX_DIR/$STAX_NAME.vpc`"
+    vpc_id=$(jq --raw-output '.Stacks[].Outputs[] | select(.OutputKey=="VPCID").OutputValue' "$STAX_DIR/$STAX_NAME.json")
+    echo "$vpc_id" > $STAX_DIR/$STAX_NAME.vpc
+    stax-message "  adding to $vpc_id"
 
     ## TODO 
     ## - verify there is a template called out
