@@ -1014,6 +1014,8 @@ if [[ -z $sub_cmd ]]; then
     exit 2
 fi
 
+stax-logger "WARN: ---- stax starting ----"
+
 # generic setup
 stax-logo
 stax-preflight
