@@ -2,6 +2,7 @@
   { "ParameterKey": "DBName",               "ParameterValue": "<changeme>" },
   { "ParameterKey": "Engine",               "ParameterValue": "<changeme>" },
   { "ParameterKey": "MultiAZ",              "ParameterValue": "<changeme>" },
+  { "ParameterKey": "VPCID",                "ParameterValue": "@VPC_ID@" },
   { "ParameterKey": "MasterUsername",       "ParameterValue": "<changeme>" },
   { "ParameterKey": "MasterUserPassword",   "ParameterValue": "<changeme>" },
   { "ParameterKey": "DBInstanceClass",      "ParameterValue": "<changeme>" },
