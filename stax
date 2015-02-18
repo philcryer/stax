@@ -478,6 +478,7 @@ stax-complete(){
 stax-list(){
     stax-message "list currently running stax"
     stax-message "  querying aws "
+    stax-message "  running stax "
     echo "{"
     # list running stax
     if ! aws --output json cloudformation list-stacks --stack-status-filter CREATE_COMPLETE | $jq '.StackSummaries[].StackName' | grep "vpc-stax" | cut -d"\"" -f2 > /tmp/run.list; then
@@ -490,6 +491,14 @@ stax-list(){
         echo -n $f && if grep $f /tmp/hist.list > /dev/null; then echo " *" && owned_stax=$f ; else echo; fi
     done
     rm -f /tmp/hist.list /tmp/run.list
+    echo "}"
+    stax-message "list currently running ec2 instances"
+    stax-message "  querying aws "
+    stax-message "  running ec2 instances "
+    echo "{"
+    running_ec2=`aws ec2 describe-instances | grep "\"Instances\"\:" | wc -l` 
+    echo $running_ec2
+    stax-logger "INFO: running ec2 instances: $running_ec2"
     echo "}"
 }
 
