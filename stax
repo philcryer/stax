@@ -104,6 +104,7 @@ If an argument is required for a long option, so to the short. Same for
 optional arguments.
 
 Commands:
+  add                Add functionality to an existing VPC
   connect [target]   Connect to jump|router|service in the VPC stax over SSH
   create             Create a new VPC stax in AWS
   describe           Describe the stax created from this host
@@ -267,6 +268,20 @@ stax-validate(){
     if ! stax-destroy-bucket; then
         stax-error-exit "failed to delete bucket, please do so manually" 1
     fi
+}
+
+stax-add(){
+    stax-message "getting existing VPC name"
+    aws --output json cloudformation describe-stacks --stack-name `cat $STAX_NAME_FILE` | jq '.Stacks[].Outputs[].OutputValue' | grep "\"vpc\-[0-9][a-z]*" | cut -d"\"" -f2 > $STAX_DIR/$STAX_NAME.vpc
+    stax-message "  adding to `cat $STAX_DIR/$STAX_NAME.vpc`"
+
+    ## TODO 
+    ## - verify there is a template called out
+    ## - validate template
+    ## ...
+    ## - aws update template against existing vpc
+
+    exit 0
 }
 
 stax-create(){
@@ -463,7 +478,7 @@ stax-list(){
     ls -1 "$STAX_DIR/audit" > /tmp/hist.list
     # put a * by one if it was launched from here
     for f in $(cat /tmp/run.list); do
-        echo -n $f && if grep $f /tmp/hist.list > /dev/null; then echo " *"; else echo; fi
+        echo -n $f && if grep $f /tmp/hist.list > /dev/null; then echo " *" && owned_stax=$f ; else echo; fi
     done
     rm -f /tmp/hist.list /tmp/run.list
     echo "}"
@@ -1093,6 +1108,16 @@ case "$sub_cmd" in
         stax-message "waiting for services to start"
         sleep 20
         stax-fleetstats
+        ;;
+
+    add)
+        if ! stax-existing; then
+            exit 1
+        fi
+        if ! stax-complete; then
+            stax-error-exit "stax build not complete" 1
+        fi
+        stax-add
         ;;
 
     test)
