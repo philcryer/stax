@@ -31,6 +31,9 @@ object AmazonFunctionCall extends DefaultJsonProtocol {
         case b64: `Fn::Base64`    => implicitly[JsonWriter[`Fn::Base64`#T]    ].write(b64.arguments)
         case eq: `Fn::Equals`     => implicitly[JsonWriter[`Fn::Equals`#T]    ].write(eq.arguments)
         case not: `Fn::Not`       => implicitly[JsonWriter[`Fn::Not`#T]       ].write(not.arguments)
+        case and: `Fn::And`       => implicitly[JsonWriter[`Fn::And`#T]       ].write(and.arguments)
+        case or: `Fn::Or`       => implicitly[JsonWriter[`Fn::Or`#T]       ].write(or.arguments)
+        case f: `Fn::If`       => implicitly[JsonWriter[`Fn::If`#T]       ].write(f.arguments)
       }
 
       JsObject(
@@ -67,6 +70,15 @@ case class `Fn::Equals`(a: Token[String], b: Token[String])
 
 case class `Fn::Not`(fn: Token[String])
   extends AmazonFunctionCall[String]("Fn::Not"){type T = (Seq[Token[String]]) ; val arguments = Seq(fn)}
+
+case class `Fn::And`(fn: Seq[Token[String]])
+  extends AmazonFunctionCall[String]("Fn::And"){type T = (Seq[Token[String]]) ; val arguments = fn}
+
+case class `Fn::Or`(fn: Seq[Token[String]])
+  extends AmazonFunctionCall[String]("Fn::Or"){type T = (Seq[Token[String]]) ; val arguments = fn}
+
+case class `Fn::If`(conditionName : Token[String], valIfTrue: Token[String], valIfFalse: Token[String])
+  extends AmazonFunctionCall[String]("Fn::If"){type T = (Seq[Token[String]]) ; val arguments = Seq(conditionName, valIfTrue, valIfFalse)}
 
 
 object `Fn::Base64` extends DefaultJsonProtocol {

@@ -138,6 +138,31 @@ object CloudFormationTemplateVPC extends App {
     Tags = standardTags("privrt2", "Private")
   )
 
+  val serviceELBSSLCertName = StringParameter(
+    name = "ServiceELBSSLCertName",
+    Description = "Logical name for the SSL cert to associate with the service ELB.",
+    Default = ""
+  )
+
+  val serviceELBSubdomainName = StringParameter(
+    name = "ServiceELBSubdomainName",
+    MinLength = 1,
+    MaxLength = 64,
+    Description = "Subdomain to register for services.  You must also specify ServiceELBBaseDomainName, which must be a subdomain of ServiceELBBaseDomainName.",
+    AllowedPattern = Some("[\\-.a-zA-Z0-9]*\\."),
+    Default="do.not.create.",
+    ConstraintDescription = Some("Can contain only alphanumeric characters, dashes and periods.  Must also end with a period")
+  )
+
+  val serviceELBBaseDomainName = StringParameter(
+    name        = "ServiceELBBaseDomainName",
+    Description = "Base domain to register for services.  You must already have this domain setup in Route 53.",
+    MinLength = 0,
+    MaxLength = 64,
+    AllowedPattern = Some("[\\-.a-zA-Z0-9]*\\."),
+    ConstraintDescription = Some("Can contain only alphanumeric characters, dashes and periods.  Must also end with a period"),
+    Default = "do.not.create."
+  )
   val itsaDockerStack = Template(
     AWSTemplateFormatVersion = "2010-09-09",
     Description = "Autoscaling group of Docker engines in dual AZ VPC with two NAT nodes in an active/active configuration. After successfully launching this CloudFormation stack, you will have 4 subnets in 2 AZs (a pair of public/private subnets in each AZ), a jump box, two NAT instances routing outbound traffic for their respective private subnets.  The NAT instances will automatically monitor each other and fix outbound routing problems if the other instance is unavailable.  The Docker engine autoscaling group will deploy to the private subnets.",
@@ -160,13 +185,6 @@ object CloudFormationTemplateVPC extends App {
           AllowedPattern        = Some("[-_ a-zA-Z0-9]*"),
           ConstraintDescription = Some("Can contain only alphanumeric characters, spaces, dashes and underscores."),
           Default               = "REPLACE GROUP"
-        ),
-        StringParameter(
-          name        = "ServiceDomain",
-          Description = "Domain to register for services",
-          MinLength   = 1,
-          MaxLength   = 64,
-          Default     = "REPLACE DOMAIN"
         ),
         StringParameter(
           name                  = "Owner",
@@ -242,6 +260,9 @@ object CloudFormationTemplateVPC extends App {
         privateSubnet1CidrParam,
         publicSubnet2CidrParam,
         privateSubnet2CidrParam,
+        serviceELBSSLCertName,
+        serviceELBBaseDomainName,
+        serviceELBSubdomainName,
         StringParameter(
           name                  = "JumpInstanceType",
           Description           = "Instance type for public subnet jump nodes",
@@ -326,11 +347,35 @@ object CloudFormationTemplateVPC extends App {
           AllowedValues = Seq("private","public"),
           Default       = "private"
         ),
+        StringParameter(
+          name          ="THISISACOMMENT",
+          Description = "Not really a parameter.  Since JSON can't have comments, this is a dumb way to annotate the config.json file.  You can use this multiple times.",
+          Default = ""
+        ),
         allowHTTPFromParam,
         allowSSHFromParam
       )
     ),
-
+    Conditions = Some(
+      Seq(
+        Condition(name = "ServiceELBSubdomainNameIsDefined", function = `Fn::Not`(`Fn::Equals`(a = ParameterRef(serviceELBSubdomainName), b = StringToken("do.not.create.")))),
+        Condition(name = "ServiceELBSubdomainNameIsNotDefined", function = `Fn::Equals`(a = ParameterRef(serviceELBSubdomainName), b = StringToken("do.not.create."))),
+        Condition(name = "ServiceELBSSLCertNameIsDefined", function = `Fn::Not`(`Fn::Equals`(a = ParameterRef(serviceELBSSLCertName), b = StringToken("")))),
+        Condition(name = "ServiceELBSSLCertNameIsNotDefined", function = `Fn::Equals`(a = ParameterRef(serviceELBSSLCertName), b = StringToken(""))),
+        Condition(name = "ServiceELBSubdomainNameAndSSLIsDefined", function = `Fn::And`(
+          Seq(
+            `Fn::Not`(`Fn::Equals`(a = ParameterRef(serviceELBSubdomainName), b = StringToken("do.not.create."))),
+            `Fn::Not`(`Fn::Equals`(a = ParameterRef(serviceELBSSLCertName), b = StringToken("")))
+          )
+        )),
+        Condition(name = "ServiceELBSubdomainNameIsDefinedAndSSLIsNotDefined", function = `Fn::And`(
+          Seq(
+            `Fn::Not`(`Fn::Equals`(a = ParameterRef(serviceELBSubdomainName), b = StringToken("do.not.create."))),
+            `Fn::Equals`(a = ParameterRef(serviceELBSSLCertName), b = StringToken(""))
+          )
+        ))
+      )
+    ),
     Mappings = Some(
       Seq(
         StringMapping(
@@ -608,6 +653,101 @@ object CloudFormationTemplateVPC extends App {
           InstanceId = Ref("NAT2Instance")
         ),
 
+      // Start the "with SSL" version
+        `AWS::ElasticLoadBalancing::LoadBalancer`(
+          "RouterELBSSL",
+          CrossZone = true,
+          SecurityGroups = Seq(Ref("RouterELBSSLSecurityGroup")),
+          Subnets = Seq(Ref("PubSubnet1"), Ref("PubSubnet2")),
+          Listeners = Seq(
+            Listener(
+              LoadBalancerPort = "443",
+              InstancePort = "443",
+              Protocol = "HTTPS",
+              InstanceProtocol = "HTTPS",
+              PolicyNames = None,
+              SSLCertificateId = Some(`Fn::Join`("", Seq(
+                StringToken("arn:aws:iam::"),
+                Ref("AWS::AccountId"),
+                StringToken(":server-certificate/"),
+                ParameterRef(serviceELBSSLCertName))))
+            )
+          ),
+          HealthCheck = HealthCheck(
+            Target = "TCP:80",
+            HealthyThreshold = "3",
+            UnhealthyThreshold = "5",
+            Interval = "30",
+            Timeout = "5"
+          ),
+//        Policies = Some(Seq[LoadBalancerPolicy]()),
+          Policies = None,
+          Tags = standardTagsNoNetwork("router-elb"),
+          Condition = Some("ServiceELBSSLCertNameIsDefined")
+        ),
+
+        `AWS::EC2::SecurityGroup`(
+          "RouterELBSSLSecurityGroup",
+          GroupDescription = "Rules for allowing access to/from service router ELB",
+          VpcId = ResourceRef(vpcResource),
+          SecurityGroupEgress = None,
+          SecurityGroupIngress = Some(Seq(
+            CidrIngressSpec(
+              IpProtocol = "tcp",
+              CidrIp = ParameterRef(allowHTTPFromParam),
+              FromPort = "443",
+              ToPort = "443"
+            )
+          )),
+          Tags = standardTagsNoNetwork("router-elbsg"),
+          Condition = Some("ServiceELBSSLCertNameIsDefined")
+        ),
+
+        `AWS::Route53::RecordSet::AliasRecord`(
+          "Route53ServiceELBRecord",
+          ParameterRef(serviceELBSubdomainName),
+          ParameterRef(serviceELBBaseDomainName),
+          Route53AliasTarget(
+            `Fn::GetAtt`(Seq("RouterELBSSL", "DNSName")),
+            `Fn::GetAtt`(Seq("RouterELBSSL", "CanonicalHostedZoneNameID")),
+            false
+          ),
+          Condition = Some("ServiceELBSubdomainNameAndSSLIsDefined")
+
+        ),
+
+      // End the "with SSL" version
+
+      // Start the "without SSL" version
+                `AWS::ElasticLoadBalancing::LoadBalancer`(
+                  "RouterELB",
+                  CrossZone = true,
+                  SecurityGroups = Seq(Ref("RouterELBSecurityGroup")),
+                  Subnets = Seq(Ref("PubSubnet1"), Ref("PubSubnet2")),
+                  Listeners = Seq(
+                    Listener(
+                      LoadBalancerPort = "80",
+                      InstancePort = "80",
+                      Protocol = "HTTP",
+                      InstanceProtocol = "HTTP",
+                      PolicyNames = None,
+                      SSLCertificateId = None
+                    )
+                  ),
+                  HealthCheck = HealthCheck(
+                    Target = "TCP:80",
+                    HealthyThreshold = "3",
+                    UnhealthyThreshold = "5",
+                    Interval = "30",
+                    Timeout = "5"
+                  ),
+                  //        Policies = Some(Seq[LoadBalancerPolicy]()),
+                  Policies = None,
+                  Tags = standardTagsNoNetwork("router-elb"),
+                  Condition = Some("ServiceELBSSLCertNameIsNotDefined")
+                ),
+
+
         `AWS::EC2::SecurityGroup`(
           "RouterELBSecurityGroup",
           GroupDescription = "Rules for allowing access to/from service router ELB",
@@ -619,54 +759,73 @@ object CloudFormationTemplateVPC extends App {
               CidrIp = ParameterRef(allowHTTPFromParam),
               FromPort = "80",
               ToPort = "80"
-            ),
-            CidrIngressSpec(
-              IpProtocol = "tcp",
-              CidrIp = ParameterRef(allowHTTPFromParam),
-              FromPort = "443",
-              ToPort = "443"
             )
           )),
-          Tags = standardTagsNoNetwork("router-elbsg")
+          Tags = standardTagsNoNetwork("router-elbsg"),
+          Condition = Some("ServiceELBSSLCertNameIsNotDefined")
         ),
+
+        `AWS::Route53::RecordSet::AliasRecord`(
+          "Route53ServiceELBRecord",
+          ParameterRef(serviceELBSubdomainName),
+          ParameterRef(serviceELBBaseDomainName),
+          Route53AliasTarget(
+            `Fn::GetAtt`(Seq("RouterELB", "DNSName")),
+            `Fn::GetAtt`(Seq("RouterELB", "CanonicalHostedZoneNameID")),
+            false
+          ),
+          Condition = Some("ServiceELBSubdomainNameIsDefinedAndSSLIsNotDefined")
+
+        ),
+
+
+      // END the "without SSL" version
 
         `AWS::EC2::SecurityGroupEgress`(
           "RouterELBToRouterCoreOSRouter",
-          GroupId = Ref("RouterELBSecurityGroup"),
+          GroupId = `Fn::If`("ServiceELBSSLCertNameIsNotDefined", Ref("RouterELBSecurityGroup"), Ref("RouterELBSSLSecurityGroup")),
           IpProtocol = "tcp",
           DestinationSecurityGroupId = Ref("RouterCoreOSSecurityGroup"),
           FromPort = "80",
           ToPort = "80"
         ),
-        `AWS::EC2::SecurityGroupEgress`(
-          "RouterELBToRouterCoreOSELB",
-          GroupId = Ref("RouterELBSecurityGroup"),
-          IpProtocol = "tcp",
-          DestinationSecurityGroupId = Ref("RouterCoreOSSecurityGroup"),
-          FromPort = "4001",
-          ToPort = "4001"
+
+        `AWS::AutoScaling::AutoScalingGroup`(
+          "RouterCoreOSServerAutoScale",
+          AvailabilityZones = Seq("us-east-1a", "us-east-1b"),
+          LaunchConfigurationName = Ref("RouterCoreOSServerLaunchConfig"),
+          LoadBalancerNames = Some(Seq(`Fn::If`("ServiceELBSSLCertNameIsNotDefined", Ref("RouterELB"), Ref("RouterELBSSL")))),
+          MinSize = "2",
+          MaxSize = "12",
+          DesiredCapacity = Ref("RouterClusterSize"),
+          HealthCheckType = "EC2",
+          VPCZoneIdentifier = Seq(Ref("PriSubnet1"), Ref("PriSubnet2")),
+          Tags = standardTagsNoNetworkPropagate("router")
         ),
-        `AWS::ElasticLoadBalancing::LoadBalancer`(
-          "RouterELB",
-          CrossZone = true,
-          SecurityGroups = Seq(Ref("RouterELBSecurityGroup")),
-          Subnets = Seq(Ref("PubSubnet1"), Ref("PubSubnet2")),
-          Listeners = Seq(
-            Listener(
-              LoadBalancerPort = "80",
-              InstancePort = "80",
-              Protocol = "HTTP"
+
+        `AWS::EC2::SecurityGroup`(
+          "RouterCoreOSSecurityGroup",
+          GroupDescription = "Router CoreOS SecurityGroup",
+          VpcId = ResourceRef(vpcResource),
+          SecurityGroupIngress = Some(Seq(
+            SGIngressSpec(
+              IpProtocol = "tcp",
+              SourceSecurityGroupId =`Fn::If`("ServiceELBSSLCertNameIsNotDefined", Ref("RouterELBSecurityGroup"), Ref("RouterELBSSLSecurityGroup")),
+              FromPort = "80",
+              ToPort = "80"
+            ),
+            SGIngressSpec(
+              IpProtocol = "tcp",
+              SourceSecurityGroupId = `Fn::If`("ServiceELBSSLCertNameIsNotDefined", Ref("RouterELBSecurityGroup"), Ref("RouterELBSSLSecurityGroup")),
+              FromPort = "4001",
+              ToPort = "4001"
             )
-          ),
-          HealthCheck = HealthCheck(
-            Target = "HTTP:4001/version",
-            HealthyThreshold = "3",
-            UnhealthyThreshold = "5",
-            Interval = "30",
-            Timeout = "5"
-          ),
-          Tags = standardTagsNoNetwork("router-elb")
+          )),
+          SecurityGroupEgress = None,
+          Tags = standardTagsNoNetwork("routersg")
         ),
+
+
 
         `AWS::EC2::SecurityGroup`(
           "CoreOSFromJumpSecurityGroup",
@@ -695,29 +854,6 @@ object CloudFormationTemplateVPC extends App {
             )
           )),
           Tags = standardTagsNoNetwork("coreos-from-jumpsg")
-        ),
-
-        `AWS::EC2::SecurityGroup`(
-          "RouterCoreOSSecurityGroup",
-          GroupDescription = "Router CoreOS SecurityGroup",
-          VpcId = ResourceRef(vpcResource),
-          SecurityGroupIngress = Some(Seq(
-            SGIngressSpec(
-              IpProtocol = "tcp",
-              SourceSecurityGroupId = Ref
-                ("RouterELBSecurityGroup"),
-              FromPort = "80",
-              ToPort = "80"
-            ),
-            SGIngressSpec(
-              IpProtocol = "tcp",
-              SourceSecurityGroupId = Ref("RouterELBSecurityGroup"),
-              FromPort = "4001",
-              ToPort = "4001"
-            )
-          )),
-          SecurityGroupEgress = None,
-          Tags = standardTagsNoNetwork("routersg")
         ),
 
         `AWS::EC2::SecurityGroupIngress`(
@@ -828,19 +964,6 @@ object CloudFormationTemplateVPC extends App {
               )
             )
           )
-        ),
-
-        `AWS::AutoScaling::AutoScalingGroup`(
-          "RouterCoreOSServerAutoScale",
-          AvailabilityZones = Seq("us-east-1a", "us-east-1b"),
-          LaunchConfigurationName = Ref("RouterCoreOSServerLaunchConfig"),
-          LoadBalancerNames = Some(Seq(Ref("RouterELB"))),
-          MinSize = "2",
-          MaxSize = "12",
-          DesiredCapacity = Ref("RouterClusterSize"),
-          HealthCheckType = "EC2",
-          VPCZoneIdentifier = Seq(Ref("PriSubnet1"), Ref("PriSubnet2")),
-          Tags = standardTagsNoNetworkPropagate("router")
         ),
 
         `AWS::EC2::SecurityGroup`(
@@ -1020,6 +1143,7 @@ object CloudFormationTemplateVPC extends App {
           Cooldown = Ref("AutoScaleCooldown"),
           ScalingAdjustment = "-1"
         )
+
       )
     ),
 
@@ -1029,7 +1153,7 @@ object CloudFormationTemplateVPC extends App {
         Output("JumpEIP",        "Jump Box EIP",      Ref("JumpEIP")                           ),
         Output("NAT1EIP",        "NAT 1 EIP",         Ref("NAT1EIP")                           ),
         Output("NAT2EIP",        "NAT 2 EIP",         Ref("NAT2EIP")                           ),
-        Output("RouterDNS",      "ELB DNS Name",      `Fn::GetAtt`(Seq("RouterELB","DNSName")) ),
+//        Output("RouterDNS",      "ELB DNS Name",      `Fn::GetAtt`(Seq("RouterELB","DNSName")) ),
         Output("PublicSubnet1",  "Public Subnet #1",  Ref("PubSubnet1")                        ),
         Output("PrivateSubnet1", "Private Subnet #1", Ref("PriSubnet1")                        ),
         Output("PublicSubnet2",  "Public Subnet #2",  Ref("PubSubnet2")                        ),
@@ -1040,7 +1164,7 @@ object CloudFormationTemplateVPC extends App {
 
   val json = itsaDockerStack.toJson
 
-  val f = new File("templates/cloudformation-template-vpc.json")
+  val f = new File("templates/default.json")
   val pw = new PrintWriter(f)
 
   pw.print(json)

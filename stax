@@ -936,7 +936,7 @@ EOF
 # process positional parameters
 config="config/config.json"
 jump=
-template="templates/cloudformation-template-vpc.json"
+template="templates/default.json"
 sub_cmd=
 sub_cmd_args=
 prev_arg=
