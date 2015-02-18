@@ -692,9 +692,9 @@ object StaxTemplate {
                                                               LoadBalancerPort = "80",
                                                               InstancePort = "80",
                                                               Protocol = "HTTP",
-                                                      InstanceProtocol = "HTTP",
-                                                    PolicyNames = None,
-                                                    SSLCertificateId = None
+                                                              InstanceProtocol = "HTTP",
+                                                              PolicyNames = None,
+                                                              SSLCertificateId = None
                                                             )
                                                   ),
                                                   HealthCheck = HealthCheck(

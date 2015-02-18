@@ -1620,7 +1620,8 @@
           {
             "LoadBalancerPort":"80",
             "InstancePort":"80",
-            "Protocol":"HTTP"
+            "Protocol":"HTTP",
+            "InstanceProtocol": "HTTP"
           }
         ],
         "HealthCheck":{
