@@ -271,14 +271,41 @@ stax-validate(){
 }
 
 stax-add(){
+    stax-message "Adding functionality to existing stax."
     stax-message "getting existing VPC name"
     vpc_id=$(jq --raw-output '.Stacks[].Outputs[] | select(.OutputKey=="VPCID").OutputValue' "$STAX_DIR/$STAX_NAME.json")
     echo "$vpc_id" > $STAX_DIR/$STAX_NAME.vpc
     stax-message "  adding to $vpc_id"
 
-    ## TODO 
+    stax-message "Validating template"
+    if [[ ! $1 ]]; then
+        stax-error-exit "stax-add takes the template path as an argument" 10
+    fi
+    template_path="$1"
+
+    # Validate template
+    if ! stax-create-bucket; then
+        stax-destroy-key
+        stax-destroy-files
+        stax-error-exit "failed to create bucket" 1
+    fi
+    # upload template to s3 to have bigger size limits
+    if ! stax-upload-template "$template_path"; then
+        stax-destroy-bucket
+        stax-destroy-key
+        stax-destroy-files
+        stax-error-exit "failed to upload template to s3" 1
+    fi
+    if ! stax-validate-template; then
+        stax-destroy-bucket
+        stax-destroy-key
+        stax-destroy-files
+        stax-error-exit "failed to validate template" 1
+    fi
+
+    ## TODO
     ## - verify there is a template called out
-    ## - validate template
+    # validate template
     ## ...
     ## - aws update template against existing vpc
 
@@ -1113,6 +1140,7 @@ case "$sub_cmd" in
 
     add)
         if ! stax-existing; then
+            stax-error "no stax defined, use create first."
             exit 1
         fi
         if ! stax-complete; then
