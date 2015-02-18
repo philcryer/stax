@@ -496,7 +496,7 @@ stax-list(){
     echo "}"
     stax-message "list currently running ec2 instances"
     stax-message "  querying aws "
-    running_ec2=`aws ec2 describe-instances | grep "\"Instances\"\:" | wc -l` 
+    running_ec2=`aws ec2 describe-instances --filter Name="instance-state-code",Values="16" | grep "\"Instances\"\:" | wc -l`
     stax-message "  $running_ec2 running ec2 instances"
 }
 
