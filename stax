@@ -1146,7 +1146,7 @@ case "$sub_cmd" in
         if ! stax-complete; then
             stax-error-exit "stax build not complete" 1
         fi
-        stax-add
+        stax-add "$template"
         ;;
 
     test)
