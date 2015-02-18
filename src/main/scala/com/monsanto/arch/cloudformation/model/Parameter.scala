@@ -75,7 +75,23 @@ object StringParameter extends DefaultJsonProtocol {
                                                    ConstraintDescription,
                                                    Some(Default),
                                                    AllowedValues
-                                                 )
+  )
+
+  def apply(
+             name:                  String,
+             Description:           String,
+             ConstraintDescription: String,
+             AllowedPattern:        Option[String]
+             ): StringParameter = StringParameter(
+    name,
+    Description,
+    None,
+    None,
+    AllowedPattern,
+    Some(ConstraintDescription),
+    None,
+    None
+  )
 
     def apply(
              name:                  String,
