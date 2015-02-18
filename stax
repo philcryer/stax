@@ -7,7 +7,7 @@
 
 # variables
 pkg="stax"
-version="0.2"
+version="0.3"
 STAX_PRE_NAME="stax"
 SCRIPT_PATH=$(cd $(dirname $0); pwd -P)
 SYSTEM=$(uname)
@@ -393,16 +393,24 @@ IdentityFile $STAX_PRIV_KEY
 Host jump
   User ec2-user
   HostName $STAX_PUB_IP
+EOF
+    if [[ $jump ]]; then
+        # when jumping through their jump box, use their ssh_config
+        cat >> "$STAX_SSH_CONFIG" <<EOF
+  ProxyCommand ssh -q -A -x -o ServerAliveInterval=60 -o ServerAliveCountMax=30 -o TCPKeepAlive=no -W %h:%p $jump
+EOF
+    fi
+    cat >> "$STAX_SSH_CONFIG" <<EOF
 
 Host router
   User core
   HostName $router_ip
-  ProxyCommand ssh -q -F $STAX_SSH_CONFIG jump nc -w 120 %h %p
+  ProxyCommand ssh -q -F $STAX_SSH_CONFIG -W %h:%p jump
 
 Host service
   User core
   HostName $service_ip
-  ProxyCommand ssh -q -F $STAX_SSH_CONFIG jump nc -w 120 %h %p
+  ProxyCommand ssh -q -F $STAX_SSH_CONFIG -W %h:%p jump
 EOF
     stax-message "  created $STAX_SSH_CONFIG"
     SSH_OPTIONS="$SSH_OPTIONS -F $STAX_SSH_CONFIG"
@@ -799,7 +807,7 @@ stax-config(){
     fi
     if grep -q '@SSH_FROM@' "$config" > /dev/null 2>&1; then
         if [[ $jump ]]; then
-            ssh_from="$jump"
+            ssh_from="$jump/32"
         else
             if [[ ! $external_cidr ]]; then
                 stax-error "config requests replacement for @SSH_FROM@ but unable to determine external IP"
@@ -917,6 +925,7 @@ EOF
 
 # process positional parameters
 config="config/config.json"
+jump=
 template="templates/cloudformation-template-vpc.json"
 sub_cmd=
 sub_cmd_args=
@@ -950,6 +959,14 @@ do
         -h | --help | --hel | --he | --h)
             stax-usage
             exit 0;;
+
+        -j | --jump | --jum | --ju | --j)
+            prev_arg=jump
+            ;;
+
+        --jump=* | --jum=* | --ju=* | --j=*)
+            jump="$optarg"
+            ;;
 
         -t | --template | --templat | --templa | --templ | --temp | --tem | --te | --t)
             prev_arg=template
