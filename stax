@@ -7,7 +7,7 @@
 
 # variables
 pkg="stax"
-version="0.1"
+version="0.2"
 STAX_PRE_NAME="stax"
 SCRIPT_PATH=$(cd $(dirname $0); pwd -P)
 SYSTEM=$(uname)
@@ -17,11 +17,25 @@ STAX_LOG="$STAX_DIR/stax.log"
 STAX_TEMPLATE_PATH="templates/cloudformation-template-vpc.json"
 SSH_OPTIONS="-q"
 host=$(hostname)
+YES=
 
-# make sure we are running under ssh-agent
-if [[ ! $SSH_AUTH_SOCK ]]; then
-    echo "$pkg: not running under ssh-agent, restarting with ssh-agent running"
-    exec ssh-agent $0 "$@"
+# create a dir to store stax stuff
+if [[ ! -d $STAX_DIR ]]; then
+    if ! mkdir -p "$STAX_DIR"; then
+        echo "$pkg: failed to make run directory: $STAX_DIR"
+        exit 1
+    fi
+    if ! chmod 700 "$STAX_DIR"; then
+        echo "$pkg: failed to chmod $STAX_DIR"
+        exit 1
+    fi
+fi
+# create audit dir for stax
+if [[ ! -d $STAX_DIR/audit ]]; then
+    if ! mkdir -p "$STAX_DIR/audit"; then
+        echo "$pkg: failed to make audit directory: $STAX_DIR/audit"
+        exit 1
+    fi
 fi
 
 # set colors
@@ -65,21 +79,26 @@ stax-logger(){
         echo "$pkg: cannot call stax-logger with STAX_LOG undefined"
         exit 5
     fi
-    if [[ ! -d $STAX_DIR ]]; then
-        mkdir -p $STAX_DIR
-    fi
     echo "$(date +'%b %d %T') $host $pkg: $msg" >> "$STAX_LOG"
 }
+
+# make sure we are running under ssh-agent
+if [[ ! $SSH_AUTH_SOCK ]]; then
+    stax-logger "$pkg: not running under ssh-agent, restarting with ssh-agent running"
+    exec ssh-agent $0 "$@"
+fi
 
 stax-usage(){
     cat <<EOM
 Usage: stax [OPTIONS] <command>
 
 Options:
-  -c,--config=CONFIG   Use file CONFIG rather than config/config.json
-  -d,--debug           Turn on verbose messages
-  -h,--help            Output this message
-  -v,--version         Print name and version information
+  -c,--config=CONFIG        Use file CONFIG rather than config/config.json
+  -d,--debug                Turn on verbose messages
+  -h,--help                 Output this message
+  -t,--template=TEMPLATE    Use file TEMPLATE rather than templates/default.json
+  -v,--version              Print name and version information
+  -y,--yes                  Do not prompt for confirmation
 
 If an argument is required for a long option, so to the short. Same for
 optional arguments.
@@ -97,6 +116,7 @@ Commands:
   services          List servers that are available to run across a stax
   start <service>   Start a service across the stax cluster
   test              Automated test to exercise functionality of stax
+  validate          Validate CloudFormation template
 
 For more help, check the docs: https://github.com/philcryer/stax
 EOM
@@ -104,7 +124,6 @@ EOM
 
 ## FIXME broken or unused commands, fix or remove?
 #desc-auto         Describe the autoscaling groups in the stax
-#validate          Validate JSON - DRY RUN, nothing applied
 
 stax-logo(){
 NUMS=`wc -l < assets/stax/slogans`
@@ -128,36 +147,13 @@ stax-preflight(){
     if [[ ! -f $HOME/.aws/config ]]; then
         stax-error-exit "awscli not configured, run 'aws configure'. Aborting." 1
     fi
-    # check for jq
+    # check for jq, use system installed version if found, otherwise use bundled
     if which jq > /dev/null; then
         jq=$(which jq)
     else
         jq="assets/jq/$SYSTEM/jq"
         if [[ ! -f $jq ]]; then
             stax-error-exit "no viable jq binary found, Aborting." 1
-        fi
-    fi
-    # create a dir to store stax stuff
-    if [[ ! -d $STAX_DIR ]]; then
-        stax-message "creating directory $STAX_DIR"
-        if ! mkdir -p "$STAX_DIR"; then
-            stax-error-exit "faild to make run directory: $STAX_DIR" 1
-        fi
-    fi
-    if ! chmod 700 "$STAX_DIR"; then
-        stax-error-exit "failed to chmod $STAX_DIR" 1
-    fi
-    # verify config is filled out
-    if [[ ! -f $config ]]; then
-        stax-error "$config does not exist, configuration required"
-        stax-error "copy example to config directory, configure it and run again."
-        stax-error "    $ cp $config.example $config"
-        stax-error-exit "$pkg: Aborting." 1
-    fi
-    # create audit dir for stax    
-    if [[ ! -d $STAX_DIR/audit ]]; then
-        if ! mkdir -p "$STAX_DIR/audit"; then
-            stax-error-exit "failed to make audit directory: $STAX_DIR/audit" 1
         fi
     fi
 }
@@ -414,7 +410,7 @@ stax-describe(){
     stax-message "$STAX_NAME" "NAME"
     stax-message "  querying aws"
     STAX_DESC="$STAX_DIR/$STAX_NAME.json"
-    if ! aws cloudformation describe-stacks --stack-name "$STAX_NAME" > "$STAX_DESC"; then
+    if ! aws --output json cloudformation describe-stacks --stack-name "$STAX_NAME" > "$STAX_DESC"; then
         stax-error-message "failed to get stax information for $STAX_NAME from aws"
         return 1
     fi
@@ -451,7 +447,7 @@ stax-list(){
     stax-message "  querying aws "
     echo "{"
     # list running stax
-    if ! aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE | $jq '.StackSummaries[].StackName' | grep "vpc-stax" | cut -d"\"" -f2 > /tmp/run.list; then
+    if ! aws --output json cloudformation list-stacks --stack-status-filter CREATE_COMPLETE | $jq '.StackSummaries[].StackName' | grep "vpc-stax" | cut -d"\"" -f2 > /tmp/run.list; then
         stax-error "  aws query failed"
         return 1
     fi
@@ -518,11 +514,11 @@ stax-fleetstats(){
 stax-descauto(){
     stax-message "describe autoscaling groups"
     stax-message "  querying aws for autoscaling policies"
-    if ! aws autoscaling describe-auto-scaling-groups | grep "arn:aws:autoscaling" | grep `cat $STAX_NAME_FILE` | cut -d"/" -f2 | cut -d"\"" -f1 > /tmp/asg; then
+    if ! aws --output json autoscaling describe-auto-scaling-groups | grep "arn:aws:autoscaling" | grep `cat $STAX_NAME_FILE` | cut -d"/" -f2 | cut -d"\"" -f1 > /tmp/asg; then
         rm -f /tmp/asg
         stax-error-exit "failed to get autoscaling policies" 1
     fi
-    if ! aws autoscaling describe-policies --auto-scaling-group-name `cat /tmp/asg`; then
+    if ! aws --output json autoscaling describe-policies --auto-scaling-group-name `cat /tmp/asg`; then
         rm -f /tmp/asg
         stax-error-exit "failed to get information about autoscaling policies" 1
     fi
@@ -539,8 +535,16 @@ stax-history(){
 
 stax-jumpip(){
     stax-message "getting public IP (EIP)"
+    if [[ ! $STAX_DESC ]]; then
+        stax-error "cannot call stax-jumpip without STAX_DESC defined"
+        return 10
+    fi
+    if [[ ! -f $STAX_DESC ]]; then
+        stax-error "stax description file not found: $STAX_DESC"
+        return 1
+    fi
     STAX_JUMP_FILE="$STAX_DIR/$STAX_NAME.jump"
-    STAX_PUB_IP=$(grep -B2 -A2 'JumpEIP' "$STAX_DIR/$STAX_NAME.json" | grep -o '[0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*[.][0-9][0-9]*')
+    STAX_PUB_IP=$($jq --raw-output '.Stacks[].Outputs[] | select(.OutputKey=="JumpEIP").OutputValue' "$STAX_DESC")
     stax-message "  public IP (EIP): $STAX_PUB_IP"
     stax-message "  writing to $STAX_JUMP_FILE"
     echo "$STAX_PUB_IP" > "$STAX_JUMP_FILE"
@@ -568,7 +572,7 @@ EOF
 
 stax-popjumpbox(){
     stax-message "setup motd and bashrc on jumpbox"
-    stax-message "  pushing motd to jump box: $STAX_PUB_IP"
+    stax-message "  pushing motd to jump box"
     motd="$STAX_DIR/$STAX_NAME.motd"
     if [[ ! -f $motd ]]; then
         stax-error "motd file not found: $motd"
@@ -578,7 +582,7 @@ stax-popjumpbox(){
         stax-error "failed to copy motd file to jump box"
         return 1
     fi
-    stax-message "  pushing bashrc to jump box: $STAX_PUB_IP"
+    stax-message "  pushing bashrc to jump box"
     if ! scp $SSH_OPTIONS assets/stax/bashrc jump:.bashrc > /dev/null; then
         stax-error "failed to copy bashrc file to jump box"
         return 1
@@ -590,12 +594,12 @@ stax-getdockerips(){
     stax-message "  querying aws"
     service_hosts="$STAX_DIR/$STAX_NAME.service_hosts"
     # this will not print the IP address of a host if it is the last host in the list
-    if ! aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"container-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$NF } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$service_hosts"; then
+    if ! aws --output json ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"container-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$NF } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$service_hosts"; then
         stax-error "failed to query aws for service instances"
         return 1
     fi
     router_hosts="$STAX_DIR/$STAX_NAME.router_hosts"
-    if ! aws ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"router-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$NF } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$router_hosts"; then
+    if ! aws --output json ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"router-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$NF } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$router_hosts"; then
         stax-error "failed to query aws for router instances"
         return 1
     fi
@@ -686,7 +690,7 @@ stax-destroy-bucket(){
         return 10
     fi
     stax-message "  making sure bucket $STAX_NAME exists in aws"
-    if ! aws s3api list-buckets | $jq '.Buckets[].Name' | grep -q "^\"$STAX_NAME\"$" > /dev/null 2>&1; then
+    if ! aws --output json s3api list-buckets | $jq --raw-output '.Buckets[].Name' | grep -q "^$STAX_NAME$" > /dev/null 2>&1; then
         stax-error "bucket $STAX_NAME does not exist"
         return 1
     fi
@@ -697,9 +701,8 @@ stax-destroy-bucket(){
 }
 
 stax-destroy(){
-    confirmed="$1"
     stax-message "destroy stax"
-    if [[ -z $confirmed ]]; then
+    if [[ $YES != "y" ]]; then
         read -p "${yellow}[ ${cyan}????${yellow} ]${reset}     ok to destroy $STAX_NAME [y/n]? " answer
         if [[ $answer != y ]] ; then
             stax-message "  will not destroy $STAX_NAME"
@@ -737,6 +740,13 @@ stax-generate(){
 
 # generate parameters file
 stax-config(){
+    # verify config is filled out
+    if [[ ! -f $config ]]; then
+        stax-error "$config does not exist, configuration required"
+        stax-error "copy example to config directory, configure it and run again."
+        stax-error "    $ cp $config.example $config"
+        stax-error-exit "Aborting." 1
+    fi
     stax-message "creating parameter file"
     # initialize sed command
     sed="sed -e s/@KEY_NAME@/$STAX_NAME/"
@@ -851,6 +861,7 @@ EOF
     # curl ELB/httpbin/get
     # fleetctl list-
 
+    YES="y"
     stax-destroy 1
 }
 
@@ -889,9 +900,21 @@ do
             stax-usage
             exit 0;;
 
+        -t | --template | --templat | --templa | --templ | --temp | --tem | --te | --t)
+            prev_arg=template
+            ;;
+
+        --template=* | --templat=* | --templa=* | --templ=* | --temp=* | --tem=* | --te=* | --t=*)
+            template="$optarg"
+            ;;
+
         -v | --version | --versio | --versi | --vers | --ver | --ve | --v)
             echo "$pkg $version"
             exit 0;;
+
+        -y | --yes | --ye | --y)
+            YES="y"
+            ;;
 
         -*)
             if [[ "$sub_cmd_args" ]]; then
