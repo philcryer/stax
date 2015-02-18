@@ -597,9 +597,8 @@ stax-motd(){
 
 EOF
     cat >> "$motd" <<EOF
-Name      $STAX_NAME_FILE
+Name      $STAX_NAME
 Built     $now
-
 EOF
 }
 
