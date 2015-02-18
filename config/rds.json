@@ -1,0 +1,9 @@
+[
+  { "ParameterKey": "DBName",               "ParameterValue": "<changeme>" },
+  { "ParameterKey": "Engine",               "ParameterValue": "<changeme>" },
+  { "ParameterKey": "MultiAZ",              "ParameterValue": "<changeme>" },
+  { "ParameterKey": "MasterUsername",       "ParameterValue": "<changeme>" },
+  { "ParameterKey": "MasterUserPassword",   "ParameterValue": "<changeme>" },
+  { "ParameterKey": "DBInstanceClass",      "ParameterValue": "<changeme>" },
+  { "ParameterKey": "AllocatedStorage",     "ParameterValue": "<changeme>" }
+]
