@@ -42,7 +42,7 @@ object Resource extends DefaultJsonProtocol {
 
         }
 
-        val mainFields = JsObject(raw.asJsObject.fields - "name")
+        val mainFields = JsObject(raw.asJsObject.fields - "name" - "Condition")
         val outputFields = mainFields.fields.get("Metadata") match {
           case Some(meta) => Map("Type" -> JsString(obj.Type), "Metadata" -> meta, "Properties" -> JsObject(mainFields.fields - "Metadata"))
           case None       => Map("Type" -> JsString(obj.Type),                     "Properties" -> mainFields)
