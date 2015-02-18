@@ -1,20 +1,25 @@
-"DBInstance" : {
-  "Type": "AWS::RDS::DBInstance",
-  "Properties": {
-     "DBName"            : { "Ref" : "DBName" },
-     "Engine"            : "MySQL",
-     "MasterUsername"    : { "Ref" : "DBUsername" },
-     "DBInstanceClass"   : { "Ref" : "DBClass" },
-     "DBSecurityGroups"  : [ { "Ref" : "DBSecurityGroup" } ],
-     "AllocatedStorage"  : { "Ref" : "DBAllocatedStorage" },
-     "MasterUserPassword": { "Ref" : "DBPassword" }
+"DBSecurityGroup": {
+  "Type": "AWS::EC2::SecurityGroup",
+  "Properties" : {
+    "GroupDescription": "Open database for access",
+    "SecurityGroupIngress" : [{
+      "IpProtocol" : "tcp",
+      "FromPort" : "5432",
+      "ToPort" : "5432"
+    }]
   }
 }
 
-"DBSecurityGroup": {
-  "Type": "AWS::RDS::DBSecurityGroup",
+"PGDBInstance" : {
+  "Type": "AWS::RDS::DBInstance",
   "Properties": {
-     "DBSecurityGroupIngress": { "EC2SecurityGroupName": { "Ref": "WebServerSecurityGroup" } },
-     "GroupDescription"      : "Frontend Access"
+    "DBName"            : "DBName",
+    "Engine"            : "postgres",
+    "MultiAZ"           : "true",
+    "MasterUsername"    : "DBUser",
+    "DBInstanceClass"   : "db.m1.small",
+    "AllocatedStorage"  : "5",
+    "MasterUserPassword": "DBPassword",
+    "DBSecurityGroups" : { "Ref": "DBSecurityGroup" }
   }
 }
