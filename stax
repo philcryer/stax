@@ -899,13 +899,15 @@ EOF
             fi
         done
     done
+    stax-message "  giving fleet some time to cluster"
+    sleep 120
     stax-message "  listing machines in fleet cluster"
     if ! stax-connect service fleetctl list-machines; then
         stax-error "failed to run fleetctl list-machines on service"
         return 1
     fi
     stax-message "  giving consul some time to cluster"
-    sleep 150
+    sleep 120
     stax-message "  getting consul cluster members"
     if ! stax-connect router docker exec consul consul members; then
         stax-error "failed to run consul members on router"
