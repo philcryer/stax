@@ -109,7 +109,7 @@ Commands:
   create             Create a new VPC stax in AWS
   describe           Describe the stax created from this host
   destroy            Destroy the existing VPC stax
-  dockerip-update    Destroy the existing VPC stax
+  dockerip-update    Fetch docker IP addresses and update related files
   fleet              Run various fleetctl commands against the fleet cluster
   generate           Regenerate the VPC template from the Scala definition
   help               Output this message
@@ -369,17 +369,16 @@ stax-create(){
 stax-ssh-config(){
     stax-message "creating ssh_config"
     STAX_SSH_CONFIG="$STAX_DIR/$STAX_NAME.ssh_config"
-    stax-message "  randomizing router and service hosts"
     rhosts="$STAX_DIR/$STAX_NAME.router_hosts"
     shosts="$STAX_DIR/$STAX_NAME.service_hosts"
     if [[ ! -f $rhosts ]]; then
-        stax-error-exit "missing router host file: $rhosts" 5
+        stax-error "missing router host file: $rhosts"
+        return 10
     fi
     if [[ ! -f $shosts ]]; then
-        stax-error-exit "missing service host file: $shosts" 5
+        stax-error "missing service host file: $shosts"
+        return 10
     fi
-    router_ip=$(head -n $(($RANDOM % $(wc -l < $rhosts) + 1)) $rhosts | tail -n 1)
-    service_ip=$(head -n $(($RANDOM % $(wc -l < $shosts) + 1)) $shosts | tail -n 1)
     stax-message "  writing $STAX_SSH_CONFIG"
     cat > "$STAX_SSH_CONFIG" <<EOF
 ForwardAgent yes
@@ -401,18 +400,28 @@ EOF
   ProxyCommand ssh -q -A -x -o ServerAliveInterval=60 -o ServerAliveCountMax=30 -o TCPKeepAlive=no -W %h:%p $jump
 EOF
     fi
-    cat >> "$STAX_SSH_CONFIG" <<EOF
+    ri=
+    for rip in $(<"$rhosts"); do
+        cat >> "$STAX_SSH_CONFIG" <<EOF
 
-Host router
+Host router$ri
   User core
-  HostName $router_ip
-  ProxyCommand ssh -q -F $STAX_SSH_CONFIG -W %h:%p jump
-
-Host service
-  User core
-  HostName $service_ip
+  HostName $rip
   ProxyCommand ssh -q -F $STAX_SSH_CONFIG -W %h:%p jump
 EOF
+        ri=$((ri+1))
+    done
+    si=
+    for sip in $(<"$shosts"); do
+        cat >> "$STAX_SSH_CONFIG" <<EOF
+
+Host service$si
+  User core
+  HostName $sip
+  ProxyCommand ssh -q -F $STAX_SSH_CONFIG -W %h:%p jump
+EOF
+        si=$((si+1))
+    done
     stax-message "  created $STAX_SSH_CONFIG"
     SSH_OPTIONS="$SSH_OPTIONS -F $STAX_SSH_CONFIG"
 }
@@ -1042,8 +1051,12 @@ case "$sub_cmd" in
         fi
         if [[ ! -f $STAX_JUMP_FILE ]]; then
             stax-jumpip
-            stax-getdockerips
-            stax-ssh-config
+            if ! stax-getdockerips; then
+                exit 1
+            fi
+            if ! stax-ssh-config; then
+                exit 1
+            fi
             stax-popjumpbox
         fi
         STAX_PUB_IP=$(<$STAX_JUMP_FILE)
@@ -1097,9 +1110,6 @@ case "$sub_cmd" in
         fi
         if [[ ! -f $STAX_JUMP_FILE ]]; then
             stax-jumpip
-            stax-getdockerips
-            stax-ssh-config
-            stax-popjumpbox
         fi
         STAX_PUB_IP=$(<$STAX_JUMP_FILE)
         if ! stax-getdockerips; then
@@ -1121,8 +1131,12 @@ case "$sub_cmd" in
         fi
         if [ ! -f "$STAX_JUMP_FILE" ]; then
             stax-jumpip
-            stax-getdockerips
-            stax-ssh-config
+            if ! stax-getdockerips; then
+                exit 1
+            fi
+            if ! stax-ssh-config; then
+                exit 1
+            fi
             stax-popjumpbox
         fi
         STAX_PUB_IP=$(<$STAX_JUMP_FILE)
@@ -1163,8 +1177,12 @@ case "$sub_cmd" in
         fi
         if [ ! -f "$STAX_JUMP_FILE" ]; then
             stax-jumpip
-            stax-getdockerips
-            stax-ssh-config
+            if ! stax-getdockerips; then
+                exit 1
+            fi
+            if ! stax-ssh-config; then
+                exit 1
+            fi
             stax-popjumpbox
         fi
         for service in $sub_cmd_args; do
