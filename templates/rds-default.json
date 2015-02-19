@@ -41,12 +41,10 @@
       "Properties": {
         "CidrBlock": "10.0.1.0/24",
         "Tags": [
-          {
-              {"Key":"Name", "Value":"DBSubnet1"},
-              {"Key":"Type", "Value":"db"},
-              {"Key":"Group", "Value":"ITSA"},
-              {"Key":"Env", "Value":"TEST"}
-          }
+          {"Key":"Name", "Value":"DBSubnet1"},
+          {"Key":"Type", "Value":"db"},
+          {"Key":"Group", "Value":"ITSA"},
+          {"Key":"Env", "Value":"TEST"}
         ],
         "VpcId": "VPCID"
       }
@@ -56,12 +54,10 @@
       "Properties": {
         "CidrBlock": "10.0.2.0/24",
         "Tags": [
-          {
               {"Key":"Name", "Value":"DBSubnet2"},
               {"Key":"Type", "Value":"db"},
               {"Key":"Group", "Value":"ITSA"},
               {"Key":"Env", "Value":"TEST"}
-          }
         ],
         "VpcId": "VPCID"
       }
@@ -79,12 +75,10 @@
           }
         ],
         "Tags": [
-          {
               {"Key":"Name", "Value":"DBSubnetGroup"},
               {"Key":"Type", "Value":"db"},
               {"Key":"Group", "Value":"ITSA"},
               {"Key":"Env", "Value":"TEST"}
-          }
         ]
       }
     },
@@ -105,12 +99,10 @@
           "sg-vpc-ID"
         ],
         "Tags": [
-          {
               {"Key":"Role", "Value":"Primary"},
               {"Key":"Service", "Value":"MySvc"},
               {"Key":"Group", "Value":"ITSA"},
               {"Key":"Env", "Value":"TEST"}
-          }
         ]
       }
     },
@@ -122,12 +114,10 @@
         },
         "DBInstanceClass": "db.m3.medium",
         "Tags": [
-          {
               {"Key":"Role", "Value":"ReadReplica1"},
               {"Key":"Service", "Value":"MySvc"},
               {"Key":"Group", "Value":"ITSA"},
               {"Key":"Env", "Value":"TEST"}
-          }
         ]
       }
     }
