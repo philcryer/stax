@@ -943,7 +943,7 @@ EOF
     # curl ELB/httpbin/get
 
     # do not prompt for deleting if all tests were successful
-    if [[ $statux == 0 ]]; then
+    if [[ $status == 0 ]]; then
         YES="y"
     fi
     stax-destroy
