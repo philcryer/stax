@@ -557,7 +557,8 @@ stax-fleetstats(){
     for fleet_cmd in "list-machines" "list-units" "list-unit-files"; do
         stax-message "  running $fleet_cmd"
         if ! stax-connect service fleetctl $fleet_cmd; then
-            stax-error-exit "command failed on service host: fleetctl $fleet_cmd" 1
+            stax-error "command failed on service host: fleetctl $fleet_cmd"
+            return 1
         fi
     done
 }
@@ -690,7 +691,8 @@ stax-connect(){
             jump|router|service)
                 :;;
             *)
-                stax-error-exit "unknown connection target: $target" 1
+                stax-error "unknown connection target: $target"
+                return 1
                 ;;
         esac
     fi
@@ -700,7 +702,8 @@ stax-connect(){
     fi
     ssh_cmd="ssh $SSH_OPTIONS $target $@"
     if ! $ssh_cmd; then
-        stax-error-exit "ssh command failed: $ssh_cmd" 1
+        stax-error "ssh command failed: $ssh_cmd"
+        return 1
     fi
 }
 
@@ -884,18 +887,19 @@ EOF
         "stax-complete 1" \
         "stax-jumpip" \
         "stax-getdockerips" \
-        "stax-ssh-config" \
-        "stax-popjumpbox"
+        "stax-ssh-config"
     do
         if ! $cmd; then
             stax-error "stax test failed: $cmd"
             return 1
         fi
     done
+    stax-popjumpbox
+    status=0
     stax-message "  connecting to jump box and running hostname"
     if ! stax-connect jump hostname; then
         stax-error "failed to run hostname on jump box"
-        return 1
+        status=$((status+1))
     fi
     stax-message "  giving docker containers some time to spin up"
     sleep 300
@@ -904,7 +908,7 @@ EOF
             stax-message "  running docker $docker_cmd on $target"
             if ! stax-connect $target docker $docker_cmd; then
                 stax-error "failed to run docker $docker_cmd on $target"
-                return 1
+                status=$((status+1))
             fi
         done
     done
@@ -913,19 +917,19 @@ EOF
     stax-message "  listing machines in fleet cluster"
     if ! stax-connect service fleetctl list-machines; then
         stax-error "failed to run fleetctl list-machines on service"
-        return 1
+        status=$((status+1))
     fi
     stax-message "  giving consul some time to cluster"
     sleep 120
     stax-message "  getting consul cluster members"
     if ! stax-connect router docker exec consul consul members; then
         stax-error "failed to run consul members on router"
-        return 1
+        status=$((status+1))
     fi
     if ! stax-connect service docker exec consul curl --silent localhost:8500/v1/catalog/nodes; then
         echo ""
         stax-error "failed to curl consul members on service"
-        return 1
+        status=$((status+1))
     fi
     echo ""
 
@@ -937,10 +941,13 @@ EOF
     # journalctl -u consul
     # start httpbin
     # curl ELB/httpbin/get
-    # fleetctl list-
 
-    YES="y"
+    # do not prompt for deleting if all tests were successful
+    if [[ $statux == 0 ]]; then
+        YES="y"
+    fi
     stax-destroy
+    return $status
 }
 
 # process positional parameters
@@ -1060,7 +1067,9 @@ case "$sub_cmd" in
             stax-popjumpbox
         fi
         STAX_PUB_IP=$(<$STAX_JUMP_FILE)
-        stax-connect $sub_cmd_args
+        if ! stax-connect $sub_cmd_args; then
+            exit 1
+        fi
         ;;
 
     create)
@@ -1140,7 +1149,9 @@ case "$sub_cmd" in
             stax-popjumpbox
         fi
         STAX_PUB_IP=$(<$STAX_JUMP_FILE)
-        stax-fleetstats
+        if ! stax-fleetstats; then
+            exit 1
+        fi
         ;;
 
     help)
@@ -1192,7 +1203,9 @@ case "$sub_cmd" in
         done
         stax-message "waiting for services to start"
         sleep 20
-        stax-fleetstats
+        if ! stax-fleetstats; then
+            exit 1
+        fi
         ;;
 
     add)
