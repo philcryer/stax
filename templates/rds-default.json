@@ -33,13 +33,21 @@
     "AllocatedStorage":{
       "Description" : "Boo",
       "Type" : "String"
+    },
+    "DBSubnet1Cidr":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "DBSubnet2Cidr":{
+      "Description" : "Boo",
+      "Type" : "String"
     }
   },
   "Resources": {
     "DBSubnet1": {
       "Type": "AWS::EC2::Subnet",
       "Properties": {
-        "CidrBlock": "10.0.1.0/24",
+        "CidrBlock": { "Ref":, "DBSubnet1Cidr"},
         "Tags": [
           {"Key":"Name", "Value":"DBSubnet1"},
           {"Key":"Type", "Value":"db"},
@@ -52,7 +60,7 @@
     "DBSubnet2": {
       "Type": "AWS::EC2::Subnet",
       "Properties": {
-        "CidrBlock": "10.0.2.0/24",
+        "CidrBlock": { "Ref":, "DBSubnet2Cidr"},
         "Tags": [
               {"Key":"Name", "Value":"DBSubnet2"},
               {"Key":"Type", "Value":"db"},
