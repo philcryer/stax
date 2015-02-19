@@ -1,0 +1,12 @@
+[
+  { "ParameterKey": "DBName",               "ParameterValue": "<changeme>" },
+  { "ParameterKey": "Engine",               "ParameterValue": "<changeme>" },
+  { "ParameterKey": "MultiAZ",              "ParameterValue": "<changeme>" },
+  { "ParameterKey": "VPCID",                "ParameterValue": "@VPC_ID@" },
+  { "ParameterKey": "MasterUsername",       "ParameterValue": "<changeme>" },
+  { "ParameterKey": "MasterUserPassword",   "ParameterValue": "<changeme>" },
+  { "ParameterKey": "DBInstanceClass",      "ParameterValue": "<changeme>" },
+  { "ParameterKey": "AllocatedStorage",     "ParameterValue": "<changeme>" },
+  { "ParameterKey": "DBSubnet1Cidr",        "ParameterValue": "10.183.100.0/24" },
+  { "ParameterKey": "DBSubnet2Cidr",        "ParameterValue": "10.183.101.0/24" }
+]
