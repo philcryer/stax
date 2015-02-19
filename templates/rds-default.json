@@ -47,7 +47,7 @@
     "DBSubnet1": {
       "Type": "AWS::EC2::Subnet",
       "Properties": {
-        "CidrBlock": { "Ref":, "DBSubnet1Cidr"},
+        "CidrBlock": { "Ref": "DBSubnet1Cidr"},
         "Tags": [
           {"Key":"Name", "Value":"DBSubnet1"},
           {"Key":"Type", "Value":"db"},
@@ -60,7 +60,7 @@
     "DBSubnet2": {
       "Type": "AWS::EC2::Subnet",
       "Properties": {
-        "CidrBlock": { "Ref":, "DBSubnet2Cidr"},
+        "CidrBlock": { "Ref": "DBSubnet2Cidr"},
         "Tags": [
               {"Key":"Name", "Value":"DBSubnet2"},
               {"Key":"Type", "Value":"db"},
