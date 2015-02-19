@@ -42,10 +42,10 @@
         "CidrBlock": "10.0.1.0/24",
         "Tags": [
           {
-            "Name": "DBSubnet1",
-            "Type": "db",
-            "Group": "ITSA",
-            "Env": "TEST"
+              {"Key":"Name", "Value":"DBSubnet1"},
+              {"Key":"Type", "Value":"db"},
+              {"Key":"Group", "Value":"ITSA"},
+              {"Key":"Env", "Value":"TEST"}
           }
         ],
         "VpcId": "VPCID"
@@ -57,10 +57,10 @@
         "CidrBlock": "10.0.2.0/24",
         "Tags": [
           {
-            "Name": "DBSubnet2",
-            "Type": "db",
-            "Group": "ITSA",
-            "Env": "TEST"
+              {"Key":"Name", "Value":"DBSubnet2"},
+              {"Key":"Type", "Value":"db"},
+              {"Key":"Group", "Value":"ITSA"},
+              {"Key":"Env", "Value":"TEST"}
           }
         ],
         "VpcId": "VPCID"
@@ -80,10 +80,10 @@
         ],
         "Tags": [
           {
-            "Name": "DBSubnetGroup",
-            "Type": "db",
-            "Group": "ITSA",
-            "Env": "TEST"
+              {"Key":"Name", "Value":"DBSubnetGroup"},
+              {"Key":"Type", "Value":"db"},
+              {"Key":"Group", "Value":"ITSA"},
+              {"Key":"Env", "Value":"TEST"}
           }
         ]
       }
@@ -106,10 +106,10 @@
         ],
         "Tags": [
           {
-            "Role": "Primary",
-            "Service": "MySvc",
-            "Group": "ITSA",
-            "Env": "TEST"
+              {"Key":"Role", "Value":"Primary"},
+              {"Key":"Service", "Value":"MySvc"},
+              {"Key":"Group", "Value":"ITSA"},
+              {"Key":"Env", "Value":"TEST"}
           }
         ]
       }
@@ -123,10 +123,10 @@
         "DBInstanceClass": "db.m3.medium",
         "Tags": [
           {
-            "Role": "ReadReplica1",
-            "Service": "MySvc",
-            "Group": "ITSA",
-            "Env": "TEST"
+              {"Key":"Role", "Value":"ReadReplica1"},
+              {"Key":"Service", "Value":"MySvc"},
+              {"Key":"Group", "Value":"ITSA"},
+              {"Key":"Env", "Value":"TEST"}
           }
         ]
       }
