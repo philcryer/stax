@@ -6,5 +6,7 @@
   { "ParameterKey": "MasterUsername",       "ParameterValue": "<changeme>" },
   { "ParameterKey": "MasterUserPassword",   "ParameterValue": "<changeme>" },
   { "ParameterKey": "DBInstanceClass",      "ParameterValue": "<changeme>" },
-  { "ParameterKey": "AllocatedStorage",     "ParameterValue": "<changeme>" }
+  { "ParameterKey": "AllocatedStorage",     "ParameterValue": "<changeme>" },
+  { "ParameterKey": "DBSubnet1Cidr",        "ParameterValue": "10.183.100.0/24" },
+  { "ParameterKey": "DBSubnet2Cidr",        "ParameterValue": "10.183.101.0/24" }
 ]
