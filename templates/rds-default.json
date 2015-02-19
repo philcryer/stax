@@ -46,7 +46,7 @@
           {"Key":"Group", "Value":"ITSA"},
           {"Key":"Env", "Value":"TEST"}
         ],
-        "VpcId": "VPCID"
+        "VpcId": "@VPC_ID@"
       }
     },
     "DBSubnet2": {
@@ -59,7 +59,7 @@
               {"Key":"Group", "Value":"ITSA"},
               {"Key":"Env", "Value":"TEST"}
         ],
-        "VpcId": "VPCID"
+        "VpcId": "@VPC_ID@"
       }
     },
     "DBSubnetGroup": {
