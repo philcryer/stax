@@ -759,25 +759,26 @@ stax-destroy(){
         read -p "${yellow}[ ${cyan}????${yellow} ]${reset}     ok to destroy $STAX_NAME [y/n]? " answer
         if [[ $answer != y ]] ; then
             stax-message "  will not destroy $STAX_NAME"
-            exit 0
+            return 0
         fi
     fi
     stax-message "destroying $STAX_NAME stax"
     if ! aws cloudformation delete-stack --stack-name "$STAX_NAME" > /dev/null; then
-        stax-error "  destroy failed"
-        stax-error-exit "you will need to clean up the stack, key, bucket, and files" 2
+        stax-error "stax destroy of $STAX_NAME failed"
+        stax-error "you will need to clean up the stack, key, bucket, and files"
+        return 1
     fi
     stax-message "  destroy started successfully"
     touch "$STAX_DIR/audit/$STAX_NAME/$(date +'%Y%m%d-%H%M%S')-destroyed"
     status=0
     if ! stax-destroy-bucket; then
-        status=1
+        status=2
     fi
     if ! stax-destroy-key; then
-        status=1
+        status=2
     fi
     if ! stax-destroy-files; then
-        status=1
+        status=2
     fi
     return $status
 }
@@ -912,8 +913,13 @@ EOF
             fi
         done
     done
-    stax-message "  giving fleet some time to cluster"
+    stax-message "  giving etcd and fleet some time to cluster"
     sleep 120
+    # stax-message "  getting etcd version"
+    # if ! stax-connect service curl localhost:4001/version; then
+    #     stax-error "failed to get etcd version"
+    #     status=$((status+1))
+    # fi
     stax-message "  listing machines in fleet cluster"
     if ! stax-connect service fleetctl list-machines; then
         stax-error "failed to run fleetctl list-machines on service"
@@ -945,8 +951,18 @@ EOF
     # do not prompt for deleting if all tests were successful
     if [[ $status == 0 ]]; then
         YES="y"
+    else
+        stax-error "some tests failed, see above for details"
+        stax-error "you can troubleshoot using the following commands:"
+        stax-error "  $ ./stax connect HOST systemctl status [-l] SERVICE"
+        stax-error "  $ ./stax connect HOST journalctl -b -u SERVICE"
+        stax-error "where HOST is router or service and SERVICE is etcd, fleet, consul, etc."
     fi
-    stax-destroy
+    if ! stax-destroy; then
+        stax-error "failed to destroy the stack, you will need to clean up"
+        status=$((status+1))
+    fi
+
     return $status
 }
 
@@ -1105,7 +1121,7 @@ case "$sub_cmd" in
         if ! stax-existing; then
             exit 1
         fi
-        if ! stax-destroy $sub_cmd_args; then
+        if ! stax-destroy; then
             stax-error-exit "please see above errors and deal with them" 1
         fi
         ;;
