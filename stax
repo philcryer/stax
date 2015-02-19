@@ -284,6 +284,21 @@ stax-add(){
         stax-error-exit "stax-add takes the template path as an argument" 10
     fi
     template_path="$1"
+
+    ####################################################
+    # new routine replaces @VPC_ID@ in the rds template
+    ####################################################
+    old_template_path=$1
+    template_path="run/`echo $1 | cut -d"/" -f2`"
+    sed="sed -e s/@VPC_ID@/$vpc_id/"
+    if ! $sed "$old_template_path" > "$template_path"; then
+        stax-error "sed failed to replace elements in $config: $sed"
+        return 1
+    fi
+    ####################################################
+    #  (this could (probably) be done a bit better...)
+    ####################################################
+
     if ! stax-upload-template "$template_path"; then
         stax-error-exit "failed to upload template to s3" 1
     fi
