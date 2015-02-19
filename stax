@@ -277,8 +277,7 @@ stax-add(){
     stax-rds-config
     stax-message "  getting existing VPC name"
     vpc_id=$(jq --raw-output '.Stacks[].Outputs[] | select(.OutputKey=="VPCID").OutputValue' "$STAX_DIR/$STAX_NAME.json")
-    echo "$vpc_id" > $STAX_DIR/$STAX_NAME.vpc
-    stax-message "  adding to $vpc_id"
+    stax-message "  adding to `cat $STAX_DIR/$STAX_NAME.vpc`"
 
     # validate template
     if [[ ! $1 ]]; then
@@ -857,6 +856,7 @@ stax-rds-config(){
         return 1
     fi
     stax-message "creating parameter file"
+    vpc_id=`cat $STAX_DIR/$STAX_NAME.vpc`
     # initialize sed command
     sed="sed -e s/@VPC_ID@/$vpc_id/"
     STAX_RDS_PARAMS="$STAX_DIR/$STAX_NAME.rdsparams"
