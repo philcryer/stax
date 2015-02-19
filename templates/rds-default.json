@@ -1,51 +1,135 @@
-"DBSubnet1": {
-   "Type" : "AWS::EC2::Subnet",
-   "Properties" : {
-      "CidrBlock" : "10.0.1.0/24",
-      "Tags"      : [ {"Name" : "DBSubnet1", "Type" : "db", "Group" : "ITSA", "Env" : "TEST"} ],
-      "VpcId"     : "VPCID"
-   }
-}
-
-"DBSubnet2": {
-   "Type" : "AWS::EC2::Subnet",
-   "Properties" : {
-      "CidrBlock" : "10.0.2.0/24",
-      "Tags"      : [ {"Name" : "DBSubnet2", "Type" : "db", "Group" : "ITSA", "Env" : "TEST"} ],
-      "VpcId"     : "VPCID"
-   }
-}
-
-"DBSubnetGroup": {
-  "Type" : "AWS::RDS::DBSubnetGroup",
-  "Properties" : {
-    "DBSubnetGroupDescription": "DB Subnet Group",
-    "SubnetIds"               : [{ "Ref": "DBSubnet1" }, { "Ref": "DBSubnet2" }],
-    "Tags"                    : [ {"Name" : "DBSubnetGroup", "Type" : "db", "Group" : "ITSA", "Env" : "TEST"} ]
-   }
-}
-
-"DBInstance" : {
-  "Type": "AWS::RDS::DBInstance",
-  "Properties": {
-    "DBName"            : "DBName",
-    "Engine"            : "postgres",
-    "MultiAZ"           : "true",
-    "MasterUsername"    : "DBUser",
-    "MasterUserPassword": "DBPassword",
-    "DBInstanceClass"   : "db.m3.medium",
-    "AllocatedStorage"  : "5",
-    "DBSubnetGroupName" : { "Ref": "DBSubnetGroup" },
-    "VPCSecurityGroups" : ["sg-vpc-ID"],
-    "Tags"              : [ {"Role" : "Primary", "Service" : "MySvc", "Group" : "ITSA", "Env" : "TEST"} ]
-  }
-}
-
-"DBReadReplica" : {
-  "Type": "AWS::RDS::DBInstance",
-  "Properties": {
-    "SourceDBInstanceIdentifier": { "Ref" : "DBInstance" },
-    "DBInstanceClass"           : "db.m3.medium",
-    "Tags"                      : [ {"Role" : "ReadReplica1", "Service" : "MySvc", "Group" : "ITSA", "Env" : "TEST"} ]
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "CoreOS on EC2: http://coreos.com/docs/running-coreos/cloud-providers/ec2/",
+  "Parameters":{
+    "DBName":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "Engine":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "MultiAZ":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "VPCID":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "MasterUsername":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "MasterUserPassword":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "DBInstanceClass":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "AllocatedStorage":{
+      "Description" : "Boo",
+      "Type" : "String"
+    }
+  },
+  "Resources": {
+    "DBSubnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.0.1.0/24",
+        "Tags": [
+          {
+            "Name": "DBSubnet1",
+            "Type": "db",
+            "Group": "ITSA",
+            "Env": "TEST"
+          }
+        ],
+        "VpcId": "VPCID"
+      }
+    },
+    "DBSubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.0.2.0/24",
+        "Tags": [
+          {
+            "Name": "DBSubnet2",
+            "Type": "db",
+            "Group": "ITSA",
+            "Env": "TEST"
+          }
+        ],
+        "VpcId": "VPCID"
+      }
+    },
+    "DBSubnetGroup": {
+      "Type": "AWS::RDS::DBSubnetGroup",
+      "Properties": {
+        "DBSubnetGroupDescription": "DB Subnet Group",
+        "SubnetIds": [
+          {
+            "Ref": "DBSubnet1"
+          },
+          {
+            "Ref": "DBSubnet2"
+          }
+        ],
+        "Tags": [
+          {
+            "Name": "DBSubnetGroup",
+            "Type": "db",
+            "Group": "ITSA",
+            "Env": "TEST"
+          }
+        ]
+      }
+    },
+    "DBInstance": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "DBName": {"Ref":"DBName"},
+        "Engine": "postgres",
+        "MultiAZ": "true",
+        "MasterUsername": "DBUser",
+        "MasterUserPassword": "DBPassword",
+        "DBInstanceClass": "db.m3.medium",
+        "AllocatedStorage": "5",
+        "DBSubnetGroupName": {
+          "Ref": "DBSubnetGroup"
+        },
+        "VPCSecurityGroups": [
+          "sg-vpc-ID"
+        ],
+        "Tags": [
+          {
+            "Role": "Primary",
+            "Service": "MySvc",
+            "Group": "ITSA",
+            "Env": "TEST"
+          }
+        ]
+      }
+    },
+    "DBReadReplica": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "SourceDBInstanceIdentifier": {
+          "Ref": "DBInstance"
+        },
+        "DBInstanceClass": "db.m3.medium",
+        "Tags": [
+          {
+            "Role": "ReadReplica1",
+            "Service": "MySvc",
+            "Group": "ITSA",
+            "Env": "TEST"
+          }
+        ]
+      }
+    }
   }
 }
