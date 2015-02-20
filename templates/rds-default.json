@@ -90,6 +90,30 @@
         ]
       }
     },
+    "VPCSecurityGroup": {
+    "Type" : "AWS::EC2::SecurityGroup",
+    "Properties" : {
+      "GroupDescription" : "VPC Security Group for RDS",
+      "SecurityGroupEgress" : [ {
+              "IpProtocol" : "tcp",
+              "FromPort" : "5432",
+              "ToPort" : "5432",
+              "CidrIp" : "0.0.0.0/0"
+        }],
+      "SecurityGroupIngress" : [{
+              "IpProtocol" : "tcp",
+              "FromPort" : "5432",
+              "ToPort" : "5432",
+              "CidrIp" : "0.0.0.0/0"
+        }],
+        "Tags": [
+              {"Key":"Name", "Value":"VPCSecurityGroup"},
+              {"Key":"Type", "Value":"sg"},
+              {"Key":"Group", "Value":"ITSA"},
+              {"Key":"Env", "Value":"TEST"}
+        ]
+      "VpcId" : "@VPC_ID@"
+    },
     "DBInstance": {
       "Type": "AWS::RDS::DBInstance",
       "Properties": {
@@ -104,7 +128,7 @@
           "Ref": "DBSubnetGroup"
         },
         "VPCSecurityGroups": [
-          "sg-vpc-ID"
+          { "Ref": "VPCSecurityGroup" }
         ],
         "Tags": [
               {"Key":"Role", "Value":"Primary"},
