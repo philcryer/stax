@@ -7,7 +7,7 @@
 
 # variables
 pkg="stax"
-version="0.3"
+version="0.4"
 STAX_PRE_NAME="stax"
 SCRIPT_PATH=$(cd $(dirname $0); pwd -P)
 SYSTEM=$(uname)
@@ -833,7 +833,8 @@ stax-destroy(){
         fi
     fi
 
-    if [ `ls -1 $STAX_DIR/audit/$STAX_NAME/*-RDS-created | wc -l` -gt 0 ]; then
+    ls -1 $STAX_DIR/audit/$STAX_NAME/*-RDS-created > /tmp/rds.total
+    if [ `cat /tmp/rds.total | wc -l` -gt 0 ]; then
         stax-message "this stax also contains an RDS"
             if [[ $YES != "y" ]]; then
                 read -p "${yellow}[ ${cyan}????${yellow} ]${reset}     ok to destroy $STAX_NAME-RDS with the $STAX_NAME [y/n]? " answer
@@ -844,6 +845,7 @@ stax-destroy(){
                 fi
             fi
     fi
+    rm /tmp/rds.total
 
     stax-message "destroying $STAX_NAME stax"
     if ! aws cloudformation delete-stack --stack-name "$STAX_NAME" > /dev/null; then
