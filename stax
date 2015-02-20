@@ -283,10 +283,11 @@ stax-validate(){
 
 stax-add(){
     stax-message "Adding RDS to existing vpc"
-    # build RDS params file"
-    stax-message "  building params file"
+    stax-message "  getting existing VPC name"
     vpc_id=$(jq --raw-output '.Stacks[].Outputs[] | select(.OutputKey=="VPCID").OutputValue' "$STAX_DIR/$STAX_NAME.json")
     echo $vpc_id > $STAX_DIR/$STAX_NAME.vpc
+    # build RDS params file"
+    stax-message "  building params file"
     stax-rds-config
     stax-message "  getting existing VPC name"
     stax-message "  adding to `cat $STAX_DIR/$STAX_NAME.vpc`"
