@@ -249,25 +249,35 @@ stax-validate-template(){
 stax-validate(){
     stax-message "validate template"
     if [[ ! $1 ]]; then
-        stax-error-exit "stax-validate requires the template path as an argument" 10
+        stax-error "stax-validate requires the template path as an argument"
+        return 10
     fi
     template_path="$1"
     if ! stax-generate; then
-        stax-error-exit "failed to set up stax" 1
+        stax-error "failed to set up stax"
+        return 1
+    fi
+    if ! $jq . "$template_path" >/dev/null; then
+        stax-error "template $template_path failed jq validation, see error above"
+        return 1
     fi
     if ! stax-create-bucket; then
-        stax-error-exit "failed to create bucket for upload" 1
+        stax-error "failed to create bucket for upload"
+        return 1
     fi
     if ! stax-upload-template "$template_path"; then
         stax-destroy-bucket
-        stax-error-exit "failed to upload template" 1
+        stax-error "failed to upload template"
+        return 1
     fi
     if ! stax-validate-template; then
         stax-destroy-bucket
-        stax-error-exit "failed to validate template" 1
+        stax-error "failed to validate template"
+        return 1
     fi
     if ! stax-destroy-bucket; then
-        stax-error-exit "failed to delete bucket, please do so manually" 1
+        stax-error "failed to delete bucket, please do so manually"
+        return 1
     fi
 }
 
@@ -303,6 +313,10 @@ stax-create(){
     stax-message "$STAX_NAME" "NAME"
     if ! stax-config; then
         stax-error-exit "failed to generate stax config" 1
+    fi
+    if ! $jq . "$template_path" >/dev/null; then
+        stax-destroy-files
+        stax-error-exit "template $template_path failed jq validation, see error above" 1
     fi
     if ! stax-create-key; then
         stax-destroy-files
@@ -1241,7 +1255,10 @@ case "$sub_cmd" in
         ;;
 
     validate)
-        stax-validate "$template"
+        if ! stax-validate "$template"; then
+            stax-error "template validation failed"
+            exit 1
+        fi
         ;;
 
     *)
