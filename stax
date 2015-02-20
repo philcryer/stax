@@ -105,7 +105,7 @@ optional arguments.
 
 Commands:
   add                Add functionality to an existing VPC
-  connect [target]   Connect to jump|router|service in the VPC stax over SSH
+  connect [target]   Connect to jump|gateway|service in the VPC stax over SSH
   create             Create a new VPC stax in AWS
   describe           Describe the stax created from this host
   destroy            Destroy the existing VPC stax
@@ -383,10 +383,10 @@ stax-create(){
 stax-ssh-config(){
     stax-message "creating ssh_config"
     STAX_SSH_CONFIG="$STAX_DIR/$STAX_NAME.ssh_config"
-    rhosts="$STAX_DIR/$STAX_NAME.router_hosts"
+    gwhosts="$STAX_DIR/$STAX_NAME.gateway_hosts"
     shosts="$STAX_DIR/$STAX_NAME.service_hosts"
-    if [[ ! -f $rhosts ]]; then
-        stax-error "missing router host file: $rhosts"
+    if [[ ! -f $gwhosts ]]; then
+        stax-error "missing gateway host file: $gwhosts"
         return 10
     fi
     if [[ ! -f $shosts ]]; then
@@ -414,16 +414,16 @@ EOF
   ProxyCommand ssh -q -A -x -o ServerAliveInterval=60 -o ServerAliveCountMax=30 -o TCPKeepAlive=no -W %h:%p $jump
 EOF
     fi
-    ri=
-    for rip in $(<"$rhosts"); do
+    gi=
+    for gip in $(<"$gwhosts"); do
         cat >> "$STAX_SSH_CONFIG" <<EOF
 
-Host router$ri
+Host gateway$gi
   User core
-  HostName $rip
+  HostName $gip
   ProxyCommand ssh -q -F $STAX_SSH_CONFIG -W %h:%p jump
 EOF
-        ri=$((ri+1))
+        gi=$((gi+1))
     done
     si=
     for sip in $(<"$shosts"); do
@@ -660,16 +660,17 @@ stax-popjumpbox(){
 }
 
 stax-getdockerips(){
-    stax-message "get router and service IP(s)"
-    stax-message "  querying aws"
-    service_hosts="$STAX_DIR/$STAX_NAME.service_hosts"
-    if ! aws --output json ec2 describe-instances | $jq --raw-output ".Reservations[].Instances[] | select(.Tags[].Value==\"container-$STAX_NAME\").PrivateIpAddress" > "$service_hosts"; then
-        stax-error "failed to query aws for service instances"
+    stax-message "get gateway and service IPs"
+    stax-message "  querying aws for gateway hosts"
+    gateway_hosts="$STAX_DIR/$STAX_NAME.gateway_hosts"
+    if ! aws --output json ec2 describe-instances | $jq --raw-output ".Reservations[].Instances[] | select(.Tags[].Value==\"gateway-$STAX_NAME\").PrivateIpAddress" > "$gateway_hosts"; then
+        stax-error "failed to query aws for gateway instances"
         return 1
     fi
-    router_hosts="$STAX_DIR/$STAX_NAME.router_hosts"
-    if ! aws --output json ec2 describe-instances | $jq --raw-output ".Reservations[].Instances[] | select(.Tags[].Value==\"router-$STAX_NAME\").PrivateIpAddress" > "$router_hosts"; then
-        stax-error "failed to query aws for router instances"
+    stax-message "  querying aws for service hosts"
+    service_hosts="$STAX_DIR/$STAX_NAME.service_hosts"
+    if ! aws --output json ec2 describe-instances | $jq --raw-output ".Reservations[].Instances[] | select(.Tags[].Value==\"service-$STAX_NAME\").PrivateIpAddress" > "$service_hosts"; then
+        stax-error "failed to query aws for service instances"
         return 1
     fi
 }
@@ -707,7 +708,7 @@ stax-connect(){
         target="$1"
         shift
         case "$target" in
-            jump|router|service)
+            jump|gateway*|service*)
                 :;;
             *)
                 stax-error "unknown connection target: $target"
@@ -923,7 +924,7 @@ EOF
     fi
     stax-message "  giving docker containers some time to spin up"
     sleep 300
-    for target in router service; do
+    for target in gateway service; do
         for docker_cmd in images ps; do
             stax-message "  running docker $docker_cmd on $target"
             if ! stax-connect $target docker $docker_cmd; then
@@ -949,8 +950,8 @@ EOF
     stax-message "  giving consul some time to cluster"
     sleep 120
     stax-message "  getting consul cluster members"
-    if ! stax-connect router docker exec consul consul members; then
-        stax-error "failed to run consul members on router"
+    if ! stax-connect gateway docker exec consul consul members; then
+        stax-error "failed to run consul members on gateway"
         status=$((status+1))
     fi
     if ! stax-connect service docker exec consul curl --silent --location http://localhost:8500/v1/catalog/nodes; then
@@ -971,7 +972,7 @@ EOF
         stax-error "you can troubleshoot using the following commands:"
         stax-error "  $ ./stax connect HOST systemctl status [-l] SERVICE"
         stax-error "  $ ./stax connect HOST journalctl -b -u SERVICE"
-        stax-error "where HOST is router or service and SERVICE is etcd, fleet, consul, etc."
+        stax-error "where HOST is gateway or service and SERVICE is etcd, fleet, consul, etc."
     fi
     if ! stax-destroy; then
         stax-error "failed to destroy the stack, you will need to clean up"
@@ -984,7 +985,7 @@ EOF
 # process positional parameters
 config="config/config.json"
 jump=
-template="templates/default.json"
+template="templates/vpc-default.json"
 sub_cmd=
 sub_cmd_args=
 prev_arg=
