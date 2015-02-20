@@ -114,20 +114,5 @@
         ]
       }
     },
-    "DBReadReplica": {
-      "Type": "AWS::RDS::DBInstance",
-      "Properties": {
-        "SourceDBInstanceIdentifier": {
-          "Ref": "DBInstance"
-        },
-        "DBInstanceClass": "db.m3.medium",
-        "Tags": [
-              {"Key":"Role", "Value":"ReadReplica1"},
-              {"Key":"Service", "Value":"MySvc"},
-              {"Key":"Group", "Value":"ITSA"},
-              {"Key":"Env", "Value":"TEST"}
-        ]
-      }
-    }
   }
 }
