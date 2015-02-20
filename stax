@@ -934,11 +934,13 @@ EOF
     done
     stax-message "  giving etcd and fleet some time to cluster"
     sleep 120
-    # stax-message "  getting etcd version"
-    # if ! stax-connect service curl --silent --location http://localhost:4001/version; then
-    #     stax-error "failed to get etcd version"
-    #     status=$((status+1))
-    # fi
+    stax-message "  getting etcd version"
+    if ! stax-connect service curl --silent --location http://localhost:4001/version; then
+        echo ""
+        stax-error "failed to get etcd version"
+        status=$((status+1))
+    fi
+    echo ""
     stax-message "  listing machines in fleet cluster"
     if ! stax-connect service fleetctl list-machines; then
         stax-error "failed to run fleetctl list-machines on service"
