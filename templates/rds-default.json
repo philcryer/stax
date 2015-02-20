@@ -111,7 +111,7 @@
               {"Key":"Type", "Value":"sg"},
               {"Key":"Group", "Value":"ITSA"},
               {"Key":"Env", "Value":"TEST"}
-        ]
+        ],
       "VpcId" : "@VPC_ID@"
     },
     "DBInstance": {
