@@ -325,6 +325,9 @@ stax-add(){
         stax-error-exit "creation failed, exiting" 1
     fi
     stax-message "  stax creation complete"
+    if [ ! -d "$STAX_DIR/audit/$STAX_NAME-RDS" ]; then
+        mkdir -p $STAX_DIR/audit/$STAX_NAME-RDS
+    fi
     touch "$STAX_DIR/audit/$STAX_NAME-RDS/$(date +'%Y%m%d-%H%M%S')-created"
     stax-describe
     exit 0
@@ -834,7 +837,7 @@ stax-destroy(){
         fi
     fi
 
-    ls -1 $STAX_DIR/audit/$STAX_NAME/*-RDS-created > /tmp/rds.total
+    ls -1 $STAX_DIR/audit/$STAX_NAME-RDS/*-created > /tmp/rds.total
     if [ `cat /tmp/rds.total | wc -l` -gt 0 ]; then
         stax-message "this stax also contains an RDS"
             if [[ $YES != "y" ]]; then
