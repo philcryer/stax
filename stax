@@ -7,7 +7,7 @@
 
 # variables
 pkg="stax"
-version="0.2"
+version="0.3"
 STAX_PRE_NAME="stax"
 SCRIPT_PATH=$(cd $(dirname $0); pwd -P)
 SYSTEM=$(uname)
@@ -109,6 +109,7 @@ Commands:
   create             Create a new VPC stax in AWS
   describe           Describe the stax created from this host
   destroy            Destroy the existing VPC stax
+  dockerip-update    Destroy the existing VPC stax
   fleet              Run various fleetctl commands against the fleet cluster
   generate           Regenerate the VPC template from the Scala definition
   help               Output this message
@@ -133,7 +134,7 @@ NUMS=`wc -l < assets/stax/slogans`
     echo " ___| |_ __ ___  __"
     echo '/ __| __/ _` \ \/ /'
     echo '\__ \ || (_| |>  < '
-    echo "|___/\__\__,_/_/\_\ ${reset}"
+    echo "|___/\__\__,_/_/\_\ ${reset} `echo $version`"
     echo
 }
 
@@ -442,16 +443,24 @@ IdentityFile $STAX_PRIV_KEY
 Host jump
   User ec2-user
   HostName $STAX_PUB_IP
+EOF
+    if [[ $jump ]]; then
+        # when jumping through their jump box, use their ssh_config
+        cat >> "$STAX_SSH_CONFIG" <<EOF
+  ProxyCommand ssh -q -A -x -o ServerAliveInterval=60 -o ServerAliveCountMax=30 -o TCPKeepAlive=no -W %h:%p $jump
+EOF
+    fi
+    cat >> "$STAX_SSH_CONFIG" <<EOF
 
 Host router
   User core
   HostName $router_ip
-  ProxyCommand ssh -q -F $STAX_SSH_CONFIG jump nc -w 120 %h %p
+  ProxyCommand ssh -q -F $STAX_SSH_CONFIG -W %h:%p jump
 
 Host service
   User core
   HostName $service_ip
-  ProxyCommand ssh -q -F $STAX_SSH_CONFIG jump nc -w 120 %h %p
+  ProxyCommand ssh -q -F $STAX_SSH_CONFIG -W %h:%p jump
 EOF
     stax-message "  created $STAX_SSH_CONFIG"
     SSH_OPTIONS="$SSH_OPTIONS -F $STAX_SSH_CONFIG"
@@ -460,7 +469,8 @@ EOF
 # ensure there is a stax
 stax-existing(){
     if [[ ! -f $STAX_NAME_FILE ]]; then
-        stax-error-exit "no stax defined, use create first" 1
+        stax-error "no stax defined, use create first"
+        return 1
     fi
     # define all the global variables
     STAX_NAME=$(<$STAX_NAME_FILE)
@@ -501,8 +511,8 @@ stax-complete(){
             stax-error "unable to get information about stax $STAX_NAME"
             return 1
         fi
-        status=$($jq '.Stacks[].StackStatus' "$STAX_DESC")
-        if [[ $status == '"CREATE_COMPLETE"' ]]; then
+        status=$($jq --raw-output '.Stacks[].StackStatus' "$STAX_DESC")
+        if [[ $status == CREATE_COMPLETE ]]; then
             break
         fi
         stax-message "  stax build not complete: $status"
@@ -519,12 +529,15 @@ stax-complete(){
 stax-list(){
     stax-message "list currently running stax"
     stax-message "  querying aws "
-    echo "{"
     # list running stax
-    if ! aws --output json cloudformation list-stacks --stack-status-filter CREATE_COMPLETE | $jq '.StackSummaries[].StackName' | grep "vpc-stax" | cut -d"\"" -f2 > /tmp/run.list; then
+    if ! aws --output json cloudformation list-stacks --stack-status-filter CREATE_COMPLETE | $jq --raw-output '.StackSummaries[].StackName' | grep '^vpc-stax-' > /tmp/run.list; then
         stax-error "  aws query failed"
         return 1
     fi
+    running_stax=`cat /tmp/run.list | wc -l`
+    stax-message "  $running_stax running stax"
+    stax-message "    (the * denotes one handled by local node)"
+    echo "{"
     ls -1 "$STAX_DIR/audit" > /tmp/hist.list
     # put a * by one if it was launched from here
     for f in $(cat /tmp/run.list); do
@@ -532,6 +545,10 @@ stax-list(){
     done
     #    rm -f /tmp/hist.list /tmp/run.list
     echo "}"
+    stax-message "list currently running ec2 instances"
+    stax-message "  querying aws "
+    running_ec2=`aws ec2 describe-instances --filter Name="instance-state-code",Values="16" | grep "\"Instances\"\:" | wc -l`
+    stax-message "  $running_ec2 running ec2 instances"
 }
 
 stax-services(){
@@ -639,9 +656,8 @@ stax-motd(){
 
 EOF
     cat >> "$motd" <<EOF
-Name      $STAX_NAME_FILE
+Name      $STAX_NAME
 Built     $now
-
 EOF
 }
 
@@ -668,13 +684,12 @@ stax-getdockerips(){
     stax-message "get router and service IP(s)"
     stax-message "  querying aws"
     service_hosts="$STAX_DIR/$STAX_NAME.service_hosts"
-    # this will not print the IP address of a host if it is the last host in the list
-    if ! aws --output json ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"container-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$NF } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$service_hosts"; then
+    if ! aws --output json ec2 describe-instances | $jq --raw-output ".Reservations[].Instances[] | select(.Tags[].Value==\"container-$STAX_NAME\").PrivateIpAddress" > "$service_hosts"; then
         stax-error "failed to query aws for service instances"
         return 1
     fi
     router_hosts="$STAX_DIR/$STAX_NAME.router_hosts"
-    if ! aws --output json ec2 describe-instances --output text --query 'Reservations[*].Instances[*]' | awk "\$1 == \"0\" { if (ip != \"\" && name == \"router-$STAX_NAME\") print ip; ip = \"\" } \$1 == \"PRIVATEIPADDRESSES\" { ip = \$NF } \$1 == \"TAGS\" && \$2 == \"Name\" { name = \$3 }" > "$router_hosts"; then
+    if ! aws --output json ec2 describe-instances | $jq --raw-output ".Reservations[].Instances[] | select(.Tags[].Value==\"router-$STAX_NAME\").PrivateIpAddress" > "$router_hosts"; then
         stax-error "failed to query aws for router instances"
         return 1
     fi
@@ -862,7 +877,7 @@ stax-config(){
     fi
     if grep -q '@SSH_FROM@' "$config" > /dev/null 2>&1; then
         if [[ $jump ]]; then
-            ssh_from="$jump"
+            ssh_from="$jump/32"
         else
             if [[ ! $external_cidr ]]; then
                 stax-error "config requests replacement for @SSH_FROM@ but unable to determine external IP"
@@ -968,22 +983,26 @@ EOF
             fi
         done
     done
+    stax-message "  giving fleet some time to cluster"
+    sleep 120
     stax-message "  listing machines in fleet cluster"
     if ! stax-connect service fleetctl list-machines; then
         stax-error "failed to run fleetctl list-machines on service"
         return 1
     fi
     stax-message "  giving consul some time to cluster"
-    sleep 200
+    sleep 120
     stax-message "  getting consul cluster members"
     if ! stax-connect router docker exec consul consul members; then
         stax-error "failed to run consul members on router"
         return 1
     fi
-    if ! stax-connect service docker exec consul curl --silent localhost:8500/v1/catalog/nodes | $jq .; then
+    if ! stax-connect service docker exec consul curl --silent localhost:8500/v1/catalog/nodes; then
+        echo ""
         stax-error "failed to curl consul members on service"
         return 1
     fi
+    echo ""
 
     #jump_hostname=$(stax-connect jump hostname)
     #stax-message "  jump box hostname: $jump_hostname"
@@ -1002,7 +1021,8 @@ EOF
 # process positional parameters
 config="config/config.json"
 config_rds="config/rds.json"
-template="templates/cloudformation-template-vpc.json"
+jump=
+template="templates/default.json"
 template_default="$template"
 sub_cmd=
 sub_cmd_args=
@@ -1036,6 +1056,14 @@ do
         -h | --help | --hel | --he | --h)
             stax-usage
             exit 0;;
+
+        -j | --jump | --jum | --ju | --j)
+            prev_arg=jump
+            ;;
+
+        --jump=* | --jum=* | --ju=* | --j=*)
+            jump="$optarg"
+            ;;
 
         -t | --template | --templat | --templa | --templ | --temp | --tem | --te | --t)
             prev_arg=template
@@ -1082,6 +1110,8 @@ if [[ -z $sub_cmd ]]; then
     exit 2
 fi
 
+stax-logger "WARN: ---- stax (tag `git log | head -n1 | cut -d " " -f2`) starting ----"
+
 # generic setup
 stax-logo
 stax-preflight
@@ -1108,27 +1138,63 @@ case "$sub_cmd" in
 
     create)
         stax-create "$template"
-        stax-existing
-        stax-motd
-        stax-describe
+        if ! stax-existing; then
+            stax-error-exit "stax create failed" 1
+        fi
+        if ! stax-motd; then
+            stax-error-exit "failed to create motd file" 1
+        fi
+        if ! stax-describe; then
+            stax-error-exit "failed to get stack information from aws" 1
+        fi
         ;;
 
     desc-auto)
-        stax-existing
+        if ! stax-existing; then
+            exit 1
+        fi
         stax-descauto
         ;;
 
     desc*)
-        stax-existing
+        if ! stax-existing; then
+            exit 1
+        fi
         if ! stax-describe; then
             stax-error-exit "stax describe failed" 1
         fi
         ;;
 
     destroy)
-        stax-existing
+        if ! stax-existing; then
+            exit 1
+        fi
         if ! stax-destroy $sub_cmd_args; then
             stax-error-exit "please see above errors and deal with them" 1
+        fi
+        ;;
+
+    dockerip-update)
+        if ! stax-existing; then
+            exit 1
+        fi
+        if ! stax-complete; then
+            stax-error-exit "stax build not complete" 1
+        fi
+        if [[ ! -f $STAX_JUMP_FILE ]]; then
+            stax-jumpip
+            stax-getdockerips
+            stax-ssh-config
+            stax-popjumpbox
+        fi
+        STAX_PUB_IP=$(<$STAX_JUMP_FILE)
+        if ! stax-getdockerips; then
+            stax-error "failed to update docker IPs"
+            exit 1
+        fi
+        if ! stax-ssh-config; then
+            stax-error "failed to update ssh config"
+            exit 1
         fi
         ;;
 
