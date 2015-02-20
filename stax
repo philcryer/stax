@@ -474,10 +474,15 @@ stax-complete(){
         status=$($jq --raw-output '.Stacks[].StackStatus' "$STAX_DESC")
         if [[ $status == CREATE_COMPLETE ]]; then
             break
+        elif [[ $status != CREATE_IN_PROGRESS ]]; then
+            stax-error "it appears the build failed: $status"
+            stax-error "stax $STAX_NAME will be destroyed"
+            stax-destroy
+            return 1
         fi
         stax-message "  stax build not complete: $status"
         if [[ $wait ]]; then
-            stax-message "  waiting..."
+            stax-message "  waiting for build to complete..."
         else
             return 1
         fi
