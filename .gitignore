@@ -2,3 +2,4 @@ config.json
 config.json.tmp
 *.swp
 run
+rds.json
