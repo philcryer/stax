@@ -3,12 +3,13 @@
   { "ParameterKey": "Group",                        "ParameterValue": "<changeMe>" },
   { "ParameterKey": "Environment",                  "ParameterValue": "<changeMe>" },
   { "ParameterKey": "THISISACOMMENT", "ParameterValue": "To create a subdomain in route 53, change these two values."},
-  { "ParameterKey": "THISISACOMMENT", "ParameterValue": "To skip, remove these or leave as 'do.not.create.', including the period at the end."},
-  { "ParameterKey": "ServiceELBSubdomainName",      "ParameterValue": "do.not.create." },
+  { "ParameterKey": "THISISACOMMENT", "ParameterValue": "To skip, remove these or leave ServiceELBSubdomainName as blank and ServiceELBBaseDomainName as 'do.not.create.', including the period at the end."},
+  { "ParameterKey": "ServiceELBSubdomainName",      "ParameterValue": "" },
   { "ParameterKey": "ServiceELBBaseDomainName",     "ParameterValue": "do.not.create." },
   { "ParameterKey": "THISISACOMMENT", "ParameterValue": "To associate an SSL cert with the service ELB and configure HTTPS instead of HTTP, fill in the logical name of the cert in AWS IAM."},
   { "ParameterKey": "THISISACOMMENT", "ParameterValue": "To upload a new cert, do that first with AWS CLI.  To skip SSL, remove or leave blank."},
   { "ParameterKey": "ServiceELBSSLCertName",        "ParameterValue": "" },
+
   { "ParameterKey": "CostCenter",                   "ParameterValue": "####-####-ABC#####" },
   { "ParameterKey": "DockerRegistryUser",           "ParameterValue": "<changeMe>" },
   { "ParameterKey": "DockerRegistryPass",           "ParameterValue": "<changeMe>" },
@@ -26,6 +27,6 @@
   { "ParameterKey": "Owner",                        "ParameterValue": "@OWNER@" },
   { "ParameterKey": "KeyName",                      "ParameterValue": "@KEY_NAME@" },
   { "ParameterKey": "AllowSSHFrom",                 "ParameterValue": "@SSH_FROM@" },
-  { "ParameterKey": "AllowHTTPFrom",                "ParameterValue": "@HTTP_FROM@" },
+  { "ParameterKey": "AllowHTTPFrom",                "ParameterValue": "0.0.0.0/0" },
   { "ParameterKey": "DiscoveryURL",                 "ParameterValue": "@DISCOVERY_URL@" }
 ]
