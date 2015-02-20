@@ -916,7 +916,7 @@ EOF
     stax-message "  giving etcd and fleet some time to cluster"
     sleep 120
     # stax-message "  getting etcd version"
-    # if ! stax-connect service curl localhost:4001/version; then
+    # if ! stax-connect service curl --silent --location http://localhost:4001/version; then
     #     stax-error "failed to get etcd version"
     #     status=$((status+1))
     # fi
@@ -932,19 +932,13 @@ EOF
         stax-error "failed to run consul members on router"
         status=$((status+1))
     fi
-    if ! stax-connect service docker exec consul curl --silent localhost:8500/v1/catalog/nodes; then
+    if ! stax-connect service docker exec consul curl --silent --location http://localhost:8500/v1/catalog/nodes; then
         echo ""
         stax-error "failed to curl consul members on service"
         status=$((status+1))
     fi
     echo ""
 
-    #jump_hostname=$(stax-connect jump hostname)
-    #stax-message "  jump box hostname: $jump_hostname"
-    #consul_members=$(stax-connect router docker exec consul consul members)
-    #stax-message "  consul cluster members: $consul_members"
-    # systemctl status consul
-    # journalctl -u consul
     # start httpbin
     # curl ELB/httpbin/get
 
