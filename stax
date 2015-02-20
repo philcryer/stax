@@ -280,15 +280,10 @@ stax-add(){
     stax-message "  getting existing VPC name"
     stax-message "  adding to `cat $STAX_DIR/$STAX_NAME.vpc`"
 
-    # validate template
-    if [[ ! $1 ]]; then
-        stax-error-exit "stax-add takes the template path as an argument" 10
-    fi
-    template_path="$1"
-
     ####################################################
     # new routine replaces @VPC_ID@ in the rds template
     ####################################################
+    template_path="$1"
     old_template_path=$1
     template_path="run/`echo $1 | cut -d"/" -f2`"
     sed="sed -e s/@VPC_ID@/$vpc_id/"
@@ -318,9 +313,25 @@ stax-add(){
         stax-error-exit "creation failed, exiting" 1
     fi
     stax-message "  stax creation complete"
-    touch "$STAX_DIR/audit/$STAX_NAME/$(date +'%Y%m%d-%H%M%S')-RDS-created"
+    touch "$STAX_DIR/audit/$STAX_NAME-RDS/$(date +'%Y%m%d-%H%M%S')-created"
     stax-describe
     exit 0
+}
+
+stax-destroy-rds(){
+    stax-message "Destroying RDS"
+    STAX_RDS_PARAMS="$STAX_DIR/$STAX_NAME.rdsparams"
+    # delete RDS from existing VPC
+    #--template-url "$STAX_TEMPLATE_URL" \
+    #    --capabilities CAPABILITY_IAM > /dev/null
+    #    --parameters "$(<$STAX_RDS_PARAMS)" \
+    if ! aws cloudformation delete-stack \
+        --stack-name "$STAX_NAME-RDS" 
+    then
+        stax-error-exit "  RDS delete failed, exiting" 1
+    fi
+    stax-message "  RDS delete complete"
+    touch "$STAX_DIR/audit/$STAX_NAME-RDS/$(date +'%Y%m%d-%H%M%S')-destroyed"
 }
 
 stax-create(){
@@ -519,7 +530,7 @@ stax-list(){
     for f in $(cat /tmp/run.list); do
         echo -n $f && if grep $f /tmp/hist.list > /dev/null; then echo " *" && owned_stax=$f ; else echo; fi
     done
-    rm -f /tmp/hist.list /tmp/run.list
+    #    rm -f /tmp/hist.list /tmp/run.list
     echo "}"
 }
 
@@ -592,7 +603,8 @@ stax-history(){
     stax-message "history"
     stax-message "  recently created and destoryed stax"
     echo "{"
-    ls -1R "$STAX_DIR/audit" | cut -d"/" -f6 | sed -e "1d"
+    cd $STAX_DIR; cd ..
+    ls -1R "run/audit" | cut -d"/" -f3 | sed -e "1d"
     echo "}"
 }
 
@@ -773,6 +785,19 @@ stax-destroy(){
             exit 0
         fi
     fi
+
+    if [ `ls -1 $STAX_DIR/audit/$STAX_NAME/*-RDS-created | wc -l` -gt 0 ]; then
+        stax-message "this stax also contains an RDS"
+            if [[ $YES != "y" ]]; then
+                read -p "${yellow}[ ${cyan}????${yellow} ]${reset}     ok to destroy $STAX_NAME-RDS with the $STAX_NAME [y/n]? " answer
+                if [[ $answer != y ]] ; then
+                    stax-error-exit "  will not destroy $STAX_NAME-RDS, can't destroy one without the other, existing" 2
+                else
+                    stax-destroy-rds
+                fi
+            fi
+    fi
+
     stax-message "destroying $STAX_NAME stax"
     if ! aws cloudformation delete-stack --stack-name "$STAX_NAME" > /dev/null; then
         stax-error "  destroy failed"
@@ -978,6 +1003,7 @@ EOF
 config="config/config.json"
 config_rds="config/rds.json"
 template="templates/cloudformation-template-vpc.json"
+template_default="$template"
 sub_cmd=
 sub_cmd_args=
 prev_arg=
@@ -1174,6 +1200,10 @@ case "$sub_cmd" in
     add)
         if ! stax-existing; then
             stax-error "no stax defined, use create first."
+            exit 1
+        fi
+        if [[ $template == $template_default ]]; then
+            stax-error "you must supply a --template argument when calling add"
             exit 1
         fi
         if ! stax-complete; then
