@@ -749,8 +749,8 @@ stax-ssh-key-remove(){
         return 10
     fi
     if ! ssh-add -d "$STAX_PUB_KEY" > /dev/null 2>&1; then
-        stax-error "failed to remove private key from ssh-agent: $STAX_PUB_KEY"
-        stax-error "you will have to remove it yourself"
+        stax-logger "failed to remove private key from ssh-agent: $STAX_PUB_KEY"
+        stax-logger "you will have to remove it yourself"
         return 1
     fi
     stax-message "  private key removed"
@@ -784,7 +784,7 @@ stax-connect(){
 stax-destroy-key(){
     stax-message "destroying key pair"
     if ! stax-ssh-key-remove; then
-        stax-error "failed to remove ssh key from ssh-agent, continuing"
+        stax-logger "failed to remove ssh key from ssh-agent, continuing"
     fi
     stax-message "  making sure key $STAX_NAME exists in aws"
     if ! aws ec2 describe-key-pairs --key-names "$STAX_NAME" > /dev/null 2>&1; then
