@@ -277,6 +277,7 @@ stax-add(){
     stax-rds-config
     stax-message "  getting existing VPC name"
     vpc_id=$(jq --raw-output '.Stacks[].Outputs[] | select(.OutputKey=="VPCID").OutputValue' "$STAX_DIR/$STAX_NAME.json")
+    echo $vpc_id > $STAX_DIR/$STAX_NAME.vpc
     stax-message "  adding to `cat $STAX_DIR/$STAX_NAME.vpc`"
 
     # validate template
@@ -317,6 +318,7 @@ stax-add(){
         stax-error-exit "creation failed, exiting" 1
     fi
     stax-message "  stax creation complete"
+    touch "$STAX_DIR/audit/$STAX_NAME/$(date +'%Y%m%d-%H%M%S')-RDS-created"
     stax-describe
     exit 0
 }
