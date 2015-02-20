@@ -1,20 +1,145 @@
-"DBInstance" : {
-  "Type": "AWS::RDS::DBInstance",
-  "Properties": {
-     "DBName"            : { "Ref" : "DBName" },
-     "Engine"            : "MySQL",
-     "MasterUsername"    : { "Ref" : "DBUsername" },
-     "DBInstanceClass"   : { "Ref" : "DBClass" },
-     "DBSecurityGroups"  : [ { "Ref" : "DBSecurityGroup" } ],
-     "AllocatedStorage"  : { "Ref" : "DBAllocatedStorage" },
-     "MasterUserPassword": { "Ref" : "DBPassword" }
-  }
-}
-
-"DBSecurityGroup": {
-  "Type": "AWS::RDS::DBSecurityGroup",
-  "Properties": {
-     "DBSecurityGroupIngress": { "EC2SecurityGroupName": { "Ref": "WebServerSecurityGroup" } },
-     "GroupDescription"      : "Frontend Access"
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "CoreOS on EC2: http://coreos.com/docs/running-coreos/cloud-providers/ec2/",
+  "Parameters":{
+    "DBName":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "Engine":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "MultiAZ":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "VPCID":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "MasterUsername":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "MasterUserPassword":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "DBInstanceClass":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "AllocatedStorage":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "DBSubnet1Cidr":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
+    "DBSubnet2Cidr":{
+      "Description" : "Boo",
+      "Type" : "String"
+    }
+  },
+  "Resources": {
+    "DBSubnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "AvailabilityZone": "us-east-1a",
+        "CidrBlock": { "Ref": "DBSubnet1Cidr"},
+        "Tags": [
+          {"Key":"Name", "Value":"DBSubnet1"},
+          {"Key":"Type", "Value":"db"},
+          {"Key":"Group", "Value":"ITSA"},
+          {"Key":"Env", "Value":"TEST"}
+        ],
+        "VpcId": "@VPC_ID@"
+      }
+    },
+    "DBSubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "AvailabilityZone": "us-east-1b",
+        "CidrBlock": { "Ref": "DBSubnet2Cidr"},
+        "Tags": [
+              {"Key":"Name", "Value":"DBSubnet2"},
+              {"Key":"Type", "Value":"db"},
+              {"Key":"Group", "Value":"ITSA"},
+              {"Key":"Env", "Value":"TEST"}
+        ],
+        "VpcId": "@VPC_ID@"
+      }
+    },
+    "DBSubnetGroup": {
+      "Type": "AWS::RDS::DBSubnetGroup",
+      "Properties": {
+        "DBSubnetGroupDescription": "DB Subnet Group",
+        "SubnetIds": [
+          {
+            "Ref": "DBSubnet1"
+          },
+          {
+            "Ref": "DBSubnet2"
+          }
+        ],
+        "Tags": [
+              {"Key":"Name", "Value":"DBSubnetGroup"},
+              {"Key":"Type", "Value":"db"},
+              {"Key":"Group", "Value":"ITSA"},
+              {"Key":"Env", "Value":"TEST"}
+        ]
+      }
+    },
+    "VPCSecurityGroup": {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "VPC Security Group for RDS",
+        "SecurityGroupEgress" : [ {
+              "IpProtocol" : "tcp",
+              "FromPort" : "5432",
+              "ToPort" : "5432",
+              "CidrIp" : "0.0.0.0/0"
+        }],
+        "SecurityGroupIngress" : [{
+              "IpProtocol" : "tcp",
+              "FromPort" : "5432",
+              "ToPort" : "5432",
+              "CidrIp" : "0.0.0.0/0"
+        }],
+        "Tags": [
+              {"Key":"Name", "Value":"VPCSecurityGroup"},
+              {"Key":"Type", "Value":"sg"},
+              {"Key":"Group", "Value":"ITSA"},
+              {"Key":"Env", "Value":"TEST"}
+        ],
+        "VpcId" : "@VPC_ID@"
+      }
+    },
+    "DBInstance": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "DBName": {"Ref":"DBName"},
+        "Engine": "postgres",
+        "MultiAZ": "true",
+        "MasterUsername": "DBUser",
+        "MasterUserPassword": "DBPassword",
+        "DBInstanceClass": "db.m3.medium",
+        "AllocatedStorage": "5",
+        "DBSubnetGroupName": {
+          "Ref": "DBSubnetGroup"
+        },
+        "VPCSecurityGroups": [
+          { "Ref": "VPCSecurityGroup" }
+        ],
+        "Tags": [
+              {"Key":"Role", "Value":"Primary"},
+              {"Key":"Service", "Value":"MySvc"},
+              {"Key":"Group", "Value":"ITSA"},
+              {"Key":"Env", "Value":"TEST"}
+        ]
+      }
+    }
   }
 }

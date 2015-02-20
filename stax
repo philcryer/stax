@@ -282,18 +282,67 @@ stax-validate(){
 }
 
 stax-add(){
-    stax-message "getting existing VPC name"
+    stax-message "Adding RDS to existing vpc"
+    # build RDS params file"
+    stax-message "  building params file"
     vpc_id=$(jq --raw-output '.Stacks[].Outputs[] | select(.OutputKey=="VPCID").OutputValue' "$STAX_DIR/$STAX_NAME.json")
-    echo "$vpc_id" > $STAX_DIR/$STAX_NAME.vpc
-    stax-message "  adding to $vpc_id"
+    echo $vpc_id > $STAX_DIR/$STAX_NAME.vpc
+    stax-rds-config
+    stax-message "  getting existing VPC name"
+    stax-message "  adding to `cat $STAX_DIR/$STAX_NAME.vpc`"
 
-    ## TODO 
-    ## - verify there is a template called out
-    ## - validate template
-    ## ...
-    ## - aws update template against existing vpc
+    ####################################################
+    # new routine replaces @VPC_ID@ in the rds template
+    ####################################################
+    template_path="$1"
+    old_template_path=$1
+    template_path="run/`echo $1 | cut -d"/" -f2`"
+    sed="sed -e s/@VPC_ID@/$vpc_id/"
+    if ! $sed "$old_template_path" > "$template_path"; then
+        stax-error "sed failed to replace elements in $config: $sed"
+        return 1
+    fi
+    ####################################################
+    #  (this could (probably) be done a bit better...)
+    ####################################################
 
+    if ! stax-upload-template "$template_path"; then
+        stax-error-exit "failed to upload template to s3" 1
+    fi
+    if ! stax-validate-template; then
+        stax-error-exit "failed to validate template" 1
+    fi
+
+    stax-message "Creating RDS stax in $vpc_id"
+    # create/add RDS to existing VPC
+    if ! aws cloudformation create-stack \
+        --stack-name "$STAX_NAME-RDS" \
+        --template-url "$STAX_TEMPLATE_URL" \
+        --parameters "$(<$STAX_RDS_PARAMS)" \
+        --capabilities CAPABILITY_IAM > /dev/null
+    then
+        stax-error-exit "creation failed, exiting" 1
+    fi
+    stax-message "  stax creation complete"
+    touch "$STAX_DIR/audit/$STAX_NAME-RDS/$(date +'%Y%m%d-%H%M%S')-created"
+    stax-describe
     exit 0
+}
+
+stax-destroy-rds(){
+    stax-message "Destroying RDS"
+    STAX_RDS_PARAMS="$STAX_DIR/$STAX_NAME.rdsparams"
+    # delete RDS from existing VPC
+    #--template-url "$STAX_TEMPLATE_URL" \
+    #    --capabilities CAPABILITY_IAM > /dev/null
+    #    --parameters "$(<$STAX_RDS_PARAMS)" \
+    if ! aws cloudformation delete-stack \
+        --stack-name "$STAX_NAME-RDS" 
+    then
+        stax-error-exit "  RDS delete failed, exiting" 1
+    fi
+    stax-message "  RDS delete complete"
+    touch "$STAX_DIR/audit/$STAX_NAME-RDS/$(date +'%Y%m%d-%H%M%S')-destroyed"
 }
 
 stax-create(){
@@ -522,7 +571,7 @@ stax-list(){
     for f in $(cat /tmp/run.list); do
         echo -n $f && if grep $f /tmp/hist.list > /dev/null; then echo " *" && owned_stax=$f ; else echo; fi
     done
-    rm -f /tmp/hist.list /tmp/run.list
+    #    rm -f /tmp/hist.list /tmp/run.list
     echo "}"
     stax-message "list currently running ec2 instances"
     stax-message "  querying aws "
@@ -600,7 +649,8 @@ stax-history(){
     stax-message "history"
     stax-message "  recently created and destoryed stax"
     echo "{"
-    ls -1R "$STAX_DIR/audit" | cut -d"/" -f6 | sed -e "1d"
+    cd $STAX_DIR; cd ..
+    ls -1R "run/audit" | cut -d"/" -f3 | sed -e "1d"
     echo "}"
 }
 
@@ -782,6 +832,19 @@ stax-destroy(){
             return 0
         fi
     fi
+
+    if [ `ls -1 $STAX_DIR/audit/$STAX_NAME/*-RDS-created | wc -l` -gt 0 ]; then
+        stax-message "this stax also contains an RDS"
+            if [[ $YES != "y" ]]; then
+                read -p "${yellow}[ ${cyan}????${yellow} ]${reset}     ok to destroy $STAX_NAME-RDS with the $STAX_NAME [y/n]? " answer
+                if [[ $answer != y ]] ; then
+                    stax-error-exit "  will not destroy $STAX_NAME-RDS, can't destroy one without the other, existing" 2
+                else
+                    stax-destroy-rds
+                fi
+            fi
+    fi
+
     stax-message "destroying $STAX_NAME stax"
     if ! aws cloudformation delete-stack --stack-name "$STAX_NAME" > /dev/null; then
         stax-error "stax destroy of $STAX_NAME failed"
@@ -867,6 +930,27 @@ stax-config(){
     fi
     STAX_PARAMS="$STAX_DIR/$STAX_NAME.params"
     if ! $sed "$config" > "$STAX_PARAMS"; then
+        stax-error "sed failed to replace elements in $config: $sed"
+        return 1
+    fi
+}
+
+# generate RDS parameters file
+stax-rds-config(){
+    # verify config is filled out
+    if [[ ! -f $config_rds ]]; then
+        stax-error "config file does not exist: $config_rds"
+        stax-error "configuration required"
+        stax-error "copy example to config directory, configure it and run again."
+        stax-error "    $ cp $config_rds.example $config_rds"
+        return 1
+    fi
+    stax-message "creating parameter file"
+    vpc_id=`cat $STAX_DIR/$STAX_NAME.vpc`
+    # initialize sed command
+    sed="sed -e s/@VPC_ID@/$vpc_id/"
+    STAX_RDS_PARAMS="$STAX_DIR/$STAX_NAME.rdsparams"
+    if ! $sed "$config_rds" > "$STAX_RDS_PARAMS"; then
         stax-error "sed failed to replace elements in $config: $sed"
         return 1
     fi
@@ -984,8 +1068,10 @@ EOF
 
 # process positional parameters
 config="config/config.json"
+config_rds="config/rds.json"
 jump=
 template="templates/vpc-default.json"
+template_default="$template"
 sub_cmd=
 sub_cmd_args=
 prev_arg=
@@ -1242,12 +1328,17 @@ case "$sub_cmd" in
 
     add)
         if ! stax-existing; then
+            stax-error "no stax defined, use create first."
+            exit 1
+        fi
+        if [[ $template == $template_default ]]; then
+            stax-error "you must supply a --template argument when calling add"
             exit 1
         fi
         if ! stax-complete; then
             stax-error-exit "stax build not complete" 1
         fi
-        stax-add
+        stax-add "$template"
         ;;
 
     test)
