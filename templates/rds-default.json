@@ -47,6 +47,7 @@
     "DBSubnet1": {
       "Type": "AWS::EC2::Subnet",
       "Properties": {
+        "AvailabilityZone": "us-east-1a",
         "CidrBlock": { "Ref": "DBSubnet1Cidr"},
         "Tags": [
           {"Key":"Name", "Value":"DBSubnet1"},
@@ -60,6 +61,7 @@
     "DBSubnet2": {
       "Type": "AWS::EC2::Subnet",
       "Properties": {
+        "AvailabilityZone": "us-east-1b",
         "CidrBlock": { "Ref": "DBSubnet2Cidr"},
         "Tags": [
               {"Key":"Name", "Value":"DBSubnet2"},
