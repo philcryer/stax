@@ -105,7 +105,7 @@ optional arguments.
 
 Commands:
   add                Add functionality to an existing VPC
-  connect [target]   Connect to jump|gateway|service in the VPC stax over SSH
+  connect [target]   Connect to bastion|gateway|service in the VPC stax over SSH
   create             Create a new VPC stax in AWS
   describe           Describe the stax created from this host
   destroy            Destroy the existing VPC stax
@@ -457,7 +457,7 @@ ServerAliveCountMax 30
 TCPKeepAlive no
 IdentityFile $STAX_PRIV_KEY
 
-Host jump
+Host bastion
   User ec2-user
   HostName $STAX_PUB_IP
 EOF
@@ -474,7 +474,7 @@ EOF
 Host gateway$gi
   User core
   HostName $gip
-  ProxyCommand ssh -q -F $STAX_SSH_CONFIG -W %h:%p jump
+  ProxyCommand ssh -q -F $STAX_SSH_CONFIG -W %h:%p bastion
 EOF
         gi=$((gi+1))
     done
@@ -485,7 +485,7 @@ EOF
 Host service$si
   User core
   HostName $sip
-  ProxyCommand ssh -q -F $STAX_SSH_CONFIG -W %h:%p jump
+  ProxyCommand ssh -q -F $STAX_SSH_CONFIG -W %h:%p bastion
 EOF
         si=$((si+1))
     done
@@ -506,7 +506,7 @@ stax-existing(){
     STAX_KEY="$STAX_NAME"
     STAX_PRIV_KEY="$STAX_DIR/$STAX_NAME.pem"
     STAX_PUB_KEY="$STAX_PRIV_KEY.pub"
-    STAX_JUMP_FILE="$STAX_DIR/$STAX_NAME.jump"
+    STAX_BASTION_FILE="$STAX_DIR/$STAX_NAME.bastion"
     STAX_SSH_CONFIG="$STAX_DIR/$STAX_NAME.ssh_config"
     SSH_OPTIONS="$SSH_OPTIONS -F $STAX_SSH_CONFIG"
 }
@@ -658,21 +658,21 @@ stax-history(){
     echo "}"
 }
 
-stax-jumpip(){
+stax-bastionip(){
     stax-message "getting public IP (EIP)"
     if [[ ! $STAX_DESC ]]; then
-        stax-error "cannot call stax-jumpip without STAX_DESC defined"
+        stax-error "cannot call stax-bastionip without STAX_DESC defined"
         return 10
     fi
     if [[ ! -f $STAX_DESC ]]; then
         stax-error "stax description file not found: $STAX_DESC"
         return 1
     fi
-    STAX_JUMP_FILE="$STAX_DIR/$STAX_NAME.jump"
-    STAX_PUB_IP=$($jq --raw-output '.Stacks[].Outputs[] | select(.OutputKey=="JumpEIP").OutputValue' "$STAX_DESC")
+    STAX_BASTION_FILE="$STAX_DIR/$STAX_NAME.bastion"
+    STAX_PUB_IP=$($jq --raw-output '.Stacks[].Outputs[] | select(.OutputKey=="BastionEIP").OutputValue' "$STAX_DESC")
     stax-message "  public IP (EIP): $STAX_PUB_IP"
-    stax-message "  writing to $STAX_JUMP_FILE"
-    echo "$STAX_PUB_IP" > "$STAX_JUMP_FILE"
+    stax-message "  writing to $STAX_BASTION_FILE"
+    echo "$STAX_PUB_IP" > "$STAX_BASTION_FILE"
 }
 
 stax-motd(){
@@ -681,7 +681,7 @@ stax-motd(){
     motd="$STAX_DIR/$STAX_NAME.motd"
     cat > "$motd" <<'EOF'
      _
-    | | welcome to the jumpbox
+    | | old dirty bastion
  ___| |_ __ ___  __
 / __| __/ _` \ \/ /
 \__ \ || (_| |>  <
@@ -694,21 +694,21 @@ Built     $now
 EOF
 }
 
-stax-popjumpbox(){
-    stax-message "setup motd and bashrc on jumpbox"
-    stax-message "  pushing motd to jump box"
+stax-setup-bastion(){
+    stax-message "setup motd and bashrc on bastion host"
+    stax-message "  pushing motd to bastion host"
     motd="$STAX_DIR/$STAX_NAME.motd"
     if [[ ! -f $motd ]]; then
         stax-error "motd file not found: $motd"
         return 10
     fi
-    if ! scp $SSH_OPTIONS "$motd" jump:motd > /dev/null; then
-        stax-error "failed to copy motd file to jump box"
+    if ! scp $SSH_OPTIONS "$motd" bastion:motd > /dev/null; then
+        stax-error "failed to copy motd file to bastion host"
         return 1
     fi
-    stax-message "  pushing bashrc to jump box"
-    if ! scp $SSH_OPTIONS assets/stax/bashrc jump:.bashrc > /dev/null; then
-        stax-error "failed to copy bashrc file to jump box"
+    stax-message "  pushing bashrc to bastion host"
+    if ! scp $SSH_OPTIONS assets/stax/bashrc bastion:.bashrc > /dev/null; then
+        stax-error "failed to copy bashrc file to bastion host"
         return 1
     fi
 }
@@ -757,12 +757,12 @@ stax-ssh-key-remove(){
 }
 
 stax-connect(){
-    target="jump"
+    target="bastion"
     if [[ $1 ]]; then
         target="$1"
         shift
         case "$target" in
-            jump|gateway*|service*)
+            bastion|gateway*|service*)
                 :;;
             *)
                 stax-error "unknown connection target: $target"
@@ -996,7 +996,7 @@ EOF
         "stax-existing" \
         "stax-motd" \
         "stax-complete 1" \
-        "stax-jumpip" \
+        "stax-bastionip" \
         "stax-getdockerips" \
         "stax-ssh-config"
     do
@@ -1005,11 +1005,11 @@ EOF
             return 1
         fi
     done
-    stax-popjumpbox
+    stax-setup-bastion
     status=0
-    stax-message "  connecting to jump box and running hostname"
-    if ! stax-connect jump hostname; then
-        stax-error "failed to run hostname on jump box"
+    stax-message "  connecting to bastion host and running hostname"
+    if ! stax-connect bastion hostname; then
+        stax-error "failed to run hostname on bastion host"
         status=$((status+1))
     fi
     stax-message "  giving docker containers some time to spin up"
@@ -1180,17 +1180,17 @@ case "$sub_cmd" in
         if ! stax-complete; then
             stax-error-exit "stax build not complete" 1
         fi
-        if [[ ! -f $STAX_JUMP_FILE ]]; then
-            stax-jumpip
+        if [[ ! -f $STAX_BASTION_FILE ]]; then
+            stax-bastionip
             if ! stax-getdockerips; then
                 exit 1
             fi
             if ! stax-ssh-config; then
                 exit 1
             fi
-            stax-popjumpbox
+            stax-setup-bastion
         fi
-        STAX_PUB_IP=$(<$STAX_JUMP_FILE)
+        STAX_PUB_IP=$(<$STAX_BASTION_FILE)
         if ! stax-connect $sub_cmd_args; then
             exit 1
         fi
@@ -1241,10 +1241,10 @@ case "$sub_cmd" in
         if ! stax-complete; then
             stax-error-exit "stax build not complete" 1
         fi
-        if [[ ! -f $STAX_JUMP_FILE ]]; then
-            stax-jumpip
+        if [[ ! -f $STAX_BASTION_FILE ]]; then
+            stax-bastionip
         fi
-        STAX_PUB_IP=$(<$STAX_JUMP_FILE)
+        STAX_PUB_IP=$(<$STAX_BASTION_FILE)
         if ! stax-getdockerips; then
             stax-error "failed to update docker IPs"
             exit 1
@@ -1262,17 +1262,17 @@ case "$sub_cmd" in
         if ! stax-complete; then
             stax-error-exit "stax build not complete" 1
         fi
-        if [ ! -f "$STAX_JUMP_FILE" ]; then
-            stax-jumpip
+        if [ ! -f "$STAX_BASTION_FILE" ]; then
+            stax-bastionip
             if ! stax-getdockerips; then
                 exit 1
             fi
             if ! stax-ssh-config; then
                 exit 1
             fi
-            stax-popjumpbox
+            stax-setup-bastion
         fi
-        STAX_PUB_IP=$(<$STAX_JUMP_FILE)
+        STAX_PUB_IP=$(<$STAX_BASTION_FILE)
         if ! stax-fleetstats; then
             exit 1
         fi
@@ -1310,15 +1310,15 @@ case "$sub_cmd" in
         if ! stax-complete; then
             stax-error-exit "stax build not complete" 1
         fi
-        if [ ! -f "$STAX_JUMP_FILE" ]; then
-            stax-jumpip
+        if [ ! -f "$STAX_BASTION_FILE" ]; then
+            stax-bastionip
             if ! stax-getdockerips; then
                 exit 1
             fi
             if ! stax-ssh-config; then
                 exit 1
             fi
-            stax-popjumpbox
+            stax-setup-bastion
         fi
         for service in $sub_cmd_args; do
             if ! stax-start-service "$service"; then

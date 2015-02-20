@@ -18,7 +18,7 @@
   { "ParameterKey": "ServiceClusterSize",           "ParameterValue": "3" },
   { "ParameterKey": "RouterClusterSize",            "ParameterValue": "2" },
   { "ParameterKey": "KeepAlive",                    "ParameterValue": "false" },
-  { "ParameterKey": "JumpInstanceType",             "ParameterValue": "t2.micro" },
+  { "ParameterKey": "BastionInstanceType",          "ParameterValue": "t2.micro" },
   { "ParameterKey": "NATInstanceType",              "ParameterValue": "t2.micro" },
   { "ParameterKey": "DockerInstanceType",           "ParameterValue": "m3.medium" },
   { "ParameterKey": "CoreOSChannelAMI",             "ParameterValue": "CoreOSStableAMI" },
