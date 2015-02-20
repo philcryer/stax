@@ -367,6 +367,7 @@ stax-create(){
     if ! stax-config; then
         stax-error-exit "failed to generate stax config" 1
     fi
+    stax-message "  checking for valid json file format"
     if ! $jq . "$template_path" >/dev/null; then
         stax-destroy-files
         stax-error-exit "template $template_path failed jq validation, see error above" 1
