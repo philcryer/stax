@@ -7,7 +7,7 @@
 
 # variables
 pkg="stax"
-version="0.4"
+version="0.5"
 STAX_PRE_NAME="stax"
 SCRIPT_PATH=$(cd $(dirname $0); pwd -P)
 SYSTEM=$(uname)
@@ -15,7 +15,7 @@ STAX_DIR="$SCRIPT_PATH/run"
 STAX_NAME_FILE="$STAX_DIR/stax-name"
 STAX_LOG="$STAX_DIR/stax.log"
 SSH_OPTIONS="-q"
-host=$(hostname)
+HOST=$(hostname)
 YES=
 
 # make sure we are running under ssh-agent
@@ -84,7 +84,7 @@ stax-logger(){
         echo "$pkg: cannot call stax-logger with STAX_LOG undefined"
         exit 5
     fi
-    echo "$(date +'%b %d %T') $host $pkg: $msg" >> "$STAX_LOG"
+    echo "$(date +'%b %d %T') $HOST $pkg: $msg" >> "$STAX_LOG"
 }
 
 stax-usage(){
@@ -1069,7 +1069,7 @@ EOF
         stax-error "you can troubleshoot using the following commands:"
         stax-error "  $ ./stax connect HOST systemctl status [-l] SERVICE"
         stax-error "  $ ./stax connect HOST journalctl -b -u SERVICE"
-        stax-error "where HOST is gateway or service and SERVICE is etcd, fleet, consul, etc."
+        stax-error "where HOST is gateway[N] or service[N] and SERVICE is etcd, fleet, consul, etc."
     fi
     if ! stax-destroy; then
         stax-error "failed to destroy the stack, you will need to clean up"
