@@ -156,6 +156,14 @@ stax-preflight(){
             stax-error-exit "no viable jq binary found, Aborting." 1
         fi
     fi
+    # determine which way to reverse cat a file
+    if [[ $system == Linux ]]; then
+        tac=tac
+    elif [[ $system == Darwin ]]; then
+        tac="tail -r"
+    else
+        stax-error-exit "unsupported platform: $system" 1
+    fi
 }
 
 stax-create-key(){
@@ -845,7 +853,7 @@ stax-destroy-bucket(){
 
 stax-destroy(){
     stax-message "destroy stax"
-    if [[ $yes != "y" ]]; then
+    if [[ $yes != y ]]; then
         read -p "${yellow}[ ${cyan}????${yellow} ]${reset}     ok to destroy $STAX_NAME [y/n]? " answer
         if [[ $answer != y ]] ; then
             stax-message "  will not destroy $STAX_NAME"
@@ -853,14 +861,26 @@ stax-destroy(){
         fi
     fi
     # remove any additions
+    stop=
     if [[ -f $STAX_DIR/$STAX_NAME.add ]]; then
-        for addition in $(<"$STAX_DIR/$STAX_NAME.add"); do
-            stax-message "  removing addition $addition"
+        for addition in $($tac "$STAX_DIR/$STAX_NAME.add"); do
+            if [[ $yes != y ]]; then
+                read -p "${yellow}[ ${cyan}????${yellow} ]${reset}     ok to destroy $addition [y/n]? " answer
+                if [[ $answer != y ]] ; then
+                    stax-message "  will not destroy $addition"
+                    stop=1
+                    continue
+                fi
+            fi
             if ! stax-remove "$addition"; then
                 stax-error "failed to remove addition: $addition"
                 stax-error "continuing but destroying stax will likely fail"
             fi
         done
+    fi
+    if [[ $stop ]]; then
+        stax-error "you chose not to remove some additions, so we will not attempt to destroy the stack"
+        return 1
     fi
     stax-message "destroying $STAX_NAME stax"
     if ! aws cloudformation delete-stack --stack-name "$STAX_NAME" > /dev/null; then
