@@ -8,15 +8,14 @@
 # variables
 pkg="stax"
 version="0.5"
-STAX_PRE_NAME="stax"
-SCRIPT_PATH=$(cd $(dirname $0); pwd -P)
-SYSTEM=$(uname)
-STAX_DIR="$SCRIPT_PATH/run"
+stax_pre_name="stax"
+script_path=$(cd $(dirname $0); pwd -P)
+system=$(uname)
+STAX_DIR="$script_path/run"
 STAX_NAME_FILE="$STAX_DIR/stax-name"
-STAX_LOG="$STAX_DIR/stax.log"
+stax_log="$STAX_DIR/stax.log"
 SSH_OPTIONS="-q"
-HOST=$(hostname)
-YES=
+host=$(hostname)
 
 # make sure we are running under ssh-agent
 if [[ ! $SSH_AUTH_SOCK ]]; then
@@ -80,11 +79,11 @@ stax-error-exit(){
 
 stax-logger(){
     msg="$1"
-    if [[ ! $STAX_LOG ]]; then
-        echo "$pkg: cannot call stax-logger with STAX_LOG undefined"
+    if [[ ! $stax_log ]]; then
+        echo "$pkg: cannot call stax-logger with stax_log undefined"
         exit 5
     fi
-    echo "$(date +'%b %d %T') $HOST $pkg: $msg" >> "$STAX_LOG"
+    echo "$(date +'%b %d %T') $host $pkg: $msg" >> "$stax_log"
 }
 
 stax-usage(){
@@ -153,7 +152,7 @@ stax-preflight(){
     if which jq > /dev/null; then
         jq=$(which jq)
     else
-        jq="assets/jq/$SYSTEM/jq"
+        jq="assets/jq/$system/jq"
         if [[ ! -f $jq ]]; then
             stax-error-exit "no viable jq binary found, Aborting." 1
         fi
@@ -836,7 +835,7 @@ stax-destroy-bucket(){
 
 stax-destroy(){
     stax-message "destroy stax"
-    if [[ $YES != "y" ]]; then
+    if [[ $yes != "y" ]]; then
         read -p "${yellow}[ ${cyan}????${yellow} ]${reset}     ok to destroy $STAX_NAME [y/n]? " answer
         if [[ $answer != y ]] ; then
             stax-message "  will not destroy $STAX_NAME"
@@ -847,7 +846,7 @@ stax-destroy(){
     ls -1 $STAX_DIR/audit/$STAX_NAME-RDS/*-created > /tmp/rds.total
     if [ `cat /tmp/rds.total | wc -l` -gt 0 ]; then
         stax-message "this stax also contains an RDS"
-            if [[ $YES != "y" ]]; then
+            if [[ $yes != "y" ]]; then
                 read -p "${yellow}[ ${cyan}????${yellow} ]${reset}     ok to destroy $STAX_NAME-RDS with the $STAX_NAME [y/n]? " answer
                 if [[ $answer != y ]] ; then
                     stax-error-exit "  will not destroy $STAX_NAME-RDS, can't destroy one without the other, existing" 2
@@ -881,11 +880,15 @@ stax-destroy(){
 
 # bootstrap: set up STAX_NAME and config file
 stax-generate(){
+    prefix="vpc"
+    if [[ $1 ]]; then
+        prefix="$1"
+    fi
     stax_words="assets/stax/words"
-    NUMW=$(wc -l < $stax_words)
-    RANDOM_NAM=$(head -$((${RANDOM} % ${NUMW} + 1)) $stax_words | tail -1)
-    RANDOM_NUM=$((RANDOM%99999+10001))
-    STAX_NAME="vpc-$STAX_PRE_NAME-$RANDOM_NUM-$RANDOM_NAM"
+    numw=$(wc -l < $stax_words)
+    random_name=$(head -n $(($RANDOM % $numw + 1)) $stax_words | tail -n 1)
+    random_num=$((RANDOM%99999+10001))
+    STAX_NAME="$prefix-$stax_pre_name-$random_num-$random_name"
 }
 
 # generate parameters file
@@ -1063,7 +1066,7 @@ EOF
 
     # do not prompt for deleting if all tests were successful
     if [[ $status == 0 ]]; then
-        YES="y"
+        yes="y"
     else
         stax-error "some tests failed, see above for details"
         stax-error "you can troubleshoot using the following commands:"
@@ -1084,6 +1087,7 @@ config="config/config.json"
 config_rds="config/rds.json"
 template="templates/vpc-default.json"
 template_default="$template"
+yes=
 sub_cmd=
 sub_cmd_args=
 prev_arg=
@@ -1138,7 +1142,7 @@ do
             exit 0;;
 
         -y | --yes | --ye | --y)
-            YES="y"
+            yes="y"
             ;;
 
         -*)
