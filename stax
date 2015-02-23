@@ -308,7 +308,7 @@ stax-add(){
     fi
     if ! stax-validate-template; then
         stax-error "template did not validate: $template_path"
-        aws s3 rm "s3://$STAX_NAME/$STAX_NAME_ADD.json"
+        aws s3 rm "s3://$STAX_NAME/$STAX_NAME_ADD.json" > /dev/null
         rm -f $STAX_ADD_PARAMS
         return 1
     fi
@@ -319,7 +319,7 @@ stax-add(){
         --parameters "$(<$STAX_ADD_PARAMS)" > /dev/null
     then
         stax-error "creation of $template_path failed"
-        aws s3 rm "s3://$STAX_NAME/$STAX_NAME_ADD.json"
+        aws s3 rm "s3://$STAX_NAME/$STAX_NAME_ADD.json" > /dev/null
         rm -f $STAX_ADD_PARAMS
         return 1
     fi
@@ -997,16 +997,29 @@ stax-add-config(){
         stax-error "    $ cp rds.json.example rds.json"
         return 1
     fi
+    if ! grep -q '@VPC_ID@' "$config" > /dev/null 2>&1; then
+        stax-error "the replacement string @VPC_ID@ does not appear in the config: $config"
+        stax-error "refusing to continue since this does not appear to be adding to an existing vpc"
+        return 1
+    fi
     vpc_id=$($jq --raw-output '.Stacks[].Outputs[] | select(.OutputKey=="VPCID").OutputValue' "$STAX_DIR/$STAX_NAME.json")
     if [[ ! $vpc_id ]]; then
         stax-error "failed to determine vpc id"
         return 1
     fi
+    sed="sed -e s/@VPC_ID@/$vpc_id/"
+    if grep -q '@SERVICE_SG_ID@' "$config" > /dev/null 2>&1; then
+        service_sg_id=$($jq --raw-output '.Stacks[].Outputs[] | select(.OutputKey=="ServiceCoreOSSecurityGroup").OutputValue' "$STAX_DIR/$STAX_NAME.json")
+        if [[ ! $service_sg_id ]]; then
+            stax-error "failed to determine service security group id"
+            return 1
+        fi
+        sed="$sed -e s/@SERVICE_SG_ID@/$service_sg_id/"
+    fi
     STAX_ADD_PARAMS="$STAX_DIR/$STAX_NAME_ADD.params"
     stax-message "  building params file: $STAX_ADD_PARAMS"
-    sed="sed -e s/@VPC_ID@/$vpc_id/"
     if ! $sed "$config" > "$STAX_ADD_PARAMS"; then
-        stax-error "sed failed to replace elements in $config: $sed"
+        stax-error "sed failed to replace elements in $config: $sed $config > $STAX_ADD_PARAMS"
         return 1
     fi
 }

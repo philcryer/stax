@@ -14,6 +14,10 @@
       "Description" : "Boo",
       "Type" : "String"
     },
+    "ServiceSGID":{
+      "Description" : "Boo",
+      "Type" : "String"
+    },
     "MasterUsername":{
       "Description" : "Boo",
       "Type" : "String"
@@ -88,24 +92,24 @@
         ]
       }
     },
-    "VPCSecurityGroup": {
+    "RDSSecurityGroup": {
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
         "GroupDescription" : "VPC Security Group for RDS",
         "SecurityGroupEgress" : [ {
-              "IpProtocol" : "tcp",
-              "FromPort" : "5432",
-              "ToPort" : "5432",
-              "CidrIp" : "0.0.0.0/0"
+            "IpProtocol" : "tcp",
+            "FromPort" : "5432",
+            "ToPort" : "5432",
+            "DestinationSecurityGroupId": {"Ref":"ServiceSGID"}
         }],
         "SecurityGroupIngress" : [{
-              "IpProtocol" : "tcp",
-              "FromPort" : "5432",
-              "ToPort" : "5432",
-              "CidrIp" : "0.0.0.0/0"
+            "IpProtocol" : "tcp",
+            "FromPort" : "5432",
+            "ToPort" : "5432",
+            "SourceSecurityGroupId": {"Ref":"ServiceSGID"}
         }],
         "Tags": [
-              {"Key":"Name", "Value":"VPCSecurityGroup"},
+              {"Key":"Name", "Value":"RDSSecurityGroup"},
               {"Key":"Type", "Value":"sg"},
               {"Key":"Group", "Value":"ITSA"},
               {"Key":"Env", "Value":"TEST"}
@@ -127,7 +131,7 @@
           "Ref": "DBSubnetGroup"
         },
         "VPCSecurityGroups": [
-          { "Ref": "VPCSecurityGroup" }
+          { "Ref": "RDSSecurityGroup" }
         ],
         "Tags": [
               {"Key":"Role", "Value":"Primary"},
@@ -136,6 +140,16 @@
               {"Key":"Env", "Value":"TEST"}
         ]
       }
+    },
+    "SecurityGroupIngress":{
+      "Type":"AWS::EC2::SecurityGroupIngress",
+      "Properties":{
+        "GroupId":{"Ref":"ServiceSGID"},
+        "IpProtocol":"tcp",
+        "FromPort":"5432",
+        "ToPort":"5432",
+        "SourceSecurityGroupId":{"Ref":"RDSSecurityGroup"}
+      }
     }
-    }
+  }
 }
