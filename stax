@@ -110,7 +110,6 @@ Commands:
   destroy            Destroy the existing VPC stax
   dockerip-update    Fetch docker IP addresses and update related files
   fleet              Run various fleetctl commands against the fleet cluster
-  generate           Regenerate the VPC template from the Scala definition
   help               Output this message
   history            View history of recently created/destroyed stax
   list               List all completely built and running stax
@@ -157,14 +156,6 @@ stax-preflight(){
             stax-error-exit "no viable jq binary found, Aborting." 1
         fi
     fi
-}
-
-stax-generate-template(){
-    stax-message "generating the VPC template from the low-level Scala DSL"
-    if ! sbt run; then
-        stax-error-exit "failed to generate template" 1
-    fi
-    stax-message "  vpc template successfully generated"
 }
 
 stax-create-key(){
@@ -1290,10 +1281,6 @@ case "$sub_cmd" in
 
     help)
         stax-usage
-        ;;
-
-    generate)
-        stax-generate-template
         ;;
 
     history)
