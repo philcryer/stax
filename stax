@@ -336,7 +336,7 @@ stax-add(){
         stax-error "this will create problems when trying to destroy this stack"
         return 2
     fi
-    touch "$STAX_DIR/audit/$STAX_NAME/$(date +'%Y%m%d-%H%M%S')-created-$STAX_NAME_ADD"
+    touch "$STAX_DIR/audit/$(date +'%Y%m%d-%H%M%S')-created-$STAX_NAME_ADD"
     stax-message "  stax addition complete"
 }
 
