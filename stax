@@ -8,7 +8,6 @@
 # variables
 pkg="stax"
 version="0.5"
-stax_pre_name="stax"
 script_path=$(cd $(dirname $0); pwd -P)
 system=$(uname)
 STAX_DIR="$script_path/run"
@@ -113,6 +112,7 @@ Commands:
   help               Output this message
   history            View history of recently created/destroyed stax
   list               List all completely built and running stax
+  remove ADD         Remove the previously added ADD
   services           List servers that are available to run across a stax
   start <service>    Start a service across the stax cluster
   test               Automated test to exercise functionality of stax
@@ -203,14 +203,19 @@ stax-create-bucket(){
 
 stax-upload-template(){
     if [[ ! $1 ]]; then
-        stax-error-exit "stax-upload-template requires the template path as an argument" 10
+        stax-error "stax-upload-template requires the template path as an argument"
+        return 10
     fi
     template_path="$1"
+    target_base="$STAX_NAME"
+    if [[ $2 ]]; then
+        target_base="$2"
+    fi
     if [[ ! -f $template_path ]]; then
         stax-error "template file not found: $template_path"
         return 1
     fi
-    template="$STAX_NAME/$STAX_NAME.json"
+    template="$STAX_NAME/$target_base.json"
     stax-message "  uploading template"
     if ! aws s3 cp "$template_path" "s3://$template" > /dev/null; then
         stax-error "failed to copy $template_path to s3"
@@ -272,71 +277,85 @@ stax-validate(){
 }
 
 stax-add(){
-    stax-message "Adding RDS to existing vpc"
-    stax-message "  getting existing VPC name"
-    vpc_id=$(jq --raw-output '.Stacks[].Outputs[] | select(.OutputKey=="VPCID").OutputValue' "$STAX_DIR/$STAX_NAME.json")
-    echo $vpc_id > $STAX_DIR/$STAX_NAME.vpc
-    # build RDS params file"
-    stax-message "  building params file"
-    stax-rds-config
-    stax-message "  getting existing VPC name"
-    stax-message "  adding to `cat $STAX_DIR/$STAX_NAME.vpc`"
-
-    ####################################################
-    # new routine replaces @VPC_ID@ in the rds template
-    ####################################################
+    stax-message "adding template to existing vpc"
+    if [[ $# != 2 ]]; then
+        stax-error "stax-add: you must provide the template and config file"
+        return 10
+    fi
     template_path="$1"
-    old_template_path=$1
-    template_path="run/`echo $1 | cut -d"/" -f2`"
-    sed="sed -e s/@VPC_ID@/$vpc_id/"
-    if ! $sed "$old_template_path" > "$template_path"; then
-        stax-error "sed failed to replace elements in $config: $sed"
+    config="$2"
+    postfix=$(stax-generate-random)
+    if [[ $? != 0 ]]; then
+        stax-error "failed to generate name for add"
         return 1
     fi
-    ####################################################
-    #  (this could (probably) be done a bit better...)
-    ####################################################
-
-    if ! stax-upload-template "$template_path"; then
-        stax-error-exit "failed to upload template to s3" 1
+    STAX_NAME_ADD="$STAX_NAME-add-$postfix"
+    stax-message "$STAX_NAME_ADD" "NAME"
+    if ! stax-add-config "$config"; then
+        stax-error "failed to create parameter file"
+        return 1
+    fi
+    stax-message "  checking for valid json file format"
+    if ! $jq . "$template_path" >/dev/null; then
+        stax-error "template $template_path failed jq validation, see error above"
+        rm -f $STAX_ADD_PARAMS
+        return 1
+    fi
+    if ! stax-upload-template "$template_path" "$STAX_NAME_ADD"; then
+        stax-error "failed to upload template to s3: $template_path"
+        rm -f $STAX_ADD_PARAMS
+        return 1
     fi
     if ! stax-validate-template; then
-        stax-error-exit "failed to validate template" 1
+        stax-error "template did not validate: $template_path"
+        aws s3 rm "s3://$STAX_NAME/$STAX_NAME_ADD.json"
+        rm -f $STAX_ADD_PARAMS
+        return 1
     fi
-
-    stax-message "Creating RDS stax in $vpc_id"
-    # create/add RDS to existing VPC
+    stax-message "  adding $template_path to stax"
     if ! aws cloudformation create-stack \
-        --stack-name "$STAX_NAME-RDS" \
+        --stack-name "$STAX_NAME_ADD" \
         --template-url "$STAX_TEMPLATE_URL" \
-        --parameters "$(<$STAX_RDS_PARAMS)" \
-        --capabilities CAPABILITY_IAM > /dev/null
+        --parameters "$(<$STAX_ADD_PARAMS)" > /dev/null
     then
-        stax-error-exit "creation failed, exiting" 1
+        stax-error "creation of $template_path failed"
+        aws s3 rm "s3://$STAX_NAME/$STAX_NAME_ADD.json"
+        rm -f $STAX_ADD_PARAMS
+        return 1
     fi
-    stax-message "  stax creation complete"
-    if [ ! -d "$STAX_DIR/audit/$STAX_NAME-RDS" ]; then
-        mkdir -p $STAX_DIR/audit/$STAX_NAME-RDS
+    if ! echo "$STAX_NAME_ADD" >> "$STAX_DIR/$STAX_NAME.add"; then
+        stax-error "failed to add $STAX_NAME_ADD to add file: $STAX_DIR/$STAX_NAME.add"
+        stax-error "this will create problems when trying to destroy this stack"
+        return 2
     fi
-    touch "$STAX_DIR/audit/$STAX_NAME-RDS/$(date +'%Y%m%d-%H%M%S')-created"
-    stax-describe
-    exit 0
+    touch "$STAX_DIR/audit/$STAX_NAME/$(date +'%Y%m%d-%H%M%S')-created-$STAX_NAME_ADD"
+    stax-message "  stax addition complete"
 }
 
-stax-destroy-rds(){
-    stax-message "Destroying RDS"
-    STAX_RDS_PARAMS="$STAX_DIR/$STAX_NAME.rdsparams"
-    # delete RDS from existing VPC
-    #--template-url "$STAX_TEMPLATE_URL" \
-    #    --capabilities CAPABILITY_IAM > /dev/null
-    #    --parameters "$(<$STAX_RDS_PARAMS)" \
-    if ! aws cloudformation delete-stack \
-        --stack-name "$STAX_NAME-RDS" 
-    then
-        stax-error-exit "  RDS delete failed, exiting" 1
+stax-remove(){
+    stax-message "removing add"
+    if [[ ! $1 ]]; then
+        stax-error "stax-remove: you must supply the name of the addition to remove"
+        return 10
     fi
-    stax-message "  RDS delete complete"
-    touch "$STAX_DIR/audit/$STAX_NAME-RDS/$(date +'%Y%m%d-%H%M%S')-destroyed"
+    addition="$1"
+    stax-message "  removing $addition"
+    if ! grep -q "^$addition\$" "$STAX_DIR/$STAX_NAME.add" > /dev/null 2>&1; then
+        stax-error "unknown addition: $addition"
+        return 1
+    fi
+    if ! aws cloudformation delete-stack --stack-name "$addition" > /dev/null; then
+        stax-error "removal failed: $addition"
+        return 1
+    fi
+    if ! sed -i.bak "/^$addition\$/d" "$STAX_DIR/$STAX_NAME.add"; then
+        stax-error "failed to remove $addition from $STAX_DIR/$STAX_NAME.add"
+        stax-error "this may cause problems when destroying the stack"
+        return 2
+    fi
+    rm -f "$STAX_DIR/$STAX_NAME.add.bak"
+    stax-message "  removal complete"
+    touch "$STAX_DIR/audit/$STAX_NAME/$(date +'%Y%m%d-%H%M%S')-destroyed-$addition"
 }
 
 stax-create(){
@@ -833,21 +852,16 @@ stax-destroy(){
             return 0
         fi
     fi
-
-    ls -1 $STAX_DIR/audit/$STAX_NAME-RDS/*-created > /tmp/rds.total
-    if [ `cat /tmp/rds.total | wc -l` -gt 0 ]; then
-        stax-message "this stax also contains an RDS"
-            if [[ $yes != "y" ]]; then
-                read -p "${yellow}[ ${cyan}????${yellow} ]${reset}     ok to destroy $STAX_NAME-RDS with the $STAX_NAME [y/n]? " answer
-                if [[ $answer != y ]] ; then
-                    stax-error-exit "  will not destroy $STAX_NAME-RDS, can't destroy one without the other, existing" 2
-                else
-                    stax-destroy-rds
-                fi
+    # remove any additions
+    if [[ -f $STAX_DIR/$STAX_NAME.add ]]; then
+        for addition in $(<"$STAX_DIR/$STAX_NAME.add"); do
+            stax-message "  removing addition $addition"
+            if ! stax-remove "$addition"; then
+                stax-error "failed to remove addition: $addition"
+                stax-error "continuing but destroying stax will likely fail"
             fi
+        done
     fi
-    rm /tmp/rds.total
-
     stax-message "destroying $STAX_NAME stax"
     if ! aws cloudformation delete-stack --stack-name "$STAX_NAME" > /dev/null; then
         stax-error "stax destroy of $STAX_NAME failed"
@@ -869,21 +883,47 @@ stax-destroy(){
     return $status
 }
 
+stax-generate-random(){
+    random_num=$((RANDOM%100000+10000))
+    if [[ ! $random_num || $random_num < 10000 ]]; then
+        stax-error "failed to generate random number"
+        return 1
+    fi
+    stax_words="assets/stax/words"
+    if [[ ! -f $stax_words ]]; then
+        stax-error "stax words file is missing: $stax_words"
+        return 1
+    fi
+    numw=$(wc -l < "$stax_words" | tr -d ' ')
+    if [[ ! $numw || $numw < 1 ]]; then
+        stax-error "failed to get number of words in words file: $stax_words"
+        return 1
+    fi
+    random_name=$(head -n $(($RANDOM % $numw + 1)) $stax_words | tail -n 1)
+    if [[ ! $random_name ]]; then
+        stax-error "failed to generate random name"
+        return 1
+    fi
+    echo "$random_num-$random_name"
+}
+
 # bootstrap: set up STAX_NAME and config file
 stax-generate(){
     prefix="vpc"
     if [[ $1 ]]; then
         prefix="$1"
     fi
-    stax_words="assets/stax/words"
-    numw=$(wc -l < $stax_words)
-    random_name=$(head -n $(($RANDOM % $numw + 1)) $stax_words | tail -n 1)
-    random_num=$((RANDOM%99999+10001))
-    STAX_NAME="$prefix-$stax_pre_name-$random_num-$random_name"
+    postfix=$(stax-generate-random)
+    if [[ $? != 0 ]]; then
+        stax-error "failed to generate random part of name: $postfix"
+        return 1
+    fi
+    STAX_NAME="$prefix-$pkg-$postfix"
 }
 
 # generate parameters file
 stax-config(){
+    stax-message "creating parameter file"
     # verify config is filled out
     if [[ ! -f $config ]]; then
         stax-error "config file does not exist: $config"
@@ -892,7 +932,6 @@ stax-config(){
         stax-error "    $ cp $config.example $config"
         return 1
     fi
-    stax-message "creating parameter file"
     # initialize sed command
     sed="sed -e s/@KEY_NAME@/$STAX_NAME/"
     # check what subsitutions need to be done
@@ -942,22 +981,31 @@ stax-config(){
     fi
 }
 
-# generate RDS parameters file
-stax-rds-config(){
+# generate add parameters file
+stax-add-config(){
+    stax-message "creating parameter file for add"
+    if [[ ! $1 ]]; then
+        stax-error "you must supply the config file path when calling stax-add-config"
+        return 10
+    fi
+    config="$1"
     # verify config is filled out
-    if [[ ! -f $config_rds ]]; then
-        stax-error "config file does not exist: $config_rds"
+    if [[ ! -f $config ]]; then
+        stax-error "config file does not exist: $config"
         stax-error "configuration required"
         stax-error "copy example to config directory, configure it and run again."
-        stax-error "    $ cp $config_rds.example $config_rds"
+        stax-error "    $ cp rds.json.example rds.json"
         return 1
     fi
-    stax-message "creating parameter file"
-    vpc_id=`cat $STAX_DIR/$STAX_NAME.vpc`
-    # initialize sed command
+    vpc_id=$($jq --raw-output '.Stacks[].Outputs[] | select(.OutputKey=="VPCID").OutputValue' "$STAX_DIR/$STAX_NAME.json")
+    if [[ ! $vpc_id ]]; then
+        stax-error "failed to determine vpc id"
+        return 1
+    fi
+    STAX_ADD_PARAMS="$STAX_DIR/$STAX_NAME_ADD.params"
+    stax-message "  building params file: $STAX_ADD_PARAMS"
     sed="sed -e s/@VPC_ID@/$vpc_id/"
-    STAX_RDS_PARAMS="$STAX_DIR/$STAX_NAME.rdsparams"
-    if ! $sed "$config_rds" > "$STAX_RDS_PARAMS"; then
+    if ! $sed "$config" > "$STAX_ADD_PARAMS"; then
         stax-error "sed failed to replace elements in $config: $sed"
         return 1
     fi
@@ -1075,7 +1123,7 @@ EOF
 
 # process positional parameters
 config="config/config.json"
-config_rds="config/rds.json"
+config_default="$config"
 template="templates/vpc-default.json"
 template_default="$template"
 yes=
@@ -1174,6 +1222,27 @@ stax-preflight
 # determine which subcommand to run
 if [ "$DEBUG" == "ON" ]; then echo "----- DEBUG :::: $sub_cmd $sub_cmd_args -----"; fi
 case "$sub_cmd" in
+    add)
+        if ! stax-existing; then
+            stax-error "no stax defined, use create first"
+            exit 1
+        fi
+        if [[ $config == $config_default ]]; then
+            stax-error "you must supply a --config argument when calling add"
+            exit 1
+        fi
+        if [[ $template == $template_default ]]; then
+            stax-error "you must supply a --template argument when calling add"
+            exit 1
+        fi
+        if ! stax-complete; then
+            stax-error-exit "stax build not complete" 1
+        fi
+        if ! stax-add "$template" "$config"; then
+            stax-error-exit "add failed" 1
+        fi
+        ;;
+
     connect)
         if ! stax-existing; then
             exit 1
@@ -1291,6 +1360,24 @@ case "$sub_cmd" in
         stax-list
         ;;
 
+    remove)
+        stax-existing || exit 1
+        if [[ ! $sub_cmd_args ]]; then
+            stax-error "you must supply an addition to remove"
+            stax-error "below are the currently added stax"
+            cat "$STAX_DIR/$STAX_NAME.add"
+            exit 5
+        fi
+        status=0
+        for addition in $sub_cmd_args; do
+            if ! stax-remove $addition; then
+                stax-error "failed to remove $addition"
+                status=$((status+1))
+            fi
+        done
+        exit $status
+        ;;
+
     services)
         stax-services
         ;;
@@ -1327,21 +1414,6 @@ case "$sub_cmd" in
         if ! stax-fleetstats; then
             exit 1
         fi
-        ;;
-
-    add)
-        if ! stax-existing; then
-            stax-error "no stax defined, use create first."
-            exit 1
-        fi
-        if [[ $template == $template_default ]]; then
-            stax-error "you must supply a --template argument when calling add"
-            exit 1
-        fi
-        if ! stax-complete; then
-            stax-error-exit "stax build not complete" 1
-        fi
-        stax-add "$template"
         ;;
 
     test)

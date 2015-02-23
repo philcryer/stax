@@ -10,10 +10,6 @@
       "Description" : "Boo",
       "Type" : "String"
     },
-    "MultiAZ":{
-      "Description" : "Boo",
-      "Type" : "String"
-    },
     "VPCID":{
       "Description" : "Boo",
       "Type" : "String"
@@ -55,7 +51,7 @@
           {"Key":"Group", "Value":"ITSA"},
           {"Key":"Env", "Value":"TEST"}
         ],
-        "VpcId": "@VPC_ID@"
+        "VpcId": {"Ref":"VPCID"}
       }
     },
     "DBSubnet2": {
@@ -69,7 +65,7 @@
               {"Key":"Group", "Value":"ITSA"},
               {"Key":"Env", "Value":"TEST"}
         ],
-        "VpcId": "@VPC_ID@"
+        "VpcId": {"Ref":"VPCID"}
       }
     },
     "DBSubnetGroup": {
@@ -114,19 +110,19 @@
               {"Key":"Group", "Value":"ITSA"},
               {"Key":"Env", "Value":"TEST"}
         ],
-        "VpcId" : "@VPC_ID@"
+        "VpcId" : {"Ref":"VPCID"}
       }
     },
     "DBInstance": {
       "Type": "AWS::RDS::DBInstance",
       "Properties": {
         "DBName": {"Ref":"DBName"},
-        "Engine": "postgres",
+        "Engine": {"Ref":"Engine"},
         "MultiAZ": "true",
-        "MasterUsername": "DBUser",
-        "MasterUserPassword": "DBPassword",
-        "DBInstanceClass": "db.m3.medium",
-        "AllocatedStorage": "5",
+        "MasterUsername": {"Ref":"MasterUsername"},
+        "MasterUserPassword": {"Ref":"MasterUserPassword"},
+        "DBInstanceClass": {"Ref":"DBInstanceClass"},
+        "AllocatedStorage": {"Ref":"AllocatedStorage"},
         "DBSubnetGroupName": {
           "Ref": "DBSubnetGroup"
         },
