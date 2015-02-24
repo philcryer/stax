@@ -333,7 +333,14 @@ stax-add(){
         stax-error "this will create problems when trying to destroy this stack"
         return 2
     fi
-    touch "$STAX_DIR/audit/$(date +'%Y%m%d-%H%M%S')-created-$STAX_NAME_ADD"
+    date=$(date +'%Y%m%d-%H%M%S')
+    touch "$STAX_DIR/audit/$STAX_NAME/$date-added-$STAX_NAME_ADD"
+    if mkdir -p "$STAX_DIR/audit/$STAX_NAME_ADD"; then
+        touch "$STAX_DIR/audit/$STAX_NAME_ADD/$date-created"
+    else
+        stax-error "failed to create audit directory: $STAX_DIR/audit/$STAX_NAME_ADD"
+        stax-error "please create the audit directory yourself"
+    fi
     stax-message "  stax addition complete"
 }
 
@@ -360,7 +367,9 @@ stax-remove(){
     fi
     rm -f "$STAX_DIR/$STAX_NAME.add.bak"
     stax-message "  removal complete"
-    touch "$STAX_DIR/audit/$STAX_NAME/$(date +'%Y%m%d-%H%M%S')-destroyed-$addition"
+    date=$(date +'%Y%m%d-%H%M%S')
+    touch "$STAX_DIR/audit/$STAX_NAME/$date-removed-$addition"
+    touch "$STAX_DIR/audit/$addition/$date-destroyed"
 }
 
 stax-create(){
@@ -661,11 +670,8 @@ stax-fleetstats(){
 
 stax-history(){
     stax-message "history"
-    stax-message "  recently created and destoryed stax"
-    echo "{"
-    cd $STAX_DIR; cd ..
-    ls -1R "run/audit" | cut -d"/" -f3 | sed -e "1d"
-    echo "}"
+    stax-message "  recently created and destroyed stax"
+    ls -1tr "run/audit"
 }
 
 stax-bastionip(){
