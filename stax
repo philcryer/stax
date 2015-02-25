@@ -1104,12 +1104,29 @@ EOF
     stax-message "  giving etcd and fleet some time to cluster"
     sleep 120
     stax-message "  getting etcd version"
-    if ! stax-connect service curl --silent --location http://localhost:4001/version; then
+    if stax-connect service curl --silent --location http://localhost:4001/version; then
+        echo ""
+    else
         echo ""
         stax-error "failed to get etcd version"
         status=$((status+1))
     fi
-    echo ""
+    stax-message "  getting etcd config"
+    if stax-connect service curl --silent --location http://localhost:7001/v2/admin/config; then
+        echo ""
+    else
+        echo ""
+        stax-error "failed to get etcd config"
+        status=$((status+1))
+    fi
+    stax-message "  getting etcd leader stats"
+    if stax-connect service curl --silent --location http://localhost:4001/v2/stats/leader; then
+        echo ""
+    else
+        echo ""
+        stax-error "failed to get etcd leader stats"
+        status=$((status+1))
+    fi
     stax-message "  listing machines in fleet cluster"
     if ! stax-connect service fleetctl list-machines; then
         stax-error "failed to run fleetctl list-machines on service"
