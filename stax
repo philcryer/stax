@@ -739,7 +739,11 @@ stax-getdockerips(){
     fi
     stax-message "  querying aws for service hosts"
     service_hosts="$STAX_DIR/$STAX_NAME.service_hosts"
-    if ! aws --output json ec2 describe-instances | $jq --raw-output ".Reservations[].Instances[] | select(.Tags[].Value==\"service-$STAX_NAME\").PrivateIpAddress" > "$service_hosts"; then
+    if ! aws --output json ec2 describe-instances | $jq --raw-output ".Reservations[].Instances[] | select(.Tags[].Value==\"service-leader-1-$STAX_NAME\").PrivateIpAddress" > "$service_hosts"; then
+        stax-error "failed to query aws for service instances"
+        return 1
+    fi
+    if ! aws --output json ec2 describe-instances | $jq --raw-output ".Reservations[].Instances[] | select(.Tags[].Value==\"service-$STAX_NAME\").PrivateIpAddress" >> "$service_hosts"; then
         stax-error "failed to query aws for service instances"
         return 1
     fi
