@@ -737,12 +737,16 @@ stax-getdockerips(){
         stax-error "failed to query aws for gateway instances"
         return 1
     fi
-    stax-message "  querying aws for service hosts"
     service_hosts="$STAX_DIR/$STAX_NAME.service_hosts"
-    if ! aws --output json ec2 describe-instances | $jq --raw-output ".Reservations[].Instances[] | select(.Tags[].Value==\"service-leader-1-$STAX_NAME\").PrivateIpAddress" > "$service_hosts"; then
-        stax-error "failed to query aws for service instances"
-        return 1
-    fi
+    > "$service_hosts" # truncate file
+    stax-message "  getting service leaders"
+    for i in 1 2 3; do
+        if ! $jq --raw-output ".Stacks[].Outputs[] | select(.OutputKey==\"ServiceLeader${i}IP\").OutputValue" "$STAX_DIR/$STAX_NAME.json" >> "$service_hosts"; then
+            stax-error "failed to get IP for leader $i from $STAX_DIR/$STAX_NAME.json"
+            return 1
+        fi
+    done
+    stax-message "  querying aws for service hosts"
     if ! aws --output json ec2 describe-instances | $jq --raw-output ".Reservations[].Instances[] | select(.Tags[].Value==\"service-$STAX_NAME\").PrivateIpAddress" >> "$service_hosts"; then
         stax-error "failed to query aws for service instances"
         return 1
@@ -982,14 +986,6 @@ stax-config(){
         fi
         sed="$sed -e s|@SSH_FROM@|$ssh_from|"
     fi
-    if grep -q '@DISCOVERY_URL@' "$config" > /dev/null 2>&1; then
-        DISCOVERY_URL="$(curl -s http://discovery.etcd.io/new)"
-        if [[ -z $DISCOVERY_URL || $DISCOVERY_URL == 'Unable to generate token' ]]; then
-            stax-error "failed to get discovery URL"
-            return 1
-        fi
-        sed="$sed -e s|@DISCOVERY_URL@|$DISCOVERY_URL|"
-    fi
     STAX_PARAMS="$STAX_DIR/$STAX_NAME.params"
     if ! $sed "$config" > "$STAX_PARAMS"; then
         stax-error "sed failed to replace elements in $config: $sed"
@@ -1059,8 +1055,7 @@ stax-test(){
   { "ParameterKey": "Owner",               "ParameterValue": "@OWNER@" },
   { "ParameterKey": "KeyName",             "ParameterValue": "@KEY_NAME@" },
   { "ParameterKey": "AllowSSHFrom",        "ParameterValue": "@SSH_FROM@" },
-  { "ParameterKey": "AllowHTTPFrom",       "ParameterValue": "@HTTP_FROM@" },
-  { "ParameterKey": "DiscoveryURL",        "ParameterValue": "@DISCOVERY_URL@" }
+  { "ParameterKey": "AllowHTTPFrom",       "ParameterValue": "@HTTP_FROM@" }
 ]
 EOF
     then
