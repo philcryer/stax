@@ -15,7 +15,7 @@
   { "ParameterKey": "DockerRegistryPass",           "ParameterValue": "<changeMe>" },
   { "ParameterKey": "DockerRegistryEmail",          "ParameterValue": "<changeMe>" },
   { "ParameterKey": "DockerRegistryUrl",            "ParameterValue": "https://index.docker.io/v1/" },
-  { "ParameterKey": "ServiceClusterSize",           "ParameterValue": "3" },
+  { "ParameterKey": "ServiceClusterSize",           "ParameterValue": "0" },
   { "ParameterKey": "GatewayClusterSize",           "ParameterValue": "2" },
   { "ParameterKey": "KeepAlive",                    "ParameterValue": "false" },
   { "ParameterKey": "BastionInstanceType",          "ParameterValue": "t2.micro" },
