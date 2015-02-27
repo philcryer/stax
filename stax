@@ -662,7 +662,10 @@ stax-fleetstats(){
 stax-history(){
     stax-message "history"
     stax-message "  recently created and destroyed stax"
-    ls -1tr "run/audit"
+    for stack in $(ls -dtr run/audit/*); do
+        echo "${stack##*/}:"
+        ls -1tr "$stack" | sed 's/^/  /'
+    done
 }
 
 stax-bastionip(){
