@@ -7,7 +7,7 @@
 
 # variables
 pkg="stax"
-version="0.5"
+version="0.6"
 script_path=$(cd $(dirname $0); pwd -P)
 system=$(uname)
 STAX_DIR="$script_path/run"
@@ -15,12 +15,6 @@ STAX_NAME_FILE="$STAX_DIR/stax-name"
 stax_log="$STAX_DIR/stax.log"
 SSH_OPTIONS="-q"
 host=$(hostname)
-
-# make sure we are running under ssh-agent
-if [[ ! $SSH_AUTH_SOCK ]]; then
-    echo "$pkg: not running under ssh-agent, restarting with ssh-agent running"
-    exec ssh-agent $0 "$@"
-fi
 
 # create a dir to store stax stuff
 if [[ ! -d $STAX_DIR ]]; then
@@ -183,10 +177,6 @@ stax-create-key(){
         return 1
     fi
     stax-message "  public key generated"
-    if ! stax-ssh-key-add; then
-        stax-error "failed to add ssh key to ssh-agent, connecting to hosts may not work properly"
-        return 0
-    fi
 }
 
 stax-create-bucket(){
@@ -753,33 +743,6 @@ stax-getdockerips(){
     fi
 }
 
-stax-ssh-key-add(){
-    stax-message "adding private key to ssh-agent"
-    if [[ ! $STAX_PRIV_KEY ]]; then
-        stax-error "cannot call stax-ssh-key-add when STAX_PRIV_KEY undefined"
-        return 10
-    fi
-    if ! ssh-add "$STAX_PRIV_KEY" > /dev/null 2>&1; then
-        stax-error "failed to add private key to ssh-agent: $STAX_PRIV_KEY"
-        return 1
-    fi
-    stax-message "  private key added"
-}
-
-stax-ssh-key-remove(){
-    stax-message "removing private key from ssh-agent"
-    if [[ ! $STAX_PUB_KEY ]]; then
-        stax-error "cannot call stax-ssh-key-remove when STAX_PUB_KEY undefined"
-        return 10
-    fi
-    if ! ssh-add -d "$STAX_PUB_KEY" > /dev/null 2>&1; then
-        stax-logger "failed to remove private key from ssh-agent: $STAX_PUB_KEY"
-        stax-logger "you will have to remove it yourself"
-        return 1
-    fi
-    stax-message "  private key removed"
-}
-
 stax-connect(){
     target="bastion"
     if [[ $1 ]]; then
@@ -807,9 +770,6 @@ stax-connect(){
 
 stax-destroy-key(){
     stax-message "destroying key pair"
-    if ! stax-ssh-key-remove; then
-        stax-logger "failed to remove ssh key from ssh-agent, continuing"
-    fi
     stax-message "  making sure key $STAX_NAME exists in aws"
     if ! aws ec2 describe-key-pairs --key-names "$STAX_NAME" > /dev/null 2>&1; then
         stax-message "  key $STAX_NAME does not exist in aws"
