@@ -97,6 +97,7 @@ optional arguments.
 
 Commands:
   add                Add functionality to an existing VPC
+  check              Run various tests against an existing stax
   connect [target]   Connect to bastion|gateway|service in the VPC stax over SSH
   create             Create a new VPC stax in AWS
   describe           Describe the stax created from this host
@@ -997,8 +998,8 @@ stax-add-config(){
 }
 
 # automated test
-stax-test(){
-    stax-message "running stax test"
+stax-test-create(){
+    stax-message "building test stax"
     if [[ ! $1 ]]; then
         stax-error-exit "stax-test takes the template path as an argument" 10
     fi
@@ -1039,14 +1040,16 @@ EOF
         fi
     done
     stax-setup-bastion
+    return 0
+}
+
+stax-test-tests(){
     status=0
     stax-message "  connecting to bastion host and running hostname"
     if ! stax-connect bastion hostname; then
         stax-error "failed to run hostname on bastion host"
         status=$((status+1))
     fi
-    stax-message "  giving docker containers some time to spin up"
-    sleep 300
     for target in gateway service; do
         for docker_cmd in images ps; do
             stax-message "  running docker $docker_cmd on $target"
@@ -1056,8 +1059,6 @@ EOF
             fi
         done
     done
-    stax-message "  giving etcd and fleet some time to cluster"
-    sleep 120
     stax-message "  getting etcd version"
     if stax-connect service curl --silent --location http://localhost:4001/version; then
         echo ""
@@ -1067,10 +1068,7 @@ EOF
         status=$((status+1))
     fi
     stax-message "  getting etcd config"
-    if stax-connect service curl --silent --location http://localhost:7001/v2/admin/config; then
-        echo ""
-    else
-        echo ""
+    if ! stax-connect service curl --silent --location http://localhost:7001/v2/admin/config; then
         stax-error "failed to get etcd config"
         status=$((status+1))
     fi
@@ -1087,8 +1085,6 @@ EOF
         stax-error "failed to run fleetctl list-machines on service"
         status=$((status+1))
     fi
-    stax-message "  giving consul some time to cluster"
-    sleep 120
     stax-message "  getting consul cluster members"
     if ! stax-connect gateway docker exec consul consul members; then
         stax-error "failed to run consul members on gateway"
@@ -1103,21 +1099,6 @@ EOF
 
     # start httpbin
     # curl ELB/httpbin/get
-
-    # do not prompt for deleting if all tests were successful
-    if [[ $status == 0 ]]; then
-        yes="y"
-    else
-        stax-error "some tests failed, see above for details"
-        stax-error "you can troubleshoot using the following commands:"
-        stax-error "  $ ./stax connect HOST systemctl status [-l] SERVICE"
-        stax-error "  $ ./stax connect HOST journalctl -b -u SERVICE"
-        stax-error "where HOST is gateway[N] or service[N] and SERVICE is etcd, fleet, consul, etc."
-    fi
-    if ! stax-destroy; then
-        stax-error "failed to destroy the stack, you will need to clean up"
-        status=$((status+1))
-    fi
 
     return $status
 }
@@ -1224,10 +1205,6 @@ stax-preflight
 if [ "$DEBUG" == "ON" ]; then echo "----- DEBUG :::: $sub_cmd $sub_cmd_args -----"; fi
 case "$sub_cmd" in
     add)
-        if ! stax-existing; then
-            stax-error "no stax defined, use create first"
-            exit 1
-        fi
         if [[ $config == $config_default ]]; then
             stax-error "you must supply a --config argument when calling add"
             exit 1
@@ -1236,29 +1213,36 @@ case "$sub_cmd" in
             stax-error "you must supply a --template argument when calling add"
             exit 1
         fi
-        if ! stax-complete; then
-            stax-error-exit "stax build not complete" 1
-        fi
+        stax-existing || exit 1
+        stax-complete || exit 1
         if ! stax-add "$template" "$config"; then
             stax-error-exit "add failed" 1
         fi
         ;;
 
-    connect)
-        if ! stax-existing; then
+    check)
+        stax-existing || exit 1
+        stax-complete || exit 1
+        if [[ ! -f $STAX_BASTION_FILE ]]; then
+            stax-bastionip || exit 1
+            stax-getdockerips || exit 1
+            stax-ssh-config || exit 1
+            stax-setup-bastion
+        fi
+        STAX_PUB_IP=$(<$STAX_BASTION_FILE)
+        if ! stax-test-tests; then
+            stax-error "tests failed, please delete stack yourself"
             exit 1
         fi
-        if ! stax-complete; then
-            stax-error-exit "stax build not complete" 1
-        fi
+        ;;
+
+    connect)
+        stax-existing || exit 1
+        stax-complete || exit 1
         if [[ ! -f $STAX_BASTION_FILE ]]; then
-            stax-bastionip
-            if ! stax-getdockerips; then
-                exit 1
-            fi
-            if ! stax-ssh-config; then
-                exit 1
-            fi
+            stax-bastionip || exit 1
+            stax-getdockerips || exit 1
+            stax-ssh-config || exit 1
             stax-setup-bastion
         fi
         STAX_PUB_IP=$(<$STAX_BASTION_FILE)
@@ -1281,30 +1265,22 @@ case "$sub_cmd" in
         ;;
 
     desc*)
-        if ! stax-existing; then
-            exit 1
-        fi
+        stax-existing || exit 1
         if ! stax-describe; then
             stax-error-exit "stax describe failed" 1
         fi
         ;;
 
     destroy)
-        if ! stax-existing; then
-            exit 1
-        fi
+        stax-existing || exit 1
         if ! stax-destroy; then
             stax-error-exit "please see above errors and deal with them" 1
         fi
         ;;
 
     dockerip-update)
-        if ! stax-existing; then
-            exit 1
-        fi
-        if ! stax-complete; then
-            stax-error-exit "stax build not complete" 1
-        fi
+        stax-existing || exit 1
+        stax-complete || exit 1
         if [[ ! -f $STAX_BASTION_FILE ]]; then
             stax-bastionip
         fi
@@ -1320,12 +1296,8 @@ case "$sub_cmd" in
         ;;
 
     fleet)
-        if ! stax-existing; then
-            exit 1
-        fi
-        if ! stax-complete; then
-            stax-error-exit "stax build not complete" 1
-        fi
+        stax-existing || exit 1
+        stax-complete || exit 1
         if [ ! -f "$STAX_BASTION_FILE" ]; then
             stax-bastionip
             if ! stax-getdockerips; then
@@ -1382,12 +1354,8 @@ case "$sub_cmd" in
             stax-services
             exit 2
         fi
-        if ! stax-existing; then
-            exit 1
-        fi
-        if ! stax-complete; then
-            stax-error-exit "stax build not complete" 1
-        fi
+        stax-existing || exit 1
+        stax-complete || exit 1
         if [ ! -f "$STAX_BASTION_FILE" ]; then
             stax-bastionip
             if ! stax-getdockerips; then
@@ -1411,8 +1379,28 @@ case "$sub_cmd" in
         ;;
 
     test)
-        if ! stax-test "$template"; then
-            stax-error "test failed, please delete stack yourself"
+        if ! stax-test-create "$template"; then
+            stax-error "test create failed, please delete stack yourself"
+            stax-destroy
+            exit 1
+        fi
+        for m in 4 3 2 1; do
+            stax-message "waiting $m minutes for clustering"
+            sleep 60
+        done
+        if ! stax-test-tests; then
+            stax-error "some tests failed, see above for details"
+            stax-error "you can troubleshoot using the following commands:"
+            stax-error "  $ ./stax connect HOST systemctl status [-l] SERVICE"
+            stax-error "  $ ./stax connect HOST journalctl -b -u SERVICE"
+            stax-error "where HOST is gateway[N] or service[N] and SERVICE is etcd, fleet, consul, etc."
+            stax-destroy
+            exit 1
+        fi
+        # do not prompt for deleting if all tests were successful
+        yes="y"
+        if ! stax-destroy; then
+            stax-error "failed to destroy the stack, you will need to clean up"
             exit 1
         fi
         ;;
