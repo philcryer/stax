@@ -891,7 +891,7 @@ stax-generate-random(){
     echo "$random_num-$random_name"
 }
 
-# bootstrap: set up STAX_NAME and config file
+# bootstrap: set up STAX_NAME
 prefix="vpc"
 stax-generate(){
     if [[ $1 ]]; then
@@ -905,6 +905,7 @@ stax-generate(){
     STAX_NAME="$prefix-$pkg-$postfix"
 }
 
+# FIXME: combine the config functions into one
 # generate parameters file
 stax-config(){
     stax-message "creating parameter file"
@@ -991,6 +992,14 @@ stax-add-config(){
             return 1
         fi
         sed="$sed -e s/@SERVICE_SG_ID@/$service_sg_id/"
+    fi
+    if grep -q '@OWNER@' "$config" > /dev/null 2>&1; then
+        owner="$(id -u -n)"
+        if [[ -z $owner ]]; then
+            stax-error "failed to determine user"
+            return 1
+        fi
+        sed="$sed -e s/@OWNER@/$owner/"
     fi
     STAX_ADD_PARAMS="$STAX_DIR/$STAX_NAME_ADD.params"
     stax-message "  building params file: $STAX_ADD_PARAMS"
