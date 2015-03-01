@@ -737,7 +737,6 @@ stax-getdockerips(){
     for i in 1 2 3; do
         if ! $jq --raw-output ".Stacks[].Outputs[] | select(.OutputKey==\"ServiceLeader${i}IP\").OutputValue" "$STAX_DIR/$STAX_NAME.json" >> "$service_hosts"; then
             stax-error "failed to get IP for leader $i from $STAX_DIR/$STAX_NAME.json"
-            return 1
         fi
     done
     stax-message "  querying aws for service hosts"
