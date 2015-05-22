@@ -1,0 +1,160 @@
+[{
+  "ParameterKey": "Project",
+  "ParameterValue": "test"
+}, {
+  "ParameterKey": "Product",
+  "ParameterValue": "test"
+}, {
+  "ParameterKey": "Group",
+  "ParameterValue": "SPAA"
+}, {
+  "ParameterKey": "Team",
+  "ParameterValue": "VendorMgmt"
+}, {
+  "ParameterKey": "Owner",
+  "ParameterValue": "@OWNER@"
+}, {
+  "ParameterKey": "Environment",
+  "ParameterValue": "test"
+}, {
+  "ParameterKey": "KeepAlive",
+  "ParameterValue": "false"
+}, {
+  "ParameterKey": "CostCenter",
+  "ParameterValue": "5180-9130-SLR74733"
+}, {
+  "ParameterKey": "DockerRegistryUrl",
+  "ParameterValue": "https://docker-registry.agro.services"
+}, {
+  "ParameterKey": "DockerRegistryUser",
+  "ParameterValue": "fleeter"
+}, {
+  "ParameterKey": "DockerRegistryPass",
+  "ParameterValue": "5sTZh6OkzPC1nM8osRhk"
+}, {
+  "ParameterKey": "DockerRegistryEmail",
+  "ParameterValue": "nobody@null.com"
+}, {
+  "ParameterKey": "KeyName",
+  "ParameterValue": "@KEY_NAME@"
+}, {
+  "ParameterKey": "BastionInstanceType",
+  "ParameterValue": "t2.micro"
+}, {
+  "ParameterKey": "NATInstanceType",
+  "ParameterValue": "t2.micro"
+}, {
+  "ParameterKey": "NumberOfPings",
+  "ParameterValue": "3"
+}, {
+  "ParameterKey": "PingTimeout",
+  "ParameterValue": "10"
+}, {
+  "ParameterKey": "WaitBetweenPings",
+  "ParameterValue": "2"
+}, {
+  "ParameterKey": "WaitForInstanceStop",
+  "ParameterValue": "60"
+}, {
+  "ParameterKey": "WaitForInstanceStart",
+  "ParameterValue": "300"
+}, {
+  "ParameterKey": "DockerInstanceType",
+  "ParameterValue": "t2.micro"
+}, {
+  "ParameterKey": "ServiceClusterSize",
+  "ParameterValue": "0"
+}, {
+  "ParameterKey": "GatewayClusterSize",
+  "ParameterValue": "2"
+}, {
+  "ParameterKey": "AutoScaleCooldown",
+  "ParameterValue": "300"
+}, {
+  "ParameterKey": "AdvertisedIPAddress",
+  "ParameterValue": "private"
+}, {
+  "ParameterKey": "CoreOSChannelAMI",
+  "ParameterValue": "CoreOSAlphaAMI"
+}, {
+  "ParameterKey": "ELKInstanceType",
+  "ParameterValue": "m3.medium"
+}, {
+  "ParameterKey": "ELKEBSVolumeSize",
+  "ParameterValue": "30"
+}, {
+  "ParameterKey": "VpcCidr",
+  "ParameterValue": "10.183.0.0/16"
+}, {
+  "ParameterKey": "AllowHTTPFrom",
+  "ParameterValue": "0.0.0.0/0"
+}, {
+  "ParameterKey": "AllowSSHFrom",
+  "ParameterValue": "@SSH_FROM@"
+}, {
+  "ParameterKey": "AvailabilityZone1",
+  "ParameterValue": "us-east-1a"
+}, {
+  "ParameterKey": "AvailabilityZone2",
+  "ParameterValue": "us-east-1b"
+}, {
+  "ParameterKey": "PublicSubnet1",
+  "ParameterValue": "10.183.1.0/24"
+}, {
+  "ParameterKey": "PrivateSubnet1",
+  "ParameterValue": "10.183.0.0/24"
+}, {
+  "ParameterKey": "PublicSubnet2",
+  "ParameterValue": "10.183.3.0/24"
+}, {
+  "ParameterKey": "PrivateSubnet2",
+  "ParameterValue": "10.183.2.0/24"
+}, {
+  "ParameterKey": "ServiceELBSSLCertName",
+  "ParameterValue": "agro-services-ssl"
+}, {
+  "ParameterKey": "ServiceELBSubdomainName",
+  "ParameterValue": "mawhee"
+}, {
+  "ParameterKey": "ServiceELBBaseDomainName",
+  "ParameterValue": "agro.services"
+}, {
+  "ParameterKey": "DBSubnet1Cidr",
+  "ParameterValue": "10.183.100.0/24"
+}, {
+  "ParameterKey": "DBSubnet2Cidr",
+  "ParameterValue": "10.183.101.0/24"
+}, {
+  "ParameterKey": "AkanaPMURL",
+  "ParameterValue": "https://pm.agro.services/"
+}, {
+  "ParameterKey": "AkanaPMContainerManagerUser",
+  "ParameterValue": ""
+}, {
+  "ParameterKey": "AkanaPMContainerManagerPass",
+  "ParameterValue": ""
+}, {
+  "ParameterKey": "WebELBBaseDomainName",
+  "ParameterValue": "agro.services"
+}, {
+  "ParameterKey": "WebELBSubdomainName",
+  "ParameterValue": "mawhee"
+}, {
+  "ParameterKey": "WebELBSSLCertName",
+  "ParameterValue": "agro-services-ssl"
+}, {
+  "ParameterKey": "WebOAuthClientID",
+  "ParameterValue": ""
+}, {
+  "ParameterKey": "WebOAuthClientSecret",
+  "ParameterValue": ""
+}, {
+  "ParameterKey": "WebOAuthProvider",
+  "ParameterValue": "ping"
+}, {
+  "ParameterKey": "WebOAuthProviderBaseURL",
+  "ParameterValue": "https://test.amp.monsanto.com"
+}, {
+  "ParameterKey": "SwarmEnabled",
+  "ParameterValue": "false"
+}]

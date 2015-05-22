@@ -1,5 +1,0 @@
-[
-  { "ParameterKey": "InstanceType",       "ParameterValue": "t2.micro" },
-  { "ParameterKey": "KeyName",            "ParameterValue": "@KEY_NAME@" },
-  { "ParameterKey": "SSHLocation",        "ParameterValue": "@SSH_FROM@" }
-]

@@ -1,0 +1,10 @@
+## load-up
+docker pull philcryer/min-jessie
+docker pull philcryer/min-jessie-nginx
+docker pull philcryer/min-wheezy
+docker pull alpine:latest
+docker run -it `docker images|grep nginx|awk -F " " '{print $3}'` echo "ohai"
+docker run -it `docker images|grep nginx|awk -F " " '{print $3}'` echo "ohai"
+docker run -it `docker images|grep nginx|awk -F " " '{print $3}'` echo "ohai"
+docker run -it `docker images|grep nginx|awk -F " " '{print $3}'` echo "ohai"
+docker run -it `docker images|grep nginx|awk -F " " '{print $3}'` echo "ohai"

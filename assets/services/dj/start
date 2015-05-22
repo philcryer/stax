@@ -1,0 +1,4 @@
+## Start
+fleetctl load dj.timer
+fleetctl load dj.service
+fleetctl start dj.timer

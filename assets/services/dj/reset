@@ -1,0 +1,6 @@
+## Reset
+fleetctl unload dj.service;
+fleetctl unload dj.timer;
+fleetctl destroy dj.service;
+fleetctl destroy dj.timer;
+#journalctl -f

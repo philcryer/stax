@@ -1,7 +1,7 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 
-  "Description" : "AWS CloudFormation Sample Template vpc_single_instance_in_subnet.template, that allows recovery.",
+  "Description" : "AWS CloudFormation Sample Template.",
 
   "Parameters" : {
 
@@ -10,7 +10,7 @@
       "Type" : "String",
       "Default" : "t2.micro",
       "AllowedValues" : [ "t2.micro","t2.small","t2.medium","m3.medium","m3.large","m3.xlarge","m3.2xlarge"],
-      "ConstraintDescription" : "must be a valid EC2 instance type that allows recovery (https://aws.amazon.com/ec2/instance-types/)"
+      "ConstraintDescription" : "must be a valid EC2 instance type."
     },
 
     "KeyName": {
@@ -30,25 +30,81 @@
       "Default": "0.0.0.0/0",
       "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
       "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+    },
+
+    "Project": {
+      "MinLength": "1",
+      "Description": "Name for this ecosystem of services",
+      "ConstraintDescription": "Can contain only alphanumeric characters, spaces, dashes and underscores.",
+      "AllowedPattern": "[-_ a-zA-Z0-9]*",
+      "MaxLength": "64",
+      "Type": "String"
+    },
+
+    "Product": {
+      "MinLength": "1",
+      "Description": "Name for the customer-facing entity this project is associated with",
+      "ConstraintDescription": "Can contain only alphanumeric characters, spaces, dashes and underscores.",
+      "AllowedPattern": "[-_ a-zA-Z0-9]*",
+      "MaxLength": "64",
+      "Type": "String"
+    },
+
+    "Group": {
+      "MinLength": "1",
+      "Description": "Group responsible for this ecosystem of services",
+      "ConstraintDescription": "Can contain only alphanumeric characters, spaces, dashes and underscores.",
+      "AllowedPattern": "[-_ a-zA-Z0-9]*",
+      "MaxLength": "64",
+      "Type": "String"
+    },
+
+    "Team": {
+      "MinLength": "1",
+      "Description": "Team within the group responsible for this ecosystem of services",
+      "ConstraintDescription": "Can contain only alphanumeric characters, spaces, dashes and underscores.",
+      "AllowedPattern": "[-_ a-zA-Z0-9]*",
+      "MaxLength": "64",
+      "Type": "String"
+    },
+
+    "Environment": {
+      "MinLength": "1",
+      "Description": "Description of deployment environment, e. g., test or production",
+      "ConstraintDescription": "Can contain only alphanumeric characters, spaces, dashes and underscores.",
+      "AllowedPattern": "[-_ a-zA-Z0-9]*",
+      "MaxLength": "64",
+      "Type": "String"
+    },
+
+    "KeepAlive": {
+      "Description": "Boolean to indicate whether to allow resource to be kept alive during nightly reaping",
+      "ConstraintDescription": "Value should be 'true' or 'false'",
+      "AllowedValues": [
+        "true",
+        "false"
+      ],
+      "Type": "String"
+    },
+
+    "Owner": {
+      "MinLength": "1",
+      "Description": "Individual responsible for this ecosystem of services",
+      "ConstraintDescription": "Can contain only alphanumeric characters, spaces, dashes and underscores.",
+      "AllowedPattern": "[-_ a-zA-Z0-9]*",
+      "MaxLength": "64",
+      "Type": "String"
     }
   },
 
   "Mappings" : {
     "RegionMap" : {
-      "us-east-1": {
-        "AMI": "ami-146e2a7c"
-      },
-      "us-west-1": {
-        "AMI": "ami-42908907"
-      },
-      "us-west-2": {
-        "AMI": "ami-dfc39aef"
-      },
-      "eu-west-1": {
-        "AMI": "ami-9d23aeea"
-      }
-        }
-    },
+      "us-east-1": { "AMI": "ami-146e2a7c" },
+      "us-west-1": { "AMI": "ami-42908907" },
+      "us-west-2": { "AMI": "ami-dfc39aef" },
+      "eu-west-1": { "AMI": "ami-9d23aeea" }
+    }
+  },
 
   "Resources" : {
 
@@ -317,41 +373,6 @@
       }
     },
 
-    "RecoveryCloudWatchSystem" : {
-      "Type" : "AWS::CloudWatch::Alarm",
-      "Properties" : {
-        "ActionsEnabled" : "true",
-        "AlarmActions" : [
-          "arn:aws:automate:us-east-1:ec2:recover"
-        ],
-        "AlarmDescription" : "Recover EC2 system when health check fails",
-        "AlarmName" : {
-              "Fn::Join": [
-                "-",
-                [
-                  "recovery-system",
-                  {
-                    "Ref": "AWS::StackName"
-                  }
-                ]
-              ]
-         },
-        "ComparisonOperator" : "GreaterThanThreshold",
-        "Dimensions" : [
-          {
-            "Name" : "InstanceId",
-            "Value" : { "Ref" : "WebServerInstance" }
-          }
-        ],
-        "EvaluationPeriods" : "2",
-        "MetricName" : "StatusCheckFailed_System",
-        "Namespace" : "AWS/EC2",
-        "Period" : "60",
-        "Statistic" : "Minimum",
-        "Threshold" : "0"
-      }
-    },
-
     "WebServerWaitHandle" : {
       "Type" : "AWS::CloudFormation::WaitConditionHandle"
     },
@@ -367,6 +388,10 @@
   },
 
   "Outputs" : {
+    "BastionEIP": {
+      "Description": "WebServer IP Address",
+      "Value": {"Ref": "IPAddress"}
+    },
     "URL" : {
       "Value" : { "Fn::Join" : [ "", ["http://", { "Fn::GetAtt" : ["WebServerInstance", "PublicIp"] }]]},
       "Description" : "Newly created application URL"

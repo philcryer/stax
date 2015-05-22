@@ -97,4 +97,3 @@ ExecStopPost=/usr/bin/etcdctl rmdir /kibana/host/%H
 
 [X-Fleet]
 Conflicts=%p.service
-

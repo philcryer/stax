@@ -1,0 +1,10 @@
+## Status
+echo -n " (unit-files)  "
+fleetctl list-unit-files
+echo "------------------"
+echo -n " (units)   "
+fleetctl list-units
+echo "------------------"
+echo " (dockers)    `docker ps -a|head -n-1 |wc -l`"
+echo "------------------"
+echo " (dockers-img)    `docker images -a|head -n-1 |wc -l`"
