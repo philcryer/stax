@@ -170,6 +170,10 @@ stax-preflight(){
         source $HOME/.stax.config
     fi
     tag_prefix=${STAX_TAG_PREFIX:-"stax"}
+    s3_sse=${STAX_AWS_S3_SSE:-"AES256"}
+    if [ "$STAX_AWS_S3_SSE" != "AES256" -a "$STAX_AWS_S3_SSE" != "aws:kms" ]; then
+        stax-error-exit "invalid encryption specified for S3. Must be 'AES256' or 'aws:kms'."
+    fi
 }
 
 stax-create-key(){
@@ -227,7 +231,7 @@ stax-upload-template(){
     fi
     template_s3="$STAX_NAME/$target_base.json"
     stax-message "  uploading template"
-    if ! aws s3 cp --sse "$template_path" "s3://$template_s3" > /dev/null; then
+    if ! aws s3 cp --sse $s3_sse "$template_path" "s3://$template_s3" > /dev/null; then
         stax-error "failed to copy $template_path to s3"
         return 1
     fi
@@ -488,7 +492,7 @@ stax-update(){
     fi
     stax-message "  uploading updated vpc assets"
     for f in assets/vpc/*; do
-        if ! aws s3 cp --sse "$f" "s3://$STAX_NAME/" > /dev/null; then
+        if ! aws s3 cp --sse $s3_sse "$f" "s3://$STAX_NAME/" > /dev/null; then
             stax-error "failed to upload file $f to bucket $STAX_NAME"
             stax-delete-bucket
             stax-delete-key
@@ -569,7 +573,7 @@ stax-create(){
     fi
     stax-message "  uploading vpc assets"
     for f in assets/vpc/*; do
-        if ! aws s3 cp --sse "$f" "s3://$STAX_NAME/" > /dev/null; then
+        if ! aws s3 cp --sse $s3_sse "$f" "s3://$STAX_NAME/" > /dev/null; then
             stax-error "failed to upload file $f to bucket $STAX_NAME"
             stax-delete-bucket
             stax-delete-key
